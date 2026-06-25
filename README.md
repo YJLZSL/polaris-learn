@@ -1,8 +1,18 @@
 # Polaris 北极星 - 开源个人 AI 学习平台
 
-> 纯开源个人 AI 学习平台 | AGPL-3.0
+> 纯开源个人 AI 学习平台 | AGPL-3.0 | v2.0.0
 
 一个面向 K-12 学生的纯开源个人 AI 学习平台，提供苏格拉底式 AI 辅导、智能题库、知识图谱、游戏化学习等功能。无管理后台、无计费、无 API Key 网关，用户自带大模型 API Key，所有学习数据由自己掌控。
+
+## What's New in v2.0.0
+
+- **品牌重命名**：智学AI → Polaris（北极星），全新品牌标识
+- **全新图标**：北极星主题——深紫渐变夜空 + 金色 4 角星
+- **动画增强**：Framer Motion 全局动画系统——页面过渡、卡片悬停、列表渐入、数字计数
+- **微交互**：按钮按压反馈、侧边栏导航弹簧动画、消息气泡滑入、领奖台浮动
+- **Bug 修复**：修复 Electron 自动更新模块未导入导致生产环境崩溃的问题
+
+完整变更记录见 [CHANGELOG.md](CHANGELOG.md)。
 
 ## 功能特性
 
@@ -64,11 +74,14 @@ npm run dev
 
 | 文档 | 说明 |
 |------|------|
+| [变更记录](CHANGELOG.md) | 版本变更历史 |
 | [项目概述](docs/README.md) | 功能特性、技术栈、项目结构 |
 | [部署指南](docs/DEPLOYMENT.md) | 自托管 / Docker / 生产环境 |
 | [API 参考](docs/API_REFERENCE.md) | 学生端 REST API 端点文档 |
 | [开发指南](docs/DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献 |
 | [Android 构建](docs/ANDROID_BUILD.md) | Android APK 打包指南 |
+| [发布规范](docs/RELEASE.md) | 版本管理、发布流程、自动更新 |
+| [安全规范](docs/SECURITY.md) | 密钥与证书管理 |
 | [设计文档](docs/design/) | 调研报告、安全方案、技术参考 |
 | [贡献指南](CONTRIBUTING.md) | 如何参与开源贡献 |
 
