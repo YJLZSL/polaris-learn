@@ -59,6 +59,11 @@ next-env.d.ts
 /android/
 /ios/
 
+# build artifacts (release outputs at repo root)
+/polaris-learn-*.apk
+/polaris-learn-*.exe
+/polaris-learn-*.yml
+
 # IDE / agent workspace
 .trae/
 

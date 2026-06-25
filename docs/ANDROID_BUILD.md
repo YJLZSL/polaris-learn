@@ -126,7 +126,52 @@ storeFile=../polaris-release.keystore
 **A**: 检查 `ANDROID_HOME` 环境变量是否正确设置，或通过 Android Studio SDK Manager 确认 SDK 路径。
 
 ### Q: Gradle 构建速度很慢
-**A**: 首次构建 Gradle 会下载依赖，需要较好的网络环境。可考虑配置国内镜像源。
+**A**: 首次构建 Gradle 会下载依赖，需要较好的网络环境。可考虑配置国内镜像源（见下文「网络问题排查」）。
+
+## 网络问题排查（SSL 握手失败 / 依赖下载超时）
+
+在中国大陆网络环境下，Gradle 下载分发包或依赖时可能遇到：
+- `SSLHandshakeException: PKIX path building failed`（下载 `gradle-*-all.zip` 时）
+- `Remote host terminated the handshake`（连接 `dl.google.com` 时）
+- `Read timed out`（依赖下载超时）
+
+### 方案 1：使用本地缓存的 Gradle 分发包
+
+若 `~/.gradle/wrapper/dists/` 下已有对应版本的 `gradle-*-all.zip`，可修改 `android/gradle/wrapper/gradle-wrapper.properties`，将 `distributionUrl` 指向本地文件：
+
+```properties
+distributionUrl=file\:///C:/Users/<你的用户名>/.gradle/wrapper/dists/gradle-8.14.3-all/<hash>/gradle-8.14.3-all.zip
+```
+
+### 方案 2：配置阿里云 Maven 镜像（推荐）
+
+创建 `android/init-mirror.gradle`，将 Google Maven 和 Maven Central 重定向到阿里云镜像：
+
+```groovy
+allprojects {
+    repositories {
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/public' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        google()
+        mavenCentral()
+    }
+}
+```
+
+构建时通过 `--init-script` 传入：
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Java\jdk-21"
+$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+.\gradlew assembleDebug --init-script init-mirror.gradle --no-daemon
+```
+
+> **注意**：`init-mirror.gradle` 已在 `.gitignore` 的 `/android/` 规则中被忽略，不会提交到仓库。每位开发者需自行创建。
+
+### 方案 3：组合使用
+
+若分发包和依赖都下载失败，需同时使用方案 1（本地分发包）+ 方案 2（镜像），即可完成首次构建。构建成功后，依赖会被缓存到 `~/.gradle/caches/`，后续构建可直接使用 `--offline` 标志。
 
 ### Q: `capacitor.config.ts` 被 .gitignore 忽略了
 **A**: 是的，该文件包含本地开发配置。首次 clone 项目后请自行创建该文件，参考 `ANDROID_BUILD.md` 中的配置模板。
