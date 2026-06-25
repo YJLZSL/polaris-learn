@@ -20,7 +20,7 @@
     "android:open": "npx cap open android",
     "android:build": "npm run build && npx cap sync android",
     "android:dev": "npm run dev & npx cap run android",
-    "create-admin": "npx tsx scripts/create-admin.ts"
+    "version:check": "node -e \"console.log(require('./package.json').version)\""
   },
   "dependencies": {
     "@capacitor/cli": "^8.3.2",
@@ -50,7 +50,7 @@
     "date-fns": "^4.1.0",
     "dotenv": "^17.4.2",
     "electron-serve": "^3.0.1",
-    "ioredis": "^5.10.1",
+    "electron-updater": "^6.8.9",
     "lucide-react": "^1.18.0",
     "next": "16.2.4",
     "next-auth": "^5.0.0-beta.31",
@@ -113,6 +113,13 @@
       "public/**/*",
       "package.json",
       "electron/**/*"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "YJLZSL",
+        "repo": "ai-edu-platform"
+      }
     ]
   }
 }

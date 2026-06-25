@@ -30,9 +30,13 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# env files — 模板可提交,真值与本地覆盖文件忽略
+.env
+.env.local
+.env.*.local
 !.env.example
+!.env.development
+!.env.production
 
 # vercel
 .vercel
@@ -54,9 +58,22 @@ next-env.d.ts
 # capacitor
 /android/
 /ios/
-capacitor.config.ts
 
 # IDE / agent workspace
 .trae/
+
+# === 签名密钥与证书 (禁止入库) ===
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.cert
+*.cer
+key.properties
+signing.properties
+
+# === Electron 签名与更新令牌 ===
+*.code-signing
+dev-app-update.yml
 
 

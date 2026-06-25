@@ -125,6 +125,42 @@ ipcMain.handle("open-external", (_event, url) => shell.openExternal(url));
 ipcMain.handle("get-user-data-path", () => app.getPath("userData"));
 
 // ---------------------------------------------------------------------------
+// Auto-updater (electron-updater via GitHub Releases)
+// ---------------------------------------------------------------------------
+// 只在打包后启用自动更新 (开发模式下 autoUpdater 会报错)
+if (!isDev) {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false; // 等待用户确认
+
+  autoUpdater.on("update-available", (info) => {
+    console.log("[AutoUpdater] Update available:", info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send("update-available", { version: info.version });
+    }
+  });
+
+  autoUpdater.on("update-not-available", () => {
+    console.log("[AutoUpdater] App is up to date");
+  });
+
+  autoUpdater.on("update-downloaded", (info) => {
+    console.log("[AutoUpdater] Update downloaded:", info.version);
+    if (mainWindow) {
+      mainWindow.webContents.send("update-downloaded", { version: info.version });
+    }
+  });
+
+  autoUpdater.on("error", (err) => {
+    console.error("[AutoUpdater] Error:", err);
+  });
+
+  // 暴露给渲染进程:触发安装更新
+  ipcMain.handle("install-update", () => {
+    autoUpdater.quitAndInstall();
+  });
+}
+
+// ---------------------------------------------------------------------------
 // App lifecycle
 // ---------------------------------------------------------------------------
 app.whenReady().then(async () => {

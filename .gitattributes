@@ -1,0 +1,23 @@
+# 统一换行符
+* text=auto eol=lf
+
+# 脚本明确换行符
+*.sh text eol=lf
+*.ps1 text eol=crlf
+
+# 二进制文件 (避免 diff 噪音)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.eot binary
+*.db binary
+*.apk binary
+*.apks binary
+*.aab binary

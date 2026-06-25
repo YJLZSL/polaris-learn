@@ -48,4 +48,23 @@ contextBridge.exposeInMainWorld("electronAPI", {
   removeAllListeners: (channel) => {
     ipcRenderer.removeAllListeners(channel);
   },
+
+  /**
+   * Listen for an available update notification from the main process.
+   */
+  onUpdateAvailable: (callback) => {
+    ipcRenderer.on("update-available", (_event, data) => callback(data));
+  },
+
+  /**
+   * Listen for a downloaded update notification from the main process.
+   */
+  onUpdateDownloaded: (callback) => {
+    ipcRenderer.on("update-downloaded", (_event, data) => callback(data));
+  },
+
+  /**
+   * Trigger installation of a downloaded update (quits and installs).
+   */
+  installUpdate: () => ipcRenderer.invoke("install-update"),
 });

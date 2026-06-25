@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import { AndroidUpdateBanner } from "@/components/providers/AndroidUpdateBanner";
 
 export default function DashboardLayout({
   children,
@@ -13,6 +14,9 @@ export default function DashboardLayout({
 
   return (
     <div className="flex min-h-screen bg-background">
+      {/* Android update banner (only renders on Capacitor native platforms) */}
+      <AndroidUpdateBanner />
+
       {/* Sidebar (desktop + mobile Sheet) */}
       <Sidebar mobileOpen={mobileMenuOpen} onMobileOpenChange={setMobileMenuOpen} />
 

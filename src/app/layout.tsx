@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Toaster } from "react-hot-toast";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import ServiceWorkerRegister from "@/components/providers/ServiceWorkerRegister";
@@ -10,10 +10,10 @@ export const metadata: Metadata = {
   description:
     "智学AI——智能辅助学习，拍照搜题、AI对话、课程学习，让每个孩子都能获得个性化教育",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#6366f1",
-  other: {
-    "theme-color": "#6366f1",
-  },
 };
 
 export default function RootLayout({
