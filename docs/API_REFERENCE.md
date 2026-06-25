@@ -4,20 +4,7 @@
 
 ## 认证
 
-所有 API 调用需要认证。支持两种方式：
-
-### Session 认证（Web 端）
-自动使用 NextAuth JWT Session Cookie。
-
-### API Key 认证（第三方调用）
-在请求头中携带：
-```
-X-API-Key: sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
-```
-或
-```
-Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
-```
+所有 API 调用需要认证，统一使用 NextAuth JWT Session Cookie（Web 端自动携带）。本平台不提供 API Key 网关，所有大模型调用由用户在「设置」页面配置的 Key 完成。
 
 ---
 
@@ -38,9 +25,6 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 |------|------|------|
 | POST | `/api/ai/chat` | AI 苏格拉底式对话 |
 | GET | `/api/ai/conversations` | 获取对话列表 |
-| GET | `/api/ai/keys` | 获取 API Key 列表 |
-| POST | `/api/ai/keys` | 创建 API Key |
-| DELETE | `/api/ai/keys/[id]` | 吊销 API Key |
 
 #### POST /api/ai/chat
 ```json
@@ -63,27 +47,6 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 
 ---
 
-### LLM 代理
-
-| 方法 | 路径 | 认证 | 说明 |
-|------|------|------|------|
-| POST | `/llm-api/chat` | API Key | LLM 代理对话（OpenAI 兼容） |
-| GET | `/llm-api/models` | API Key | 可用模型列表 |
-
-#### POST /llm-api/chat
-```json
-{
-  "model": "deepseek-chat",
-  "messages": [
-    { "role": "user", "content": "解释二次函数" }
-  ],
-  "stream": false
-}
-```
-响应含 `X-Usage-Cost` 和 `X-Balance-Remaining` 头。
-
----
-
 ### 题库
 
 | 方法 | 路径 | 说明 |
@@ -94,17 +57,6 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 
 #### GET /api/questions
 参数: `subject`, `difficulty`, `page`, `limit`
-
----
-
-### 计费
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/billing/balance` | 查询余额 |
-| GET | `/api/billing/usage` | 查询用量统计 |
-| POST | `/api/billing/recharge` | 发起充值 |
-| POST | `/api/billing/recharge/callback` | 支付回调 |
 
 ---
 
@@ -123,7 +75,6 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/user/home-stats` | 首页聚合数据 |
-| GET | `/api/user/balance` | 用户余额 |
 | GET | `/api/user/profile` | 用户资料 |
 | GET | `/api/knowledge-graph` | 知识图谱 |
 | GET | `/api/analytics/report` | 学习报告 |
@@ -146,8 +97,7 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 |--------|------|
 | 200 | 成功 |
 | 400 | 请求参数错误 |
-| 401 | 未认证 / API Key 无效 |
-| 402 | 余额不足，请充值 |
+| 401 | 未认证 |
 | 403 | 无权限 |
 | 404 | 资源不存在 |
 | 429 | 请求频率超限 |
@@ -158,20 +108,14 @@ Authorization: Bearer sk-edu-xxxxxxxx-xxxxxxxxxxxxxx
 
 ## 速率限制
 
+限流采用纯内存实现（无外部依赖），按用户与 IP 维度统计：
+
 | 维度 | 限制 | 周期 |
 |------|------|------|
-| 单 API Key | 120 次 | 每分钟 |
+| 单用户 | 120 次 | 每分钟 |
 | 单 IP | 300 次 | 每分钟 |
 | 全局 | 10000 次 | 每分钟 |
 
 触发限流时返回 429，响应头包含 `Retry-After`、`X-RateLimit-Limit`、`X-RateLimit-Remaining`。
 
-## 计费定价
-
-| 模型 | 输入 (¥/千Token) | 输出 (¥/千Token) |
-|------|-------------------|-------------------|
-| deepseek-chat | 0.001 | 0.002 |
-| deepseek-reasoner | 0.002 | 0.008 |
-| qwen-turbo | 0.001 | 0.002 |
-| gpt-4o-mini | 0.0015 | 0.006 |
-| ollama (本地) | 0 | 0 |
+> 注：大模型调用产生的费用由用户自带的 API Key 直接与其 LLM 供应商结算，本平台不参与计费。

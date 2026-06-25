@@ -18,24 +18,25 @@
 ```
 ┌──────────────────────────────────────────────────┐
 │                接入层                              │
-│  PC Web (Next.js) │ Admin (Next.js)              │
-│  Electron Desktop  │ Android (Capacitor)         │
+│  PC Web (Next.js) │ Electron Desktop             │
+│  Android (Capacitor)                              │
 ├──────────────────────────────────────────────────┤
-│              API 网关层 (src/middleware.ts)        │
-│  限流 │ 余额检查 │ IP 检测 │ 安全过滤            │
+│              中间件层 (src/middleware.ts)          │
+│  鉴权 │ 内存限流 │ IP 检测 │ 安全过滤            │
 ├──────────────────────────────────────────────────┤
 │              业务服务层 (src/app/api/)             │
-│  AI对话 │ LLM代理 │ 题库 │ 计费 │ 游戏 │ 分析    │
+│  AI对话 │ 题库 │ 游戏 │ 学习分析 │ 知识图谱       │
 ├──────────────────────────────────────────────────┤
 │               核心库 (src/lib/)                   │
-│  auth │ billing │ llm-adapter │ safety │ rate-limit│
-│  game │ ai-tutor │ redis │ provider-health       │
+│  auth │ llm-adapter │ safety │ rate-limit        │
+│  game │ ai-tutor                                   │
 ├──────────────────────────────────────────────────┤
 │                数据层                              │
 │  Prisma ORM → SQLite / PostgreSQL                 │
-│  Redis (缓存/限流/余额)                            │
 └──────────────────────────────────────────────────┘
 ```
+
+> 大模型 API Key 由用户在「设置」页面填入并保存在浏览器 `localStorage`，前端发起 LLM 调用时携带用户自己的 Key，服务端不存储、不经手任何用户密钥。限流为纯内存实现，无 Redis 等外部依赖。
 
 ---
 
@@ -48,8 +49,8 @@ npm install
 # 2. 配置环境变量
 cp .env.example .env.local
 
-# 3. 最少配置一个 LLM API Key
-# DEEPSEEK_API_KEY=sk-your-key
+# 3. 编辑 .env.local，配置 DATABASE_URL 与 AUTH_SECRET
+#    LLM API Key 无需在服务端配置，登录后在「设置」页填入你自己的 Key
 
 # 4. 初始化数据库
 npx prisma db push
@@ -75,33 +76,23 @@ src/
 │   │   ├── knowledge-graph/ # 知识图谱
 │   │   ├── error-notes/ # 错题本
 │   │   ├── analytics/   # 学习报告
-│   │   ├── billing/     # 计费中心
+│   │   ├── settings/    # 设置（含 LLM API Key 配置）
 │   │   └── ...
-│   ├── admin/           # 管理后台（独立布局+权限）
-│   │   ├── users/       # 用户管理
-│   │   ├── api-keys/    # API密钥管理
-│   │   ├── providers/   # 模型供应商
-│   │   └── usage/       # 用量统计
 │   ├── api/             # API 路由处理器
 │   │   ├── ai/          # AI 辅导
-│   │   ├── billing/     # 计费
-│   │   ├── admin/       # 管理API
 │   │   ├── game/        # 游戏系统
+│   │   ├── questions/   # 题库
 │   │   └── ...
-│   ├── docs/            # 开发者文档门户
-│   └── llm-api/         # LLM 代理端点
+│   └── docs/            # 开发者文档门户
 ├── components/
 │   ├── layout/          # 布局组件（Sidebar, Header）
 │   ├── providers/       # Context Provider
 │   └── common/          # 通用组件
 ├── lib/
 │   ├── auth.ts          # NextAuth 配置
-│   ├── billing.ts       # 计费引擎
 │   ├── llm-adapter.ts   # LLM 多模型适配
 │   ├── safety.ts        # 安全护栏
-│   ├── rate-limit.ts    # 限流
-│   ├── redis.ts         # Redis 客户端
-│   ├── provider-health.ts # Provider 健康检查
+│   ├── rate-limit.ts    # 内存限流
 │   ├── game.ts          # 游戏化引擎
 │   ├── ai-tutor.ts      # 苏格拉底教学引擎
 │   └── prisma.ts        # 数据库客户端
@@ -118,15 +109,14 @@ src/
 数据库使用 Prisma ORM，Schema 文件位于 `prisma/schema.prisma`。
 
 核心模型：
-- **User** - 用户（含 XP、等级、余额、角色）
+- **User** - 用户（含 XP、等级，所有用户平等，无角色区分）
 - **Question** - 题目
 - **KnowledgePoint** - 知识点
 - **LearningRecord** - 学习记录
 - **ErrorNote** - 错题
 - **AIConversation / AIDialogueMessage** - AI 对话
-- **APIUsageLog** - API 用量日志
-- **VirtualAPIKey** - 虚拟 API Key
-- **RechargeRecord** - 充值记录
+
+> 注：用户的大模型 API Key 保存在浏览器 `localStorage`，不存入数据库；平台不存储任何充值、余额、用量计费相关数据。
 
 ### 操作命令
 
@@ -171,17 +161,7 @@ try {
 }
 ```
 
-### 计费集成
-LLM 相关 API 需集成计费：
-```typescript
-import { estimateCost, deductBalance, recordUsageLog } from "@/lib/billing";
-
-// 调用 LLM 后
-const cost = estimateCost(provider, model, promptTokens, completionTokens);
-const result = await deductBalance(userId, cost);
-// 异步记录日志（不阻塞响应）
-recordUsageLog({ userId, provider, model, ... }).catch(console.error);
-```
+> 注：LLM 相关 API 不再做服务端计费。大模型调用使用用户在「设置」页面配置的 Key，费用由用户与其 LLM 供应商直接结算。
 
 ---
 
@@ -233,15 +213,19 @@ export default function MyPage() {
 | 模型层 | `llm-adapter.ts` buildSocraticSystemPrompt() | System Prompt 约束、temperature=0.3 |
 | 输出层 | `safety.ts` checkOutputSafety() | 输出不当内容过滤 |
 | 应用层 | API 路由 | 教育话题锁定、情绪监测 |
-| 中间件 | `middleware.ts` | IP/Key 限流、余额检查 |
+| 中间件 | `middleware.ts` | 内存限流、IP 检测、安全过滤 |
 
 ---
 
 ## 贡献指南
 
+欢迎社区贡献！完整的开发环境设置、代码规范与提交流程见根目录的 [CONTRIBUTING.md](../CONTRIBUTING.md)。
+
+简要流程：
+
 1. Fork 项目仓库
 2. 创建功能分支: `git checkout -b feature/my-feature`
-3. 提交更改: `git commit -m "feat: add my feature"`
+3. 提交更改（Conventional Commits）: `git commit -m "feat: add my feature"`
 4. 推送分支: `git push origin feature/my-feature`
 5. 创建 Pull Request
 
@@ -250,3 +234,4 @@ export default function MyPage() {
 - ESLint 检查通过
 - 新功能需覆盖三种 UI 状态
 - API 路由需鉴权检查
+- 不引入计费、管理后台、API 网关等已移除的能力
