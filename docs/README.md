@@ -1,13 +1,10 @@
-# 智学AI教育平台
+# 智学AI - 开源个人 AI 学习平台
 
-> **版本**: v1.0 | **协议**: AGPL-3.0 | **类型**: 半商业化开源教育平台
+> **协议**: AGPL-3.0 | **类型**: 纯开源个人学习平台
 
 ## 项目简介
 
-智学AI 是一个面向小学至高中学生的开源 AI 教育平台，采用 **"开源核心 + 云端API"** 的半商业化模式：
-
-- **自托管模式（免费）**：下载源代码自行部署，需自备大模型 API Key，平台不收取任何费用
-- **云端 API 服务（按量付费）**：免部署即用，平台统一提供大模型后端，纯按量计费
+智学AI 是一个面向小学至高中学生的纯开源个人 AI 学习平台。无管理后台、无计费、无 API Key 网关，用户自带大模型 API Key（在「设置」页面配置，保存在浏览器本地），所有学习数据由用户自己掌控。
 
 ## 核心功能
 
@@ -19,9 +16,9 @@
 | 错题本 | 自动收录错题，支持复习与消除机制 |
 | 学习报告 | 30天学习趋势、学科分布、知识点掌握度分析 |
 | 游戏化 | XP/等级/徽章/排行榜/连续打卡激励系统 |
-| LLM 代理 | 统一 API 代理 DeepSeek/Qwen/OpenAI，多模型故障自动转移 |
-| API Key 管理 | 虚拟 Key 生成/吊销/用量监控 |
-| 计费系统 | 实时 Token 计费，余额不足自动停服 |
+| 学习小组 | 学习小组、PK 挑战、学习计划 |
+| 拍照搜题 | 拍照识别题目并给出解析 |
+| 课程 | 课程内容浏览与学习 |
 
 ## 技术栈
 
@@ -30,9 +27,9 @@
 | 前端 | Next.js 16 (React 19 + TypeScript + TailwindCSS) |
 | 后端 API | Next.js Route Handlers + Prisma ORM |
 | 数据库 | SQLite (开发) / PostgreSQL (生产) |
-| 缓存 | Redis (ioredis) |
 | 认证 | NextAuth.js v5 (Credentials + JWT) |
-| LLM 适配 | DeepSeek / Qwen / OpenAI / Ollama |
+| LLM 适配 | DeepSeek / Qwen / OpenAI / Ollama（用户自带 Key） |
+| 限流 | 纯内存限流（无外部依赖） |
 | 桌面端 | Electron + electron-builder |
 | 移动端 | Capacitor (Android APK) |
 
@@ -40,13 +37,13 @@
 
 ### 开发环境
 ```bash
-git clone https://github.com/openedu-ai/ai-edu-platform.git
+git clone https://github.com/YJLZSL/ai-edu-platform.git
 cd ai-edu-platform
 npm install
 cp .env.example .env.local
-# 编辑 .env.local 配置你的 API Key
+# 编辑 .env.local 配置 DATABASE_URL 与 AUTH_SECRET
 npm run dev
-# 访问 http://localhost:3000
+# 访问 http://localhost:3000，登录后在「设置」页填入你的 LLM API Key
 ```
 
 ### Docker 部署
@@ -58,11 +55,12 @@ docker-compose -f docker-compose.minimal.yml up -d
 
 | 文档 | 说明 |
 |------|------|
-| [部署指南](docs/DEPLOYMENT.md) | 自托管 / Docker / 生产环境部署 |
-| [API 参考](docs/API_REFERENCE.md) | 完整 REST API 端点文档 |
-| [开发指南](docs/DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献流程 |
-| [设计文档](docs/design/) | 调研报告、安全方案、大厂参考 |
-| [Android 构建](docs/ANDROID_BUILD.md) | Android APK 打包指南 |
+| [部署指南](DEPLOYMENT.md) | 自托管 / Docker / 生产环境部署 |
+| [API 参考](API_REFERENCE.md) | 学生端 REST API 端点文档 |
+| [开发指南](DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献流程 |
+| [Android 构建](ANDROID_BUILD.md) | Android APK 打包指南 |
+| [设计文档](design/) | 调研报告、安全方案、大厂参考 |
+| [贡献指南](../CONTRIBUTING.md) | 如何参与开源贡献 |
 
 ## 项目结构
 
@@ -72,12 +70,11 @@ ai-edu-platform/
 │   ├── app/              # Next.js App Router
 │   │   ├── (auth)/       # 登录/注册
 │   │   ├── (dashboard)/  # 学生端控制台
-│   │   ├── admin/        # 管理后台（独立）
+│   │   │   └── settings/ # 设置（含 LLM API Key 配置）
 │   │   ├── api/          # API 路由
-│   │   ├── docs/         # 开发者门户
-│   │   └── llm-api/      # LLM 代理端点
+│   │   └── docs/         # 开发者门户
 │   ├── components/       # 公共组件
-│   ├── lib/              # 核心库（auth/billing/safety/llm等）
+│   ├── lib/              # 核心库（auth/safety/llm-adapter/rate-limit 等）
 │   ├── stores/           # Zustand 状态管理
 │   └── types/            # TypeScript 类型
 ├── prisma/               # 数据库 Schema
@@ -89,4 +86,4 @@ ai-edu-platform/
 
 ## 许可证
 
-本项目采用 **AGPL-3.0** 协议开源。核心代码开放获取，自托管需自备大模型 API Key，平台本身不收费。云端 API 服务按量付费。
+本项目采用 **AGPL-3.0** 协议开源。任何人可自由使用、修改、分发，衍生作品须同样以 AGPL-3.0 开源。用户需自备大模型 API Key，平台本身完全免费。

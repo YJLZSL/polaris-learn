@@ -1,75 +1,55 @@
-# 智学AI教育平台
+# 智学AI - 开源个人 AI 学习平台
 
-> 开源 AI 教育平台 | AGPL-3.0 | 半商业化
+> 纯开源个人 AI 学习平台 | AGPL-3.0
 
-一个面向 K-12 学生的开源 AI 教育平台，提供苏格拉底式 AI 辅导、智能题库、知识图谱、游戏化学习等功能。
+一个面向 K-12 学生的纯开源个人 AI 学习平台，提供苏格拉底式 AI 辅导、智能题库、知识图谱、游戏化学习等功能。无管理后台、无计费、无 API Key 网关，用户自带大模型 API Key，所有学习数据由自己掌控。
 
-## v1.0.0 发布说明
+## 功能特性
 
-本次 v1.0.0 为首个正式发布版本，主要变更：
+| 模块 | 功能 |
+|------|------|
+| AI 老师 | 苏格拉底式智能辅导，通过引导提问帮助学生自主思考 |
+| 练习题库 | 多学科题库，支持分类/难度筛选，自动判分与错题收录 |
+| 知识图谱 | 知识点关联可视化，掌握度热力图 |
+| 错题本 | 自动收录错题，支持复习与消除机制 |
+| 学习报告 | 30天学习趋势、学科分布、知识点掌握度分析 |
+| 游戏化 | XP / 等级 / 徽章 / 排行榜 / 连续打卡激励系统 |
+| 学习小组 | 学习小组、PK 挑战、学习计划 |
+| 拍照搜题 | 拍照识别题目并给出解析 |
+| 课程 | 课程内容浏览与学习 |
 
-- **版本号**：从 `0.1.0` 提升至 `1.0.0`，标志着首个生产就绪版本
-- **环境变量**：补全 `.env.example`，覆盖 `DATABASE_URL`、`AUTH_SECRET`、`NEXTAUTH_URL`、LLM API Key、`REDIS_URL`、`ADMIN_IP_WHITELIST` 等全部必需变量
-- **管理后台隔离**：管理后台与学生端完全隔离，独立登录入口 `/admin/login`，服务端中间件层强制 admin 角色校验
-- **构建验证**：通过 `npm run lint` 与 `npm run build` 零错误验证
+## 自带 LLM API Key
 
-升级/部署步骤：
+本平台**不提供**大模型服务，也**不代管** API Key。每位用户需在登录后前往 **设置（Settings）** 页面填入自己的大模型 API Key（如 DeepSeek、通义千问、OpenAI、Ollama 等），Key 仅保存在浏览器 `localStorage` 中，不会上传服务器。
 
-1. 拉取最新代码
-2. 复制 `.env.example` 为 `.env.local` 并填写实际配置
-3. 至少配置一个 LLM API Key（推荐 DeepSeek）
-4. 运行 `npm install` 安装依赖
-5. 运行 `npm run build` 构建生产版本
-6. 运行 `npm run create-admin` 创建首个管理员账号
-7. 运行 `npm start` 启动服务
+- 推荐使用 DeepSeek，性价比高
+- 本地部署可使用 Ollama，零成本
+- 多模型可在设置页自由切换
 
-## 管理后台
+## 技术栈
 
-管理后台用于平台运营管理（用户、题库、订单等），与学生端完全隔离，互不影响。
-
-### 创建管理员账号
-
-```bash
-npm run create-admin
-```
-
-按提示交互式输入邮箱、密码、姓名，脚本会创建一个 `role=admin` 的账号。生产环境请使用强密码。
-
-### 访问管理后台
-
-1. 浏览器访问 `/admin/login`（注意：不是学生端的 `/login`）
-2. 使用管理员邮箱和密码登录
-3. 登录成功后自动跳转到 `/admin` 管理首页
-
-### 隔离机制
-
-- **独立登录入口**：管理后台使用 `/admin/login`，学生端使用 `/login`，两套入口完全独立
-- **服务端角色校验**：`/admin/*` 与 `/api/admin/*` 路由在中间件层强制校验 `role=admin`，未登录或非管理员账号无法访问
-- **未登录重定向**：未登录访问 `/admin/*` 会重定向到 `/admin/login`（而非学生端登录页）
-- **可选 IP 白名单**：通过 `ADMIN_IP_WHITELIST` 环境变量可进一步限制管理后台的访问来源 IP
+| 层级 | 技术 |
+|------|------|
+| 前端 | Next.js 16 (React 19 + TypeScript + TailwindCSS) |
+| 后端 API | Next.js Route Handlers + Prisma ORM |
+| 数据库 | SQLite (开发) / PostgreSQL (生产) |
+| 认证 | NextAuth.js v5 (Credentials + JWT) |
+| LLM 适配 | DeepSeek / Qwen / OpenAI / Ollama（用户自带 Key） |
+| 限流 | 纯内存限流（无外部依赖） |
+| 桌面端 | Electron + electron-builder |
+| 移动端 | Capacitor (Android APK) |
 
 ## 快速开始
 
 ```bash
-git clone https://github.com/openedu-ai/ai-edu-platform.git
+git clone https://github.com/YJLZSL/ai-edu-platform.git
 cd ai-edu-platform
 npm install
 cp .env.example .env.local
 npm run dev
 ```
 
-访问 http://localhost:3000
-
-## 文档
-
-| 文档 | 说明 |
-|------|------|
-| [项目概述](docs/README.md) | 功能特性、技术栈、项目结构 |
-| [部署指南](docs/DEPLOYMENT.md) | 自托管 / Docker / 生产环境 |
-| [API 参考](docs/API_REFERENCE.md) | 完整 REST API 端点文档 |
-| [开发指南](docs/DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献 |
-| [Android 构建](docs/ANDROID_BUILD.md) | Android APK 打包指南 |
-| [设计文档](docs/design/) | 调研报告、安全方案、技术参考 |
+访问 http://localhost:3000 ，注册账号后前往 **设置** 页面配置你的 LLM API Key 即可开始使用。
 
 ## 构建目标
 
@@ -80,6 +60,26 @@ npm run dev
 | Electron 桌面端 | `npm run electron:build` |
 | Android APK | `npm run android:build` |
 
+## 文档
+
+| 文档 | 说明 |
+|------|------|
+| [项目概述](docs/README.md) | 功能特性、技术栈、项目结构 |
+| [部署指南](docs/DEPLOYMENT.md) | 自托管 / Docker / 生产环境 |
+| [API 参考](docs/API_REFERENCE.md) | 学生端 REST API 端点文档 |
+| [开发指南](docs/DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献 |
+| [Android 构建](docs/ANDROID_BUILD.md) | Android APK 打包指南 |
+| [设计文档](docs/design/) | 调研报告、安全方案、技术参考 |
+| [贡献指南](CONTRIBUTING.md) | 如何参与开源贡献 |
+
+## 参与贡献
+
+> ⚠️ 安全提醒:禁止提交任何密钥、证书、`.env` 真值文件。详见 [密钥与安全规范](docs/SECURITY.md)。
+
+欢迎社区贡献！无论是修复 Bug、新增功能、完善文档还是提出建议，都非常欢迎。
+
+请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解开发环境搭建、代码规范与提交 PR 的流程。
+
 ## 许可证
 
-AGPL-3.0 - 开源核心免费，自托管需自备大模型 API Key。云端 API 按量付费。
+本项目采用 **AGPL-3.0** 协议开源。任何人可自由使用、修改、分发，但衍生作品必须同样以 AGPL-3.0 开源。使用者需自备大模型 API Key，平台本身完全免费。
