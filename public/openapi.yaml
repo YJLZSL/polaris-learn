@@ -1,11 +1,11 @@
 openapi: "3.0.3"
 info:
-  title: 智学AI - 开放API
+  title: Polaris - 开放API
   description: |
-    智学AI教育平台开放API接口文档。提供AI辅导、LLM代理、题库管理、游戏化学习等接口。
+    Polaris 北极星学习平台开放API接口文档。提供AI辅导、LLM代理、题库管理、游戏化学习等接口。
 
     ## 快速开始
-    1. **注册账号** - 在智学AI平台注册账号
+    1. **注册账号** - 在 Polaris 平台注册账号
     2. **获取API Key** - 在个人中心的「API Keys」页面创建虚拟API Key
     3. **调用API** - 使用 `X-API-Key` 请求头携带API Key发起请求
 
@@ -35,19 +35,19 @@ info:
 
   version: "1.0.0"
   contact:
-    name: 智学AI开发团队
-    email: dev@zixueai.com
-    url: https://zixueai.com
+    name: Polaris 开发团队
+    email: dev@polaris.com
+    url: https://polaris.com
 
 servers:
   - url: "{baseUrl}"
-    description: 智学AI API服务器
+    description: Polaris API服务器
     variables:
       baseUrl:
-        default: "https://api.zixueai.com"
+        default: "https://api.polaris.com"
         description: API服务器地址
         enum:
-          - "https://api.zixueai.com"
+          - "https://api.polaris.com"
           - "http://localhost:3000"
 
 tags:

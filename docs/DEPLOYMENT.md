@@ -1,4 +1,4 @@
-# 智学AI 部署指南
+# Polaris 部署指南
 
 ## 目录
 
@@ -72,8 +72,8 @@
 
 ```bash
 # 1. 克隆仓库
-git clone https://github.com/YJLZSL/ai-edu-platform.git
-cd ai-edu-platform
+git clone https://github.com/YJLZSL/polaris-learn.git
+cd polaris-learn
 
 # 2. 安装依赖
 npm install
@@ -121,7 +121,7 @@ docker-compose up -d
 ### 1. 配置数据库
 ```env
 DATABASE_PROVIDER=postgresql
-DATABASE_URL="postgresql://user:password@host:5432/ai_edu_platform?schema=public"
+DATABASE_URL="postgresql://user:password@host:5432/polaris_learn?schema=public"
 ```
 
 ### 2. 同步表结构
@@ -148,7 +148,7 @@ npm run start
 ```nginx
 server {
     listen 443 ssl;
-    server_name api.zixueai.com;
+    server_name api.polaris.com;
 
     ssl_certificate /etc/ssl/certs/fullchain.pem;
     ssl_certificate_key /etc/ssl/private/privkey.pem;
@@ -176,9 +176,9 @@ npm run electron:build
 ```
 
 构建产出：
-- Windows: `electron-dist/智学AI教育平台 Setup.exe`
-- macOS: `electron-dist/智学AI教育平台.dmg`
-- Linux: `electron-dist/智学AI教育平台.AppImage`
+- Windows: `electron-dist/Polaris 北极星学习平台 Setup.exe`
+- macOS: `electron-dist/Polaris 北极星学习平台.dmg`
+- Linux: `electron-dist/Polaris 北极星学习平台.AppImage`
 
 > 构建前请替换 `public/icon-512.png` 为品牌图标。
 

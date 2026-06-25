@@ -1,6 +1,6 @@
 # 密钥与安全规范
 
-本规范用于约束 `ai-edu-platform` 仓库的密钥、证书、构建产物管理,避免敏感信息泄露。所有贡献者在提交前必须遵守。
+本规范用于约束 `polaris-learn` 仓库的密钥、证书、构建产物管理,避免敏感信息泄露。所有贡献者在提交前必须遵守。
 
 ## 禁止入库文件清单
 
@@ -27,7 +27,7 @@
 Android 应用发布签名密钥由维护者本地生成,严禁入库。
 
 ```bash
-keytool -genkey -v -keystore release.keystore -alias zixueai -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore release.keystore -alias polaris -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 - 密钥文件 `release.keystore` 应存放于 `~/.android/` 或项目目录之外的安全位置,**不要放在仓库目录内**。

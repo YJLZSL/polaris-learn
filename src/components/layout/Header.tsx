@@ -81,7 +81,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/home">智学AI</Link>
+              <Link href="/home">Polaris</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           {breadcrumbItems.map((item, index) => {
@@ -108,7 +108,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <span className="sm:hidden text-sm font-medium truncate">
         {breadcrumbItems.length > 0
           ? breadcrumbItems[breadcrumbItems.length - 1].label
-          : "智学AI"}
+          : "Polaris"}
       </span>
 
       {/* Search */}

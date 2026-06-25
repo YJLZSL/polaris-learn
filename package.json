@@ -1,5 +1,5 @@
 {
-  "name": "ai-edu-platform",
+  "name": "polaris-learn",
   "version": "1.0.0",
   "private": true,
   "main": "electron/main.js",
@@ -15,7 +15,7 @@
     "electron:build": "npm run build && electron-builder",
     "electron:start": "electron .",
     "electron:icon": "node scripts/generate-icons.js",
-    "android:init": "npx cap init 智学AI com.zixueai.edu --web-dir=out && npx cap add android",
+    "android:init": "npx cap init Polaris com.polaris.learn --web-dir=out && npx cap add android",
     "android:sync": "npx cap sync android",
     "android:open": "npx cap open android",
     "android:build": "npm run build && npx cap sync android",
@@ -80,8 +80,8 @@
     "wait-on": "^9.0.5"
   },
   "build": {
-    "appId": "com.zixueai.edu",
-    "productName": "智学AI教育平台",
+    "appId": "com.polaris.learn",
+    "productName": "Polaris 北极星学习平台",
     "directories": {
       "output": "electron-dist"
     },
@@ -118,7 +118,7 @@
       {
         "provider": "github",
         "owner": "YJLZSL",
-        "repo": "ai-edu-platform"
+        "repo": "polaris-learn"
       }
     ]
   }

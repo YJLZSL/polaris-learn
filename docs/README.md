@@ -1,10 +1,10 @@
-# 智学AI - 开源个人 AI 学习平台
+# Polaris 北极星 - 开源个人 AI 学习平台
 
 > **协议**: AGPL-3.0 | **类型**: 纯开源个人学习平台
 
 ## 项目简介
 
-智学AI 是一个面向小学至高中学生的纯开源个人 AI 学习平台。无管理后台、无计费、无 API Key 网关，用户自带大模型 API Key（在「设置」页面配置，保存在浏览器本地），所有学习数据由用户自己掌控。
+Polaris 是一个面向小学至高中学生的纯开源个人 AI 学习平台。无管理后台、无计费、无 API Key 网关，用户自带大模型 API Key（在「设置」页面配置，保存在浏览器本地），所有学习数据由用户自己掌控。
 
 ## 核心功能
 
@@ -37,8 +37,8 @@
 
 ### 开发环境
 ```bash
-git clone https://github.com/YJLZSL/ai-edu-platform.git
-cd ai-edu-platform
+git clone https://github.com/YJLZSL/polaris-learn.git
+cd polaris-learn
 npm install
 cp .env.example .env.local
 # 编辑 .env.local 配置 DATABASE_URL 与 AUTH_SECRET
@@ -65,7 +65,7 @@ docker-compose -f docker-compose.minimal.yml up -d
 ## 项目结构
 
 ```
-ai-edu-platform/
+polaris-learn/
 ├── src/
 │   ├── app/              # Next.js App Router
 │   │   ├── (auth)/       # 登录/注册

@@ -28,7 +28,7 @@ const steps = [
   {
     step: "01",
     title: "注册账号",
-    desc: "前往智学AI平台注册一个学习账号，完成邮箱验证。",
+    desc: "前往 Polaris 平台注册一个学习账号，完成邮箱验证。",
     href: "/register",
     icon: HiRocketLaunch,
   },
@@ -89,7 +89,7 @@ export default function DocsPage() {
               <HiCodeBracket className="h-5 w-5 text-white" />
             </div>
             <span className="text-lg font-bold text-slate-900 dark:text-white">
-              智学AI
+              Polaris
               <span className="ml-1.5 text-sm font-medium text-slate-400">
                 开发者文档
               </span>
@@ -135,7 +135,7 @@ export default function DocsPage() {
               </span>
             </div>
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl lg:text-6xl">
-              智学AI
+              Polaris
               <span className="mt-2 block bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
                 开发者文档
               </span>
@@ -173,7 +173,7 @@ export default function DocsPage() {
               快速开始
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              两步开始使用智学AI学习平台
+              两步开始使用Polaris学习平台
             </p>
           </div>
 
@@ -428,7 +428,7 @@ export default function DocsPage() {
                 <HiCodeBracket className="h-4 w-4 text-white" />
               </div>
               <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
-                智学AI 开放平台
+                Polaris 开放平台
               </span>
             </div>
             <div className="flex items-center gap-8 text-sm text-slate-400 dark:text-slate-500">

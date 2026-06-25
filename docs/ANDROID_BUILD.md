@@ -1,4 +1,4 @@
-# 智学AI - Android APK 构建指南
+# Polaris - Android APK 构建指南
 
 ## 前置条件
 
@@ -105,8 +105,8 @@ android/app/build/outputs/apk/
 ### 1. 生成签名密钥
 
 ```bash
-keytool -genkey -v -keystore zixueai-release.keystore \
-  -alias zixueai -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore polaris-release.keystore \
+  -alias polaris -keyalg RSA -keysize 2048 -validity 10000
 ```
 
 ### 2. 创建 `android/key.properties`
@@ -114,8 +114,8 @@ keytool -genkey -v -keystore zixueai-release.keystore \
 ```properties
 storePassword=<你设置的密码>
 keyPassword=<你设置的密码>
-keyAlias=zixueai
-storeFile=../zixueai-release.keystore
+keyAlias=polaris
+storeFile=../polaris-release.keystore
 ```
 
 ---

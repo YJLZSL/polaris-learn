@@ -6,9 +6,9 @@ import ElectronDetector from "@/components/providers/ElectronDetector";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "智学AI - AI教育平台",
+  title: "Polaris - 北极星学习平台",
   description:
-    "智学AI——智能辅助学习，拍照搜题、AI对话、课程学习，让每个孩子都能获得个性化教育",
+    "Polaris 北极星学习平台——智能辅助学习，拍照搜题、AI对话、课程学习，让每个孩子都能获得个性化教育",
   manifest: "/manifest.json",
 };
 

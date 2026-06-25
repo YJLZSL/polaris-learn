@@ -64,7 +64,7 @@ export default function LoginPage() {
         </div>
         <div>
           <CardTitle className="text-2xl">欢迎回来</CardTitle>
-          <CardDescription className="mt-1">登录你的智学AI账号</CardDescription>
+          <CardDescription className="mt-1">登录你的 Polaris 账号</CardDescription>
         </div>
       </CardHeader>
 

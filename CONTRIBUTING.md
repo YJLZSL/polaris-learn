@@ -1,6 +1,6 @@
 # 贡献指南
 
-感谢你关注智学AI！本项目是一个纯开源的个人 AI 学习平台（AGPL-3.0），欢迎任何形式的贡献：修复 Bug、新增功能、完善文档、提出建议或翻译。
+感谢你关注 Polaris！本项目是一个纯开源的个人 AI 学习平台（AGPL-3.0），欢迎任何形式的贡献：修复 Bug、新增功能、完善文档、提出建议或翻译。
 
 ## 如何贡献
 
@@ -9,12 +9,12 @@
 1. **Fork** 本仓库到你的 GitHub 账号
 2. **克隆** Fork 仓库到本地：
    ```bash
-   git clone https://github.com/<你的用户名>/ai-edu-platform.git
-   cd ai-edu-platform
+   git clone https://github.com/<你的用户名>/polaris-learn.git
+   cd polaris-learn
    ```
 3. **关联上游**仓库以便同步最新代码：
    ```bash
-   git remote add upstream https://github.com/YJLZSL/ai-edu-platform.git
+   git remote add upstream https://github.com/YJLZSL/polaris-learn.git
    ```
 4. **创建功能分支**（不要直接在 `main` 上开发）：
    ```bash
@@ -118,7 +118,7 @@ iOS 不在当前支持范围内,相关 `ios/` 目录与配置已被 `.gitignore`
 
 ## 报告问题
 
-如果你在使用中发现 Bug 或有功能建议，请通过 [GitHub Issues](https://github.com/YJLZSL/ai-edu-platform/issues) 反馈：
+如果你在使用中发现 Bug 或有功能建议，请通过 [GitHub Issues](https://github.com/YJLZSL/polaris-learn/issues) 反馈：
 
 - 标题简明描述问题
 - 在正文中说明：复现步骤、期望行为、实际行为、运行环境（浏览器/系统/部署方式）

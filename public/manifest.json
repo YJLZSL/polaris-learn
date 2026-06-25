@@ -1,7 +1,7 @@
 {
-  "name": "智学AI - AI教育平台",
-  "short_name": "智学AI",
-  "description": "开源AI教育平台 - 苏格拉底式AI老师，拍照搜题，游戏化学习",
+  "name": "Polaris - 北极星学习平台",
+  "short_name": "Polaris",
+  "description": "开源北极星学习平台 - 苏格拉底式AI老师，拍照搜题，游戏化学习",
   "start_url": "/home",
   "display": "standalone",
   "background_color": "#f8fafc",

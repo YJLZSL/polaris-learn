@@ -1,6 +1,8 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { app, BrowserWindow, shell, ipcMain } = require("electron");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
+const { autoUpdater } = require("electron-updater");
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { spawn } = require("child_process");
@@ -84,7 +86,8 @@ function createWindow() {
     height: 800,
     minWidth: 1024,
     minHeight: 768,
-    title: "智学AI教育平台",
+    title: "Polaris",
+    icon: path.join(__dirname, "..", "public", "icon-512.png"),
     show: false, // show after ready-to-show to avoid white flash
     backgroundColor: "#f8fafc",
     webPreferences: {

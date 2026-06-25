@@ -1,4 +1,4 @@
-# 智学AI API 参考文档
+# Polaris API 参考文档
 
 > 在线文档: `/docs/api` | OpenAPI 规范: `public/openapi.yaml`
 

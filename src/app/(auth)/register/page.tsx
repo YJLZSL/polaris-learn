@@ -98,7 +98,7 @@ export default function RegisterPage() {
         </div>
         <div>
           <CardTitle className="text-2xl">创建账号</CardTitle>
-          <CardDescription className="mt-1">加入智学AI，开启智能学习之旅</CardDescription>
+          <CardDescription className="mt-1">加入 Polaris，开启智能学习之旅</CardDescription>
         </div>
       </CardHeader>
 

@@ -1,11 +1,11 @@
 # ============================================================
-# 智学AI - Android APK 构建脚本
+# Polaris - Android APK 构建脚本
 # 用途：一键构建 Next.js 静态站点并同步到 Capacitor Android 项目
 # ============================================================
 
 $ErrorActionPreference = "Stop"
 Write-Host "==========================" -ForegroundColor Cyan
-Write-Host "  智学AI APK 构建脚本" -ForegroundColor Cyan
+Write-Host "  Polaris APK 构建脚本" -ForegroundColor Cyan
 Write-Host "==========================" -ForegroundColor Cyan
 
 # Step 1: 构建 Next.js 静态站点

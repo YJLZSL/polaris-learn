@@ -1,4 +1,4 @@
-# 智学AI - 开源个人 AI 学习平台
+# Polaris 北极星 - 开源个人 AI 学习平台
 
 > 纯开源个人 AI 学习平台 | AGPL-3.0
 
@@ -42,8 +42,8 @@
 ## 快速开始
 
 ```bash
-git clone https://github.com/YJLZSL/ai-edu-platform.git
-cd ai-edu-platform
+git clone https://github.com/YJLZSL/polaris-learn.git
+cd polaris-learn
 npm install
 cp .env.example .env.local
 npm run dev

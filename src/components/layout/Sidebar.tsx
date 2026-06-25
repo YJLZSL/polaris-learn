@@ -125,8 +125,8 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
           </div>
           {!collapsed && (
             <div className="min-w-0">
-              <span className="text-lg font-bold tracking-wide">智学AI</span>
-              <p className="text-xs text-muted-foreground">AI教育平台</p>
+              <span className="text-lg font-bold tracking-wide">Polaris</span>
+              <p className="text-xs text-muted-foreground">北极星学习平台</p>
             </div>
           )}
         </div>
@@ -230,7 +230,7 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
             <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-primary-foreground shrink-0">
               <GraduationCap className="h-5 w-5" />
             </div>
-            <SheetTitle className="text-lg font-bold">智学AI</SheetTitle>
+            <SheetTitle className="text-lg font-bold">Polaris</SheetTitle>
           </SheetHeader>
 
           <ScrollArea className="flex-1 h-[calc(100vh-8rem)]">

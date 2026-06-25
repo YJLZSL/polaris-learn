@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.zixueai.edu',
-  appName: '智学AI',
+  appId: 'com.polaris.learn',
+  appName: 'Polaris',
   webDir: 'public',
   server: {
     // Android 开发时使用本地开发服务器

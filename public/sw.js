@@ -1,7 +1,7 @@
-// Service Worker for 智学AI - AI教育平台
+// Service Worker for Polaris - 北极星学习平台
 // Cache strategy: Network first, fallback to cache
 
-const CACHE_NAME = "zhixue-ai-v1";
+const CACHE_NAME = "polaris-v1";
 const OFFLINE_URL = "/offline";
 
 // Core shell resources to pre-cache on install
@@ -34,7 +34,7 @@ self.addEventListener("activate", (event) => {
     caches.keys().then((cacheNames) =>
       Promise.all(
         cacheNames
-          .filter((name) => name !== CACHE_NAME && name.startsWith("zhixue-ai-"))
+          .filter((name) => name !== CACHE_NAME && name.startsWith("polaris-"))
           .map((name) => {
             console.log("[SW] Deleting old cache:", name);
             return caches.delete(name);
@@ -96,7 +96,7 @@ async function networkFirst(request) {
 
     // Last resort: return a simple offline response
     return new Response(
-      '<html lang="zh-CN"><head><meta charset="utf-8"><title>离线 - 智学AI</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155"><div style="text-align:center"><div style="font-size:64px;margin-bottom:16px">📡</div><h1 style="margin:0 0 8px;font-size:24px">当前处于离线状态</h1><p style="margin:0;color:#64748b">请检查网络连接后重试</p></div></body></html>',
+      '<html lang="zh-CN"><head><meta charset="utf-8"><title>离线 - Polaris</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155"><div style="text-align:center"><div style="font-size:64px;margin-bottom:16px">📡</div><h1 style="margin:0 0 8px;font-size:24px">当前处于离线状态</h1><p style="margin:0;color:#64748b">请检查网络连接后重试</p></div></body></html>',
       {
         status: 503,
         headers: { "Content-Type": "text/html; charset=utf-8" },
