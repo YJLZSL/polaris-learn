@@ -1,0 +1,39 @@
+# ============================================================
+# 智学AI - 最小化部署配置
+# 适用于个人使用场景（1-100名学生），资源占用低，配置简单。
+#
+# 使用方法:
+#   1. 确保已安装 Docker 和 Docker Compose
+#   2. 设置环境变量: export DEEPSEEK_API_KEY=your-api-key
+#   3. 启动: docker-compose -f docker-compose.minimal.yml up -d
+#   4. 访问: http://localhost:3000
+#
+# 注意: 本配置使用 SQLite 数据库，数据存储在 docker volume 中。
+#        生产环境建议替换为 PostgreSQL 以获得更好的并发性能。
+# ============================================================
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/data/dev.db
+      - AUTH_SECRET=change-me-in-production
+      - LLM_PROVIDER=deepseek
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+    # 限制资源使用，适合低配服务器
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: "1.0"
+        reservations:
+          memory: 256M
+          cpus: "0.5"
+
+volumes:
+  sqlite_data:

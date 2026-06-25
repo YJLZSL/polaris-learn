@@ -1,0 +1,16 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DATABASE_URL=file:/data/dev.db
+      - AUTH_SECRET=change-me-in-production
+      - LLM_PROVIDER=deepseek
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+    volumes:
+      - sqlite_data:/data
+    restart: unless-stopped
+
+volumes:
+  sqlite_data:

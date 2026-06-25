@@ -1,0 +1,52 @@
+import type { Metadata } from "next";
+import { Toaster } from "react-hot-toast";
+import { SessionProvider } from "@/components/providers/SessionProvider";
+import ServiceWorkerRegister from "@/components/providers/ServiceWorkerRegister";
+import ElectronDetector from "@/components/providers/ElectronDetector";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  title: "智学AI - AI教育平台",
+  description:
+    "智学AI——智能辅助学习，拍照搜题、AI对话、课程学习，让每个孩子都能获得个性化教育",
+  manifest: "/manifest.json",
+  themeColor: "#6366f1",
+  other: {
+    "theme-color": "#6366f1",
+  },
+};
+
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html
+      lang="zh-CN"
+      className="h-full antialiased"
+    >
+      <body className="min-h-full flex flex-col">
+        <SessionProvider>
+          {children}
+        </SessionProvider>
+        <Toaster
+          position="top-center"
+          toastOptions={{
+            duration: 3000,
+            style: {
+              background: "#1e293b",
+              color: "#f1f5f9",
+              borderRadius: "12px",
+              fontSize: "14px",
+            },
+          }}
+        />
+        {/* PWA Service Worker Registration */}
+        <ServiceWorkerRegister />
+        {/* Electron environment detection */}
+        <ElectronDetector />
+      </body>
+    </html>
+  );
+}

@@ -1,0 +1,14 @@
+{
+  "name": "智学AI - AI教育平台",
+  "short_name": "智学AI",
+  "description": "开源AI教育平台 - 苏格拉底式AI老师，拍照搜题，游戏化学习",
+  "start_url": "/home",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#6366f1",
+  "orientation": "any",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

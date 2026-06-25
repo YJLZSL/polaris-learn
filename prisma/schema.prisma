@@ -1,0 +1,522 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  // 默认使用 SQLite。切换到 PostgreSQL 时:
+  // 1. 将此行改为 provider = "postgresql"
+  // 2. 在 .env.local 中设置 DATABASE_PROVIDER=postgresql
+  // 3. 设置 DATABASE_URL 为 PostgreSQL 连接字符串
+  // 4. 运行 npx prisma generate 重新生成客户端
+  provider = "sqlite"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String
+  role          String    @default("student")
+  grade         String?
+  avatar        String?
+  status        String    @default("active")
+  balance       Decimal  @default(0)
+  xp            Int       @default(0)
+  level         Int       @default(1)
+  streak        Int       @default(0)
+  maxStreak     Int       @default(0)
+  lastStudyDate DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  studentProfile      StudentProfile?
+  conversations       AIConversation[]
+  learningRecords     LearningRecord[]
+  errorNotes          ErrorNote[]
+  notes               Note[]
+  xpRecords           XPRecord[]
+  badges              UserBadge[]
+  dailyChallenges     DailyChallenge[]
+  photoSearches       PhotoSearchRecord[]
+  courses             UserCourse[]
+  learningPlans       LearningPlan[]
+  studySessions       StudySession[]
+  sentMessages        Message[]
+  createdGroups       StudyGroup[]       @relation("GroupCreator")
+  groupMembers        GroupMember[]
+  pkMatches1          PKMatch[]          @relation("Player1")
+  pkMatches2          PKMatch[]          @relation("Player2")
+  parentOf            ParentChild[]      @relation("Parent")
+  childOf             ParentChild[]      @relation("Child")
+  safetyIncidents        SafetyIncident[]
+  notificationSettings   NotificationSettings?
+  knowledgeMastery       UserKnowledgeMastery[]
+  virtualAPIKeys         VirtualAPIKey[]
+  apiUsageLogs           APIUsageLog[]
+  rechargeRecords        RechargeRecord[]
+}
+
+model StudentProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique
+  weakPoints      String   @default("[]")
+  strongPoints    String   @default("[]")
+  learningStyle   String?
+  dailyGoalMin    Int      @default(60)
+  weeklyGoalDays  Int      @default(5)
+  focusScore      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model KnowledgePoint {
+  id          String   @id @default(uuid())
+  subject     String
+  name        String
+  description String?
+  gradeLevel  String?
+  parentId    String?
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  parent      KnowledgePoint?  @relation("KnowledgeTree", fields: [parentId], references: [id])
+  children    KnowledgePoint[] @relation("KnowledgeTree")
+  questions   QuestionKnowledge[]
+  userMasters UserKnowledgeMastery[]
+}
+
+model UserKnowledgeMastery {
+  id              String   @id @default(uuid())
+  userId          String
+  knowledgePointId String
+  masteryLevel    Float    @default(0)
+  lastPracticedAt DateTime?
+  timesCorrect    Int      @default(0)
+  timesWrong      Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  knowledgePoint KnowledgePoint @relation(fields: [knowledgePointId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, knowledgePointId])
+}
+
+model Question {
+  id            String   @id @default(uuid())
+  subject       String
+  type          String   @default("choice")
+  difficulty    Int      @default(1)
+  content       String
+  options       String   @default("[]")
+  answer        String
+  explanation   String?
+  source        String?
+  gradeLevel    String?
+  createdAt     DateTime @default(now())
+
+  knowledge     QuestionKnowledge[]
+  examQuestions  ExamQuestion[]
+  errorNotes    ErrorNote[]
+  photoSearches PhotoSearchRecord[]
+  dailyChallenges DailyChallenge[]
+}
+
+model QuestionKnowledge {
+  id              String @id @default(uuid())
+  questionId      String
+  knowledgePointId String
+
+  question        Question        @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  knowledgePoint  KnowledgePoint  @relation(fields: [knowledgePointId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, knowledgePointId])
+}
+
+model ExamPaper {
+  id          String   @id @default(uuid())
+  title       String
+  subject     String
+  gradeLevel  String
+  year        Int?
+  type        String   @default("mock")
+  duration    Int      @default(120)
+  totalScore  Int      @default(100)
+  createdAt   DateTime @default(now())
+
+  questions   ExamQuestion[]
+}
+
+model ExamQuestion {
+  id          String   @id @default(uuid())
+  examPaperId String
+  questionId  String
+  orderIndex  Int      @default(0)
+  score       Int      @default(5)
+
+  examPaper  ExamPaper @relation(fields: [examPaperId], references: [id], onDelete: Cascade)
+  question   Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([examPaperId, questionId])
+}
+
+model AIConversation {
+  id        String   @id @default(uuid())
+  userId    String
+  subject   String?
+  title     String   @default("新对话")
+  status    String   @default("active")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  AIDialogueMessage[]
+}
+
+model AIDialogueMessage {
+  id             String   @id @default(uuid())
+  conversationId String
+  role           String
+  content        String
+  messageType    String   @default("text")
+  socraticStage  String?
+  metadata       String   @default("{}")
+  createdAt      DateTime @default(now())
+
+  conversation AIConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model PhotoSearchRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  imageUrl        String?
+  ocrText         String?
+  questionId      String?
+  status          String   @default("processing")
+  socraticMode    Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [questionId], references: [id])
+}
+
+model Course {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  subject     String
+  gradeLevel  String
+  coverImage  String?
+  price       Decimal  @default(0)
+  isFree      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  sections    CourseSection[]
+  userCourses UserCourse[]
+}
+
+model CourseSection {
+  id          String   @id @default(uuid())
+  courseId    String
+  title       String
+  description String?
+  videoUrl    String?
+  duration    Int      @default(0)
+  orderIndex  Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model UserCourse {
+  id        String   @id @default(uuid())
+  userId    String
+  courseId  String
+  progress  Float    @default(0)
+  enrolledAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model LearningRecord {
+  id              String   @id @default(uuid())
+  userId          String
+  subject         String?
+  type            String
+  duration        Int      @default(0)
+  questionsDone   Int      @default(0)
+  questionsCorrect Int     @default(0)
+  xpEarned        Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ErrorNote {
+  id          String   @id @default(uuid())
+  userId      String
+  questionId  String
+  wrongAnswer String?
+  errorType   String?
+  status      String   @default("active")
+  correctCount Int     @default(0)
+  createdAt   DateTime @default(now())
+  nextReviewAt DateTime?
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+}
+
+model Note {
+  id        String   @id @default(uuid())
+  userId    String
+  title     String
+  content   String
+  subject   String?
+  tags      String   @default("[]")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LearningPlan {
+  id        String   @id @default(uuid())
+  userId    String
+  date      String
+  tasks     String   @default("[]")
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudySession {
+  id          String   @id @default(uuid())
+  userId      String
+  startTime   DateTime
+  endTime     DateTime?
+  duration    Int      @default(0)
+  distractions Int     @default(0)
+  completed   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model XPRecord {
+  id        String   @id @default(uuid())
+  userId    String
+  amount    Int
+  reason    String
+  source    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Badge {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  icon        String
+  category    String
+  rarity      String   @default("common")
+  condition   String?
+  createdAt   DateTime @default(now())
+
+  users UserBadge[]
+}
+
+model UserBadge {
+  id        String   @id @default(uuid())
+  userId    String
+  badgeId   String
+  earnedAt  DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge Badge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model DailyChallenge {
+  id         String   @id @default(uuid())
+  userId     String
+  date       String
+  questionId String
+  completed  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model StudyGroup {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  subject     String?
+  creatorId   String
+  maxMembers  Int      @default(20)
+  createdAt   DateTime @default(now())
+
+  creator User          @relation("GroupCreator", fields: [creatorId], references: [id])
+  members GroupMember[]
+  messages Message[]
+}
+
+model GroupMember {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  role      String   @default("member")
+  joinedAt  DateTime @default(now())
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([groupId, userId])
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  groupId   String
+  userId    String
+  content   String
+  createdAt DateTime @default(now())
+
+  group StudyGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PKMatch {
+  id          String   @id @default(uuid())
+  player1Id   String
+  player2Id   String
+  subject     String?
+  status      String   @default("waiting")
+  player1Score Int     @default(0)
+  player2Score Int     @default(0)
+  winnerId    String?
+  createdAt   DateTime @default(now())
+
+  player1 User @relation("Player1", fields: [player1Id], references: [id])
+  player2 User @relation("Player2", fields: [player2Id], references: [id])
+}
+
+model ParentChild {
+  id        String   @id @default(uuid())
+  parentId  String
+  childId   String
+  dailyLimit Int     @default(120)
+  createdAt DateTime @default(now())
+
+  parent User @relation("Parent", fields: [parentId], references: [id])
+  child  User @relation("Child", fields: [childId], references: [id])
+
+  @@unique([parentId, childId])
+}
+
+model SafetyIncident {
+  id        String   @id @default(uuid())
+  userId    String
+  type      String
+  severity  String
+  content   String?
+  action    String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model NotificationSettings {
+  id            String @id @default(uuid())
+  userId        String @unique
+  dailyReminder Boolean @default(true)
+  streakAlert   Boolean @default(true)
+  newCourse     Boolean @default(true)
+  pkInvite      Boolean @default(true)
+  studyReport   Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VirtualAPIKey {
+  id           String   @id @default(uuid())
+  userId       String
+  name         String
+  keyHash      String   @unique
+  prefix       String
+  permissions  String   @default("{}")
+  rateLimitRpm Int      @default(120)
+  allowedIps   String   @default("[]")
+  status       String   @default("active")
+  lastUsedAt   DateTime?
+  createdAt    DateTime @default(now())
+  revokedAt    DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([keyHash])
+}
+
+model APIProvider {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  apiKeyEncrypted String
+  endpoint        String
+  config          String   @default("{}")
+  status          String   @default("active")
+  healthStatus    String   @default("unknown")
+  lastHealthCheck DateTime?
+  createdAt       DateTime @default(now())
+}
+
+model APIUsageLog {
+  id               String   @id @default(uuid())
+  userId           String
+  apiKeyId         String?
+  provider         String
+  model            String
+  endpoint         String
+  promptTokens     Int      @default(0)
+  completionTokens Int      @default(0)
+  totalTokens      Int      @default(0)
+  cost             Decimal  @default(0)
+  latencyMs        Int?
+  statusCode       Int?
+  clientIp         String?
+  requestId        String   @unique
+  createdAt        DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([provider, createdAt])
+  @@index([createdAt])
+}
+
+model RechargeRecord {
+  id            String   @id @default(uuid())
+  userId        String
+  amount        Decimal
+  paymentMethod String
+  transactionId String?
+  status        String   @default("pending")
+  createdAt     DateTime @default(now())
+  completedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
