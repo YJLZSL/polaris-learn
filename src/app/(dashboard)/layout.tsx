@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { AndroidUpdateBanner } from "@/components/providers/AndroidUpdateBanner";
+import { pageTransitionProps } from "@/lib/motion";
 
 export default function DashboardLayout({
   children,
@@ -11,6 +14,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
 
   return (
     <div className="flex min-h-screen bg-background">
@@ -25,10 +29,16 @@ export default function DashboardLayout({
         {/* Header */}
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
 
-        {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-auto">
-          {children}
-        </main>
+        {/* Page content with animated route transitions */}
+        <AnimatePresence mode="wait">
+          <motion.main
+            key={pathname}
+            {...pageTransitionProps}
+            className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-auto"
+          >
+            {children}
+          </motion.main>
+        </AnimatePresence>
       </div>
     </div>
   );

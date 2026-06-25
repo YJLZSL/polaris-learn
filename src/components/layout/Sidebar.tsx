@@ -7,6 +7,7 @@ import { useSession } from "next-auth/react";
 import { useUserStore } from "@/stores/useUserStore";
 import { getLevelInfo } from "@/lib/game";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 import {
   Home,
   MessageSquare,
@@ -70,23 +71,29 @@ function NavItem({
 }) {
   const Icon = item.icon;
   return (
-    <Button
-      asChild
-      variant="ghost"
-      className={cn(
-        "w-full justify-start gap-3 h-10 px-3 font-medium transition-colors",
-        isActive
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:text-foreground",
-        collapsed && "justify-center px-0"
-      )}
-      onClick={onClick}
+    <motion.div
+      whileHover={{ x: collapsed ? 0 : 4 }}
+      whileTap={{ scale: 0.98 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
     >
-      <Link href={item.href}>
-        <Icon className="h-5 w-5 shrink-0" />
-        {!collapsed && <span>{item.label}</span>}
-      </Link>
-    </Button>
+      <Button
+        asChild
+        variant="ghost"
+        className={cn(
+          "w-full justify-start gap-3 h-10 px-3 font-medium transition-colors",
+          isActive
+            ? "bg-accent text-accent-foreground"
+            : "text-muted-foreground hover:text-foreground",
+          collapsed && "justify-center px-0"
+        )}
+        onClick={onClick}
+      >
+        <Link href={item.href}>
+          <Icon className="h-5 w-5 shrink-0" />
+          {!collapsed && <span>{item.label}</span>}
+        </Link>
+      </Button>
+    </motion.div>
   );
 }
 
@@ -114,11 +121,10 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
         )}
       >
         {/* Logo / Brand */}
-        <div
-          className={cn(
-            "flex items-center h-16 shrink-0 border-b px-4",
-            collapsed ? "justify-center" : "gap-3"
-          )}
+        <motion.div
+          whileHover={{ scale: 1.02 }}
+          transition={{ type: "spring", stiffness: 300, damping: 20 }}
+          className={cn("flex items-center h-16 shrink-0 border-b px-4", collapsed ? "justify-center" : "gap-3")}
         >
           <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-primary text-primary-foreground shrink-0">
             <GraduationCap className="h-5 w-5" />
@@ -129,7 +135,7 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
               <p className="text-xs text-muted-foreground">北极星学习平台</p>
             </div>
           )}
-        </div>
+        </motion.div>
 
         {/* Navigation */}
         <ScrollArea className="flex-1 py-2">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
   RotateCw,
   AlertTriangle,
 } from "lucide-react";
+import { motion, useInView, useMotionValue, animate } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import { staggerContainer, listItem } from "@/lib/motion";
 
 /* ---------- helpers ---------- */
 function xpForLevel(lvl: number) {
@@ -90,6 +92,27 @@ interface HomeStats {
   todayXP: number;
   totalXP: number;
   recentRecords: RecentRecord[];
+}
+
+/* ---------- count-up helper ---------- */
+function CountUp({ value, duration = 0.8 }: { value: number; duration?: number }) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true });
+  const motionValue = useMotionValue(0);
+  const [display, setDisplay] = useState("0");
+
+  useEffect(() => {
+    if (inView) {
+      const controls = animate(motionValue, value, {
+        duration,
+        ease: "easeOut",
+        onUpdate: (latest) => setDisplay(Math.floor(latest).toString()),
+      });
+      return () => controls.stop();
+    }
+  }, [inView, value, duration, motionValue]);
+
+  return <span ref={ref}>{display}</span>;
 }
 
 /* ---------- component ---------- */
@@ -385,21 +408,42 @@ export default function HomePage() {
       </Card>
 
       {/* ====== Learning Stats Grid ====== */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4">
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 lg:gap-4"
+      >
         {statCards.map((s) => (
-          <Card key={s.label} className="transition-shadow hover:shadow-sm">
-            <CardContent className="p-4 flex flex-col items-center text-center gap-1.5">
-              <div className={`w-10 h-10 rounded-full ${s.bgColor} flex items-center justify-center`}>
-                <s.icon className={`w-5 h-5 ${s.iconColor}`} />
-              </div>
-              <span className="text-lg lg:text-xl font-bold">{s.value}</span>
-              <span className="text-[10px] lg:text-xs text-muted-foreground">
-                {s.label}
-              </span>
-            </CardContent>
-          </Card>
+          <motion.div key={s.label} variants={listItem}>
+            <Card className="transition-shadow hover:shadow-sm">
+              <CardContent className="p-4 flex flex-col items-center text-center gap-1.5">
+                <div className={`w-10 h-10 rounded-full ${s.bgColor} flex items-center justify-center`}>
+                  <s.icon className={`w-5 h-5 ${s.iconColor}`} />
+                </div>
+                <span className="text-lg lg:text-xl font-bold">
+                  {s.label === "总 XP" && stats ? (
+                    <CountUp value={stats.totalXP} />
+                  ) : s.label === "学习连胜" ? (
+                    <>
+                      <CountUp value={streak} /> 天
+                    </>
+                  ) : s.label === "答题正确率" && stats ? (
+                    <>
+                      <CountUp value={stats.correctRate} />%
+                    </>
+                  ) : (
+                    s.value
+                  )}
+                </span>
+                <span className="text-[10px] lg:text-xs text-muted-foreground">
+                  {s.label}
+                </span>
+              </CardContent>
+            </Card>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
 
       {/* ====== Daily Challenge + Quick Actions Grid ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

@@ -134,6 +134,31 @@ body {
 }
 .animate-xpGain { animation: xpGain 1s ease-out forwards; }
 
+@keyframes gradient-flow {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+.animate-gradient-flow {
+  background-size: 200% 200%;
+  animation: gradient-flow 6s ease infinite;
+}
+
+@keyframes shimmer-fast {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+.animate-shimmer-fast {
+  background-size: 200% 100%;
+  animation: shimmer-fast 1.2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+.animate-float { animation: float 3s ease-in-out infinite; }
+
 @media (max-width: 768px) {
   .pc-only { display: none !important; }
   .mobile-only { display: flex !important; }

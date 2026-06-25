@@ -41,6 +41,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { motion } from "framer-motion";
+import { slideInBottom } from "@/lib/motion";
 
 /* ---------- types ---------- */
 interface Message {
@@ -612,9 +614,12 @@ export default function AITeacherPage() {
           ) : (
             /* ====== Messages ====== */
             messages.map((msg) => (
-              <div
+              <motion.div
                 key={msg.id}
-                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slideUp`}
+                variants={slideInBottom}
+                initial="hidden"
+                animate="show"
+                className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
               >
                 <div className={`flex gap-2.5 max-w-[85%] sm:max-w-[75%] ${msg.role === "user" ? "flex-row-reverse" : "flex-row"}`}>
                   {/* Avatar */}
@@ -653,13 +658,18 @@ export default function AITeacherPage() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))
           )}
 
           {/* Loading indicator – typing animation */}
           {isLoading && (
-            <div className="flex justify-start animate-slideUp">
+            <motion.div
+              variants={slideInBottom}
+              initial="hidden"
+              animate="show"
+              className="flex justify-start"
+            >
               <div className="flex gap-2.5 max-w-[85%] sm:max-w-[75%]">
                 <Avatar className="h-8 w-8 shrink-0 mt-1">
                   <AvatarFallback className="bg-gradient-to-br from-indigo-400 to-purple-500 text-white">
@@ -683,7 +693,7 @@ export default function AITeacherPage() {
                   </div>
                 </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           <div ref={messagesEndRef} />

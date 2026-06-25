@@ -37,6 +37,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { motion } from "framer-motion";
+import { staggerContainer, listItem, fadeIn } from "@/lib/motion";
 
 /* ====== Types ====== */
 interface Question {
@@ -443,6 +445,12 @@ export default function PracticePage() {
               const submittedResult = submittedRef.current.get(question.id);
               const isCorrect = submittedResult?.correct;
               return (
+                <motion.div
+                  key={question.id}
+                  variants={fadeIn}
+                  initial="hidden"
+                  animate="show"
+                >
                 <Card
                   className={cn(
                     "relative transition-colors duration-300",
@@ -490,6 +498,11 @@ export default function PracticePage() {
 
                   <CardContent className="space-y-3">
                     {/* Options as card-style buttons */}
+                    <motion.div
+                      variants={staggerContainer}
+                      initial="hidden"
+                      animate="show"
+                    >
                     <RadioGroup
                       value={selectedOption !== null ? String(selectedOption) : undefined}
                       onValueChange={(val) => handleSelect(Number(val))}
@@ -502,8 +515,8 @@ export default function PracticePage() {
                         const isIncorrectAnswer = answered && isCorrect === false && isSelected;
 
                         return (
+                          <motion.div key={idx} variants={listItem}>
                           <Card
-                            key={idx}
                             className={cn(
                               "relative overflow-hidden transition-all duration-200 cursor-pointer",
                               "hover:border-primary/50 hover:bg-accent/30",
@@ -544,13 +557,19 @@ export default function PracticePage() {
                               </Label>
                             </CardContent>
                           </Card>
+                          </motion.div>
                         );
                       })}
                     </RadioGroup>
+                    </motion.div>
 
                     {/* Explanation after answering */}
                     {answered && (
-                      <div className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30 animate-slideUp">
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30"
+                      >
                         <p className={cn(
                           "text-xs font-semibold mb-1",
                           submittedResult?.correct
@@ -564,7 +583,7 @@ export default function PracticePage() {
                         <p className="text-xs text-blue-600/70 dark:text-blue-300/70">
                           {question.explanation || "暂无解析"}
                         </p>
-                      </div>
+                      </motion.div>
                     )}
 
                     {/* Navigation buttons */}
@@ -600,6 +619,7 @@ export default function PracticePage() {
                     )}
                   </CardContent>
                 </Card>
+                </motion.div>
               );
             })()
           ) : (

@@ -17,7 +17,6 @@ import {
 import {
   Table,
   TableHeader,
-  TableBody,
   TableHead,
   TableRow,
   TableCell,
@@ -34,6 +33,8 @@ import { cn } from "@/lib/utils";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import { staggerContainer, listItem, scaleIn } from "@/lib/motion";
 
 /* ====== Types ====== */
 interface LeaderboardUser {
@@ -386,14 +387,37 @@ export default function LeaderboardPage() {
         </TabsList>
 
         <TabsContent value={activeTab} className="mt-4 space-y-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={activeTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="space-y-4"
+            >
           {/* ====== Top 3 Podium ====== */}
           <Card>
             <CardContent className="p-4 lg:p-6">
-              <div className="grid grid-cols-3 gap-3 items-end">
-                <PodiumCard user={top3[1]} place={2} />
-                <PodiumCard user={top3[0]} place={1} />
-                <PodiumCard user={top3[2]} place={3} />
-              </div>
+              <motion.div
+                variants={staggerContainer}
+                initial="hidden"
+                animate="show"
+                className="grid grid-cols-3 gap-3 items-end"
+              >
+                {/* 2nd place */}
+                <motion.div variants={listItem}>
+                  <PodiumCard user={top3[1]} place={2} />
+                </motion.div>
+                {/* 1st place - champion with float */}
+                <motion.div variants={scaleIn} className="animate-float">
+                  <PodiumCard user={top3[0]} place={1} />
+                </motion.div>
+                {/* 3rd place */}
+                <motion.div variants={listItem}>
+                  <PodiumCard user={top3[2]} place={3} />
+                </motion.div>
+              </motion.div>
             </CardContent>
           </Card>
 
@@ -416,15 +440,22 @@ export default function LeaderboardPage() {
                       <TableHead className="text-center w-16 hidden sm:table-cell">连续</TableHead>
                     </TableRow>
                   </TableHeader>
-                  <TableBody>
+                  <motion.tbody
+                    variants={staggerContainer}
+                    initial="hidden"
+                    animate="show"
+                    className="[&_tr:last-child]:border-0"
+                  >
                     {rest.map((user, idx) => {
                       const rank = idx + 4;
                       const isMe = currentUser?.userId === user.userId;
 
                       return (
-                        <TableRow
+                        <motion.tr
                           key={user.userId}
+                          variants={listItem}
                           className={cn(
+                            "border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted",
                             isMe && "bg-accent",
                             !isMe && rank % 2 === 0 && "bg-muted/30"
                           )}
@@ -494,10 +525,10 @@ export default function LeaderboardPage() {
                               </span>
                             </div>
                           </TableCell>
-                        </TableRow>
+                        </motion.tr>
                       );
                     })}
-                  </TableBody>
+                  </motion.tbody>
                 </Table>
               </CardContent>
             </Card>
@@ -540,6 +571,8 @@ export default function LeaderboardPage() {
               </Card>
             </div>
           )}
+            </motion.div>
+          </AnimatePresence>
         </TabsContent>
       </Tabs>
     </div>
