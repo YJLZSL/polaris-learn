@@ -1,25 +1,11 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-
-/**
- * 生成 API Key：格式 sk-edu-{6位随机hex}-{32位随机hex}
- * 使用 crypto.randomBytes 安全随机生成
- */
-function generateApiKey(): { rawKey: string; prefix: string; keyHash: string } {
-  const prefix6 = crypto.randomBytes(3).toString("hex"); // 6 hex chars
-  const random32 = crypto.randomBytes(16).toString("hex"); // 32 hex chars
-  const rawKey = `sk-edu-${prefix6}-${random32}`;
-  const prefix = `sk-edu-${prefix6}`;
-  const keyHash = crypto.createHash("sha256").update(rawKey).digest("hex");
-  return { rawKey, prefix, keyHash };
-}
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, grade, role } = body;
+    const { name, email, password, grade } = body;
 
     // 参数校验
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -53,7 +39,6 @@ export async function POST(request: Request) {
         email: email.trim().toLowerCase(),
         password: hashedPassword,
         grade: grade || null,
-        role: role || "student",
         studentProfile: {
           create: {
             weakPoints: "[]",
@@ -65,45 +50,15 @@ export async function POST(request: Request) {
         id: true,
         name: true,
         email: true,
-        role: true,
         grade: true,
         createdAt: true,
       },
     });
 
-    // 为新用户自动创建首个 VirtualAPIKey
-    const { rawKey, prefix, keyHash } = generateApiKey();
-
-    const apiKey = await prisma.virtualAPIKey.create({
-      data: {
-        userId: user.id,
-        name: "默认Key",
-        keyHash,
-        prefix,
-        rateLimitRpm: 120,
-        status: "active",
-      },
-      select: {
-        id: true,
-        name: true,
-        prefix: true,
-        status: true,
-        rateLimitRpm: true,
-        createdAt: true,
-      },
-    });
-
-    // 注册响应中返回一次完整Key明文（之后永不再返回）
     return NextResponse.json(
       {
         success: true,
         user,
-        apiKey: {
-          ...apiKey,
-          fullKey: rawKey,
-          warning:
-            "完整的API Key仅在此处展示一次，请立即复制并妥善保管。关闭此页面后无法再次获取完整Key。",
-        },
       },
       { status: 201 }
     );

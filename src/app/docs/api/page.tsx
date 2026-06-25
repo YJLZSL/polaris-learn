@@ -89,24 +89,22 @@ const groups: Group[] = [
         method: "POST",
         path: "/api/auth/register",
         summary: "用户注册",
-        description: "创建新用户账号，自动生成初始 API Key。",
+        description: "创建新用户账号，并初始化学生档案。",
         auth: "none",
         bodyFields: [
           { name: "name", type: "string", required: true, desc: "用户姓名" },
           { name: "email", type: "string", required: true, desc: "邮箱地址" },
           { name: "password", type: "string", required: true, desc: "密码（至少6位）" },
           { name: "grade", type: "string", required: false, desc: "年级" },
-          { name: "role", type: "string", required: false, desc: "student / teacher，默认 student" },
         ],
         bodyExample: `{
   "name": "张三",
   "email": "zhangsan@example.com",
   "password": "password123",
-  "grade": "初三",
-  "role": "student"
+  "grade": "初三"
 }`,
         responses: [
-          { code: "200", desc: "注册成功", example: `{ "id": "user_abc123", "name": "张三", "email": "zhangsan@example.com", "grade": "初三", "role": "student" }` },
+          { code: "200", desc: "注册成功", example: `{ "success": true, "user": { "id": "user_abc123", "name": "张三", "email": "zhangsan@example.com", "grade": "初三" } }` },
           { code: "400", desc: "参数校验失败", example: `{ "error": "姓名不能为空" }` },
           { code: "409", desc: "邮箱已被注册", example: `{ "error": "该邮箱已被注册" }` },
         ],
@@ -117,7 +115,7 @@ const groups: Group[] = [
     id: "ai-tutoring",
     icon: "✨",
     name: "AI Tutoring · AI辅导",
-    description: "苏格拉底式教学对话、会话管理与 API Key 管理",
+    description: "苏格拉底式教学对话与会话管理",
     endpoints: [
       {
         method: "POST",
@@ -133,10 +131,9 @@ const groups: Group[] = [
         ],
         bodyExample: `{ "message": "请帮我理解勾股定理", "subject": "数学" }`,
         responses: [
-          { code: "200", desc: "AI 回复", example: `{ "id": "msg_xyz789", "conversationId": "conv_abc123", "role": "assistant", "content": "好的，让我们从勾股定理的基本定义开始...", "stage": "diagnostic", "tokens": { "input": 45, "output": 98 }, "cost": 0.0002 }` },
+          { code: "200", desc: "AI 回复", example: `{ "response": "好的，让我们从勾股定理的基本定义开始...", "stage": "diagnostic", "conversationId": "conv_abc123", "isCorrect": false, "safe": true, "model": { "provider": "deepseek", "model": "deepseek-chat" }, "usage": { "promptTokens": 45, "completionTokens": 98 } }` },
           { code: "400", desc: "参数错误", example: `{ "error": "消息内容不能为空" }` },
           { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-          { code: "402", desc: "余额不足", example: `{ "error": "余额不足，请充值后重试" }` },
         ],
       },
       {
@@ -152,143 +149,6 @@ const groups: Group[] = [
         ],
         responses: [
           { code: "200", desc: "对话列表", example: `{ "conversations": [{ "id": "conv_abc123", "subject": "数学", "title": "勾股定理学习", "status": "active", "lastMessage": { "role": "assistant", "content": "很好，你已经理解了...", "createdAt": "2026-05-07T10:30:00Z" }, "createdAt": "2026-05-07T10:00:00Z", "updatedAt": "2026-05-07T10:30:00Z" }], "total": 25, "limit": 20, "offset": 0 }` },
-          { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-        ],
-      },
-      {
-        method: "GET",
-        path: "/api/ai/keys",
-        summary: "获取 API Key 列表",
-        description: "获取当前用户的所有虚拟 API Key（不含完整密钥）。",
-        auth: "session",
-        responses: [
-          { code: "200", desc: "Key 列表", example: `{ "keys": [{ "id": "key_abc123", "name": "我的API Key", "prefix": "sk-edu-a1b2c3", "status": "active", "rateLimitRpm": 50, "createdAt": "2026-05-01T08:00:00Z", "lastUsedAt": "2026-05-07T09:30:00Z", "revokedAt": null }] }` },
-          { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-        ],
-      },
-      {
-        method: "POST",
-        path: "/api/ai/keys",
-        summary: "创建 API Key",
-        description: "创建新的虚拟 API Key。完整 Key 仅在创建时返回一次，请妥善保管。格式：sk-edu-{6hex}-{32hex}",
-        auth: "session",
-        bodyFields: [
-          { name: "name", type: "string", required: true, desc: "API Key 名称" },
-          { name: "rateLimitRpm", type: "integer", required: false, desc: "每分钟请求限制，默认 50" },
-        ],
-        bodyExample: `{ "name": "我的API Key", "rateLimitRpm": 50 }`,
-        responses: [
-          { code: "200", desc: "创建成功", example: `{ "id": "key_abc123", "name": "我的API Key", "prefix": "sk-edu-a1b2c3", "rawKey": "sk-edu-a1b2c3-d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9", "status": "active", "rateLimitRpm": 50, "createdAt": "2026-05-07T10:00:00Z" }` },
-          { code: "400", desc: "参数错误", example: `{ "error": "请为API Key命名" }` },
-          { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-        ],
-      },
-      {
-        method: "DELETE",
-        path: "/api/ai/keys/{id}",
-        summary: "撤销 API Key",
-        description: "软删除指定 API Key，撤销后无法再使用。",
-        auth: "session",
-        params: [
-          { name: "id", location: "path", type: "string", required: true, desc: "API Key ID", defaultV: "key_abc123" },
-        ],
-        responses: [
-          { code: "200", desc: "撤销成功", example: `{ "id": "key_abc123", "name": "我的API Key", "prefix": "sk-edu-a1b2c3", "status": "revoked", "revokedAt": "2026-05-07T12:00:00Z" }` },
-          { code: "403", desc: "无权操作", example: `{ "error": "无权操作此Key" }` },
-          { code: "404", desc: "Key 不存在", example: `{ "error": "Key不存在" }` },
-        ],
-      },
-    ],
-  },
-  {
-    id: "llm-proxy",
-    icon: "📦",
-    name: "LLM Proxy · LLM代理",
-    description: "OpenAI 兼容的公开 LLM 接口，多模型聚合",
-    endpoints: [
-      {
-        method: "POST",
-        path: "/llm-api/chat",
-        summary: "LLM 聊天补全（OpenAI 兼容）",
-        description: "公开LLM代理接口，兼容 OpenAI Chat Completions API。使用 API Key 认证，支持 Provider 健康检查和故障转移。\n支持的 Provider：deepseek、qwen、openai、ollama、custom",
-        auth: "apiKey",
-        bodyFields: [
-          { name: "model", type: "string", required: true, desc: "模型名称，如 deepseek-chat" },
-          { name: "messages", type: "array", required: true, desc: "消息列表 [{role, content}]" },
-          { name: "stream", type: "boolean", required: false, desc: "是否流式响应，默认 false" },
-          { name: "temperature", type: "number", required: false, desc: "0-2，默认 0.7" },
-          { name: "max_tokens", type: "integer", required: false, desc: "最大 token 数，默认 2048" },
-        ],
-        bodyExample: `{
-  "model": "deepseek-chat",
-  "messages": [
-    { "role": "system", "content": "你是一位专业的数学老师。" },
-    { "role": "user", "content": "请解释什么是微积分？" }
-  ],
-  "temperature": 0.7,
-  "max_tokens": 2048
-}`,
-        responses: [
-          { code: "200", desc: "补全结果", example: `{ "id": "chatcmpl-abc123", "object": "chat.completion", "created": 1746600000, "model": "deepseek-chat", "choices": [{ "index": 0, "message": { "role": "assistant", "content": "微积分是数学的一个分支..." }, "finish_reason": "stop" }], "usage": { "prompt_tokens": 45, "completion_tokens": 200, "total_tokens": 245, "cost": 0.0006 } }` },
-          { code: "401", desc: "API Key 无效", example: `{ "error": "Invalid API key" }` },
-          { code: "402", desc: "余额不足", example: `{ "error": "余额不足，请充值后重试" }` },
-          { code: "429", desc: "频率超限", example: `{ "error": "请求频率过高，请稍后重试" }` },
-        ],
-      },
-      {
-        method: "GET",
-        path: "/llm-api/models",
-        summary: "获取可用模型列表",
-        description: "返回所有健康 Provider 的可用模型及定价信息。",
-        auth: "apiKey",
-        responses: [
-          { code: "200", desc: "模型列表", example: `{ "providers": [{ "name": "deepseek", "healthy": true, "models": [{ "id": "deepseek-chat", "provider": "deepseek", "displayName": "DeepSeek Chat", "pricing": { "input": 0.000001, "output": 0.000002 } }] }], "healthyCount": 3, "totalCount": 4 }` },
-          { code: "401", desc: "API Key 无效", example: `{ "error": "Invalid API key" }` },
-        ],
-      },
-    ],
-  },
-  {
-    id: "billing",
-    icon: "💰",
-    name: "Billing · 计费",
-    description: "账户余额查询、充值和用量统计",
-    endpoints: [
-      {
-        method: "GET",
-        path: "/api/billing/balance",
-        summary: "查询账户余额",
-        description: "获取当前用户账户余额（优先 Redis，降级数据库）。",
-        auth: "session",
-        responses: [
-          { code: "200", desc: "余额信息", example: `{ "balance": 12.50, "currency": "CNY" }` },
-          { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-        ],
-      },
-      {
-        method: "POST",
-        path: "/api/billing/recharge",
-        summary: "账户充值",
-        description: "创建充值订单。金额范围 1-10000 CNY，支付方式 alipay / wechat。开发环境自动完成，生产环境生成支付链接。",
-        auth: "session",
-        bodyFields: [
-          { name: "amount", type: "number", required: true, desc: "充值金额（CNY）1-10000" },
-          { name: "paymentMethod", type: "string", required: true, desc: "alipay / wechat" },
-        ],
-        bodyExample: `{ "amount": 10, "paymentMethod": "alipay" }`,
-        responses: [
-          { code: "200", desc: "充值订单", example: `{ "id": "rech_abc123", "amount": 10, "paymentMethod": "alipay", "status": "pending", "paymentUrl": "https://pay.example.com/order/abc123", "createdAt": "2026-05-07T10:00:00Z" }` },
-          { code: "400", desc: "参数错误", example: `{ "error": "充值金额必须为有效数字" }` },
-        ],
-      },
-      {
-        method: "GET",
-        path: "/api/billing/usage",
-        summary: "查询用量统计",
-        description: "获取当月 API 用量汇总和近30天每日明细。",
-        auth: "session",
-        responses: [
-          { code: "200", desc: "用量统计", example: `{ "monthSummary": { "requestCount": 256, "totalTokens": 128000, "totalCost": 0.35 }, "dailyUsage": [{ "date": "2026-05-01", "requestCount": 15, "totalTokens": 7500, "totalCost": 0.02 }] }` },
           { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
         ],
       },
@@ -418,7 +278,7 @@ const groups: Group[] = [
     id: "user",
     icon: "👤",
     name: "User · 用户",
-    description: "用户资料、统计和余额查询",
+    description: "用户资料和学习统计",
     endpoints: [
       {
         method: "GET",
@@ -427,7 +287,7 @@ const groups: Group[] = [
         description: "获取完整用户资料，包含等级、徽章、学习统计等。",
         auth: "session",
         responses: [
-          { code: "200", desc: "用户资料", example: `{ "id": "user_abc123", "name": "张三", "email": "zhangsan@example.com", "grade": "初三", "role": "student", "xp": 2500, "level": 8, "streak": 15, "maxStreak": 30, "balance": 12.50, "badges": [{ "id": "badge_001", "name": "初来乍到", "description": "完成首次学习", "icon": "star", "earnedAt": "2026-04-01T08:00:00Z" }], "stats": { "conversationsCount": 42, "errorNotesCount": 15, "todayQuestionsDone": 25, "todayQuestionsCorrect": 20, "todayXPEarned": 150, "todayStudyDuration": 45 }, "hasApiKey": true }` },
+          { code: "200", desc: "用户资料", example: `{ "id": "user_abc123", "name": "张三", "email": "zhangsan@example.com", "grade": "初三", "xp": 2500, "level": 8, "streak": 15, "maxStreak": 30, "badges": [{ "id": "badge_001", "name": "初来乍到", "description": "完成首次学习", "icon": "star", "earnedAt": "2026-04-01T08:00:00Z" }], "stats": { "conversationsCount": 42, "errorNotesCount": 15, "todayQuestionsDone": 25, "todayQuestionsCorrect": 20, "todayXPEarned": 150, "todayStudyDuration": 45 } }` },
           { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
           { code: "404", desc: "用户不存在", example: `{ "error": "用户不存在" }` },
         ],
@@ -440,17 +300,6 @@ const groups: Group[] = [
         auth: "session",
         responses: [
           { code: "200", desc: "首页统计", example: `{ "user": { "id": "user_abc123", "name": "张三", "xp": 2500, "level": 8, "streak": 15, "maxStreak": 30 }, "todayStats": { "duration": 45, "questionsDone": 25, "questionsCorrect": 20, "xpEarned": 150, "correctRate": 80 }, "recentRecords": [{ "id": "rec_001", "questionsDone": 10, "xpEarned": 60, "duration": 20, "createdAt": "2026-05-07T09:00:00Z" }] }` },
-          { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
-        ],
-      },
-      {
-        method: "GET",
-        path: "/api/user/balance",
-        summary: "获取用户余额",
-        description: "获取当前用户账户余额（与 /api/billing/balance 功能相同）。",
-        auth: "session",
-        responses: [
-          { code: "200", desc: "余额信息", example: `{ "balance": 12.50, "currency": "CNY" }` },
           { code: "401", desc: "未登录", example: `{ "error": "请先登录" }` },
         ],
       },

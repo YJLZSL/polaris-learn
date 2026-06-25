@@ -67,7 +67,6 @@ export async function GET() {
         id: safeUser.id,
         name: safeUser.name,
         email: safeUser.email,
-        role: safeUser.role,
         grade: safeUser.grade,
         avatar: safeUser.avatar,
         xp: safeUser.xp,

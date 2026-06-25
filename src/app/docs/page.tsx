@@ -5,12 +5,10 @@ import { useState } from "react";
 import {
   HiCodeBracket,
   HiSparkles,
-  HiCube,
   HiBookOpen,
   HiArrowRight,
   HiClipboardDocument,
   HiDocumentText,
-  HiKey,
   HiRocketLaunch,
   HiCheckCircle,
   HiShieldCheck,
@@ -30,21 +28,15 @@ const steps = [
   {
     step: "01",
     title: "注册账号",
-    desc: "前往智学AI平台注册一个学生或教师账号，完成邮箱验证。",
+    desc: "前往智学AI平台注册一个学习账号，完成邮箱验证。",
     href: "/register",
     icon: HiRocketLaunch,
   },
   {
     step: "02",
-    title: "获取 API Key",
-    desc: "登录后在「API Keys」页面创建虚拟 API Key，用于API认证。",
-    href: "/api-keys",
-    icon: HiKey,
-  },
-  {
-    step: "03",
-    title: "调用 API",
-    desc: "使用 API Key 发起请求，即可接入AI辅导、LLM代理等能力。",
+    title: "登录平台",
+    desc: "使用注册的账号登录，即可在平台内使用 AI 辅导、题库等学习能力。",
+    href: "/login",
     icon: HiCommandLine,
   },
 ];
@@ -63,17 +55,6 @@ const featureCards = [
     href: "/docs/api#ai-tutoring",
   },
   {
-    title: "LLM 代理",
-    desc: "OpenAI兼容的Chat Completions接口，聚合多个AI模型供应商，支持健康检查、故障转移和按量计费。",
-    icon: HiCube,
-    color: "from-cyan-500 to-blue-600",
-    bgLight: "bg-cyan-50 dark:bg-cyan-950/30",
-    iconBg: "bg-cyan-100 dark:bg-cyan-900/50",
-    iconColor: "text-cyan-600 dark:text-cyan-400",
-    endpoints: ["POST /llm-api/chat", "GET /llm-api/models"],
-    href: "/docs/api#llm-proxy",
-  },
-  {
     title: "题库管理",
     desc: "丰富的题库数据，支持按学科、难度、年级筛选，支持关键词搜索和错题本管理。",
     icon: HiBookOpen,
@@ -89,7 +70,7 @@ const featureCards = [
 /* ---------- cURL 示例 ---------- */
 const curlExample = `curl -X POST "{baseUrl}/api/ai/chat" \\
   -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer YOUR_API_KEY" \\
+  -H "Cookie: next-auth.session-token=YOUR_SESSION_TOKEN" \\
   -d '{
     "message": "请帮我理解勾股定理",
     "subject": "数学"
@@ -160,8 +141,8 @@ export default function DocsPage() {
               </span>
             </h1>
             <p className="mt-6 text-lg leading-relaxed text-slate-600 dark:text-slate-400 sm:text-xl">
-              开放 AI 教育能力，为您的应用注入智能辅导、知识图谱、
-              题库管理等核心能力。兼容 OpenAI API 格式，快速接入，按量计费。
+              开放 AI 教育能力，为您提供智能辅导、知识图谱、
+              题库管理等核心能力，助力个性化学习。
             </p>
             <div className="mt-10 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link
@@ -192,7 +173,7 @@ export default function DocsPage() {
               快速开始
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              三步接入智学AI开放平台
+              两步开始使用智学AI学习平台
             </p>
           </div>
 
@@ -240,7 +221,7 @@ export default function DocsPage() {
               试一试
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              复制下面的命令，替换 YOUR_API_KEY 即可开始调用
+              复制下面的命令，替换 YOUR_SESSION_TOKEN 即可开始调用
             </p>
           </div>
 
@@ -300,7 +281,7 @@ export default function DocsPage() {
                     {"  "}
                     <span className="text-yellow-300">-H</span>
                     {" "}
-                    <span className="text-green-300">{'"Authorization: Bearer YOUR_API_KEY"'}</span>
+                    <span className="text-green-300">{'"Cookie: next-auth.session-token=YOUR_SESSION_TOKEN"'}</span>
                     {" "}
                     <span className="text-slate-500">\</span>
                     {"\n"}
@@ -344,7 +325,7 @@ export default function DocsPage() {
               核心能力
             </h2>
             <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
-              三大开放能力，助力教育应用快速升级
+              两大核心能力，助力个性化学习
             </p>
           </div>
 
@@ -404,22 +385,22 @@ export default function DocsPage() {
               {
                 icon: HiShieldCheck,
                 title: "安全可靠",
-                desc: "内容安全检测、API Key认证、速率限制、余额保护，全方位保障API调用安全",
-              },
-              {
-                icon: HiCube,
-                title: "多模型聚合",
-                desc: "聚合 DeepSeek、Qwen、OpenAI 等多个模型供应商，自动健康检查和故障转移",
+                desc: "内容安全检测、会话认证、速率限制，全方位保障学习安全",
               },
               {
                 icon: HiSparkles,
-                title: "OpenAI 兼容",
-                desc: "LLM代理接口完全兼容 OpenAI Chat Completions API 格式，零成本迁移",
+                title: "个性化学习",
+                desc: "苏格拉底式教学对话，根据学生学情定制辅导路径，深入理解知识点",
               },
               {
                 icon: HiCommandLine,
-                title: "按量计费",
-                desc: "精确到 token 级别计费，透明定价，免费额度开箱即用",
+                title: "游戏化激励",
+                desc: "经验值、徽章、排行榜系统，让学习过程充满乐趣与动力",
+              },
+              {
+                icon: HiBookOpen,
+                title: "知识图谱",
+                desc: "可视化学科知识结构，精准定位薄弱环节，循序渐进提升掌握度",
               },
             ].map((item, i) => (
               <div key={i} className="text-center">

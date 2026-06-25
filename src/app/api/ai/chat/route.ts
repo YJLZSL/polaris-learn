@@ -10,12 +10,6 @@ import {
   getLLMConfig,
 } from "@/lib/llm-adapter";
 import type { ChatMessage } from "@/lib/llm-adapter";
-import {
-  estimateCost,
-  deductBalance,
-  recordUsageLog,
-  getBalance,
-} from "@/lib/billing";
 
 /** 苏格拉底式教学的阶段名称列表，用于从 AI 响应中提取 stage */
 const SOCRATIC_STAGES = [
@@ -174,10 +168,8 @@ export async function POST(request: Request) {
     let aiContent: string;
     let aiStage: string;
     let isCorrect: boolean | undefined;
-    let billingCost = 0;
-    let billingBalance: number | null = null;
-    let billingPromptTokens = 0;
-    let billingCompletionTokens = 0;
+    let promptTokens = 0;
+    let completionTokens = 0;
 
     try {
       if (hasAPIKey()) {
@@ -187,53 +179,11 @@ export async function POST(request: Request) {
         aiStage = extractStage(aiContent);
         isCorrect = detectCorrectness(aiContent);
 
-        // ---- 计费集成：只有真实 LLM 调用才计费 ----
-        const llmConfig = getLLMConfig();
-        billingPromptTokens = aiResponse.usage?.promptTokens || 0;
-        billingCompletionTokens = aiResponse.usage?.completionTokens || 0;
-
-        if (billingPromptTokens > 0 || billingCompletionTokens > 0) {
-          billingCost = estimateCost(
-            llmConfig.provider,
-            llmConfig.model,
-            billingPromptTokens,
-            billingCompletionTokens
-          );
-
-          // 扣减余额（不阻塞响应，若余额不足记录日志但不中断流程）
-          const deductResult = await deductBalance(userId, billingCost);
-          billingBalance = deductResult.balance;
-
-          if (!deductResult.success) {
-            console.warn(
-              `[Billing] 余额扣减失败: userId=${userId}, cost=${billingCost}, reason=${deductResult.reason}`
-            );
-          } else {
-            // 同步更新数据库余额（最终一致性容错）
-            prisma.user
-              .update({
-                where: { id: userId },
-                data: { balance: deductResult.balance },
-              })
-              .catch((dbErr) =>
-                console.error("[Billing] 数据库余额更新失败:", dbErr)
-              );
-          }
-
-          // 异步记录用量日志（不阻塞响应）
-          recordUsageLog({
-            userId,
-            provider: llmConfig.provider,
-            model: llmConfig.model,
-            endpoint: "/api/ai/chat",
-            promptTokens: billingPromptTokens,
-            completionTokens: billingCompletionTokens,
-            cost: billingCost,
-            statusCode: 200,
-          }).catch((err) => console.error("记录AI用量日志失败:", err));
-        }
+        // 提取 token 用量（仅用于响应元数据）
+        promptTokens = aiResponse.usage?.promptTokens || 0;
+        completionTokens = aiResponse.usage?.completionTokens || 0;
       } else {
-        // 无 API Key 时使用本地降级响应，跳过计费
+        // 无 API Key 时使用本地降级响应
         aiContent = getFallbackResponse(subject, currentStage, message.trim());
         aiStage = currentStage;
         isCorrect = undefined;
@@ -273,45 +223,21 @@ export async function POST(request: Request) {
       data: { updatedAt: new Date() },
     });
 
-    // 获取最新余额（如果计费未获取到，则主动查询）
-    if (billingBalance === null && hasAPIKey()) {
-      billingBalance = await getBalance(userId).catch(() => 0);
-    }
-
-    // 构建响应头
-    const responseHeaders: Record<string, string> = {};
-    if (billingCost > 0) {
-      responseHeaders["X-Usage-Cost"] = billingCost.toFixed(6);
-    }
-    if (billingBalance !== null) {
-      responseHeaders["X-Balance-Remaining"] = billingBalance.toFixed(6);
-    }
-
-    return NextResponse.json(
-      {
-        response: finalContent,
-        stage: aiStage,
-        conversationId: conversation.id,
-        isCorrect: isCorrect || false,
-        safe: true,
-        model: {
-          provider: llmConfig.provider,
-          model: llmConfig.model,
-        },
-        ...(billingCost > 0
-          ? {
-              usage: {
-                cost: billingCost,
-                promptTokens: billingPromptTokens,
-                completionTokens: billingCompletionTokens,
-              },
-            }
-          : {}),
+    return NextResponse.json({
+      response: finalContent,
+      stage: aiStage,
+      conversationId: conversation.id,
+      isCorrect: isCorrect || false,
+      safe: true,
+      model: {
+        provider: llmConfig.provider,
+        model: llmConfig.model,
       },
-      {
-        headers: responseHeaders,
-      }
-    );
+      usage: {
+        promptTokens,
+        completionTokens,
+      },
+    });
   } catch (error) {
     console.error("AI对话处理失败:", error);
     return NextResponse.json({ error: "对话处理失败，请稍后重试" }, { status: 500 });

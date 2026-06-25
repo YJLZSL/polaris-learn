@@ -41,9 +41,6 @@ const PATH_LABELS: Record<string, string> = {
   "/plans": "学习计划",
   "/profile": "个人资料",
   "/settings": "设置",
-  "/api-keys": "API密钥",
-  "/admin": "管理后台",
-  "/billing": "计费中心",
   "/docs": "开发者文档",
 };
 

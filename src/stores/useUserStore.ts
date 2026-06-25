@@ -4,7 +4,6 @@ interface UserState {
   id: string | null;
   name: string | null;
   email: string | null;
-  role: string | null;
   grade: string | null;
   xp: number;
   level: number;
@@ -20,7 +19,6 @@ export const useUserStore = create<UserState>((set) => ({
   id: null,
   name: null,
   email: null,
-  role: null,
   grade: null,
   xp: 0,
   level: 1,
@@ -43,7 +41,7 @@ export const useUserStore = create<UserState>((set) => ({
     }),
   clearUser: () =>
     set({
-      id: null, name: null, email: null, role: null, grade: null,
+      id: null, name: null, email: null, grade: null,
       xp: 0, level: 1, streak: 0, avatar: null, weakPoints: [],
     }),
 }));

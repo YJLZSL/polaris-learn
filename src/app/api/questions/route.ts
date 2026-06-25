@@ -88,12 +88,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "请先登录" }, { status: 401 });
     }
 
-    // 仅管理员和教师可添加题目
-    const userRole = (session.user as Record<string, unknown>).role as string;
-    if (userRole !== "admin" && userRole !== "teacher") {
-      return NextResponse.json({ error: "无权限执行此操作" }, { status: 403 });
-    }
-
     const body = await request.json();
     const {
       subject,

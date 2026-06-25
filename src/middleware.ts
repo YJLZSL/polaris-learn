@@ -4,13 +4,10 @@
 // 设计说明：
 // - 由于 Next.js 中间件运行在 Edge Runtime，无法使用依赖 Node.js `net` 模块的 ioredis，
 //   因此本中间件使用基于内存的滑动窗口限流器。
-// - 路由处理器（Route Handlers）内部额外使用 Redis 滑动窗口限流（@/lib/rate-limit），
-//   两者形成纵深防御：中间件提供快速拦截，路由处理器提供精确的分布式限流。
-// - Redis 不可用时本中间件正常工作（不依赖 Redis），确保核心保护不中断。
+// - 本中间件不依赖 Redis，确保核心保护不中断。
 
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getToken } from "next-auth/jwt";
 
 // ========== 常量 ==========
 
@@ -188,11 +185,7 @@ function extractSessionId(request: NextRequest): string {
  * 检查路径是否为 API 路由
  */
 function isApiRoute(pathname: string): boolean {
-  return (
-    pathname.startsWith("/llm-api/") ||
-    pathname.startsWith("/api/llm-api/") ||
-    pathname.startsWith("/api/ai/")
-  );
+  return pathname.startsWith("/api/ai/");
 }
 
 /**
@@ -206,34 +199,6 @@ function isWebRoute(pathname: string): boolean {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-
-  // 用于解密 NextAuth JWT 并读取 role 声明的 secret
-  const authSecret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-
-  // ===== Admin 页面路由保护 =====
-  // /admin/login 允许匿名访问，不参与角色校验
-  if (pathname.startsWith("/admin") && !pathname.startsWith("/admin/login")) {
-    const token = await getToken({ req: request, secret: authSecret });
-
-    if (!token || token.role !== "admin") {
-      // 未登录或非管理员：重定向到管理后台独立登录页（非学生端 /login）
-      const loginUrl = new URL("/admin/login", request.url);
-      loginUrl.searchParams.set("error", "请先登录管理员账号");
-      return NextResponse.redirect(loginUrl);
-    }
-  }
-
-  // ===== Admin API 路由保护（与路由内 requireAdmin() 形成纵深防御） =====
-  if (pathname.startsWith("/api/admin/")) {
-    const token = await getToken({ req: request, secret: authSecret });
-
-    if (!token || token.role !== "admin") {
-      return new NextResponse(
-        JSON.stringify({ error: "无管理员权限" }),
-        { status: 403, headers: { "Content-Type": "application/json" } }
-      );
-    }
-  }
 
   // 跳过不需要限流的路径
   if (shouldSkipRateLimit(pathname)) {
@@ -443,15 +408,11 @@ export const config = {
   matcher: [
     /*
      * 匹配以下路径：
-     * - /api/llm-api/ 下的所有路由
      * - /api/ai/ 下的所有路由
-     * - /llm-api/ 下的所有路由（公开 LLM API）
      * - /(dashboard)/ 下的所有仪表盘页面
      * - 根路径
      */
-    "/api/llm-api/:path*",
     "/api/ai/:path*",
-    "/llm-api/:path*",
     "/:path*",
   ],
 };

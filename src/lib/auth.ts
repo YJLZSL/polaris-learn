@@ -35,19 +35,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        // 查询用户角色并写入 token
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id as string },
-          select: { role: true },
-        });
-        token.role = dbUser?.role || "student";
       }
       return token;
     },
     async session({ session, token }) {
       if (session.user && token) {
-        (session.user as unknown as { id: string; role: string }).id = token.id as string;
-        (session.user as unknown as { id: string; role: string }).role = (token.role as string) || "student";
+        (session.user as unknown as { id: string }).id = token.id as string;
       }
       return session;
     },

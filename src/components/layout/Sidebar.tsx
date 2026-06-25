@@ -20,10 +20,7 @@ import {
   Zap,
   Users,
   ClipboardList,
-  ShieldCheck,
   Layers,
-  KeyRound,
-  Receipt,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -53,11 +50,6 @@ const NAV_ITEMS = [
   { href: "/study-group", label: "学习小组", icon: Users },
   { href: "/pk", label: "PK挑战", icon: Zap },
   { href: "/plans", label: "学习计划", icon: ClipboardList },
-];
-
-const BOTTOM_ITEMS = [
-  { href: "/api-keys", label: "API密钥", icon: KeyRound },
-  { href: "/billing", label: "计费中心", icon: Receipt },
 ];
 
 interface SidebarProps {
@@ -108,7 +100,6 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
   const userAvatar = session?.user?.image || avatar;
 
   const levelInfo = getLevelInfo(xp);
-  const isAdmin = (session?.user as unknown as { role?: string })?.role === "admin";
   const [collapsed, setCollapsed] = useState(false);
 
   const sidebarWidth = collapsed ? "w-16" : "w-64";
@@ -154,35 +145,8 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
                 />
               );
             })}
-
-            {/* Admin section */}
-            {isAdmin && (
-              <>
-                <Separator className="my-2" />
-                <NavItem
-                  item={{ href: "/admin", label: "管理后台", icon: ShieldCheck }}
-                  isActive={pathname.startsWith("/admin")}
-                  collapsed={collapsed}
-                />
-              </>
-            )}
           </div>
         </ScrollArea>
-
-        {/* Bottom section: API Keys, Billing */}
-        <div className={cn("shrink-0 border-t px-2 py-2 space-y-0.5", collapsed && "px-1.5")}>
-          {BOTTOM_ITEMS.map((item) => {
-            const isActive = pathname.startsWith(item.href);
-            return (
-              <NavItem
-                key={item.href}
-                item={item}
-                isActive={isActive}
-                collapsed={collapsed}
-              />
-            );
-          })}
-        </div>
 
         <Separator />
 
@@ -283,34 +247,10 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
                   />
                 );
               })}
-
-              {isAdmin && (
-                <>
-                  <Separator className="my-2" />
-                  <NavItem
-                    item={{ href: "/admin", label: "管理后台", icon: ShieldCheck }}
-                    isActive={pathname.startsWith("/admin")}
-                    collapsed={false}
-                    onClick={() => onMobileOpenChange(false)}
-                  />
-                </>
-              )}
             </div>
           </ScrollArea>
 
           <div className="absolute bottom-0 left-0 right-0 border-t p-3 space-y-2 bg-card">
-            {BOTTOM_ITEMS.map((item) => {
-              const isActive = pathname.startsWith(item.href);
-              return (
-                <NavItem
-                  key={item.href}
-                  item={item}
-                  isActive={isActive}
-                  collapsed={false}
-                  onClick={() => onMobileOpenChange(false)}
-                />
-              );
-            })}
             <Separator className="my-1" />
             <div className="flex items-center gap-2">
               <Avatar className="h-8 w-8 shrink-0">

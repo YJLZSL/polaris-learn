@@ -27,7 +27,6 @@ export async function GET(request: Request) {
     if (period === "all") {
       // 总榜：按用户 XP 降序排列
       const users = await prisma.user.findMany({
-        where: { role: "student" },
         orderBy: { xp: "desc" },
         take: 50,
         select: {
@@ -121,7 +120,7 @@ export async function GET(request: Request) {
         let rank = 0;
         if (period === "all") {
           rank = await prisma.user.count({
-            where: { role: "student", xp: { gt: currentUser.xp } },
+            where: { xp: { gt: currentUser.xp } },
           });
         } else {
           const now = new Date();

@@ -128,14 +128,11 @@ async function main() {
     // 第 0 层：完全独立的表
     await migrateModel("KnowledgePoint", source.knowledgePoint, target.knowledgePoint);
     await migrateModel("Badge", source.badge, target.badge);
-    await migrateModel("APIProvider", source.aPIProvider, target.aPIProvider);
 
     // 第 1 层：仅依赖 User
     await migrateModel("User", source.user, target.user);
     await migrateModel("StudentProfile", source.studentProfile, target.studentProfile);
     await migrateModel("NotificationSettings", source.notificationSettings, target.notificationSettings);
-    await migrateModel("VirtualAPIKey", source.virtualAPIKey, target.virtualAPIKey);
-    await migrateModel("RechargeRecord", source.rechargeRecord, target.rechargeRecord);
 
     // 第 2 层：依赖 User + 其他
     await migrateModel("Question", source.question, target.question);

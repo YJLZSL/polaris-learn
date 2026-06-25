@@ -17,11 +17,9 @@ model User {
   name          String
   email         String    @unique
   password      String
-  role          String    @default("student")
   grade         String?
   avatar        String?
   status        String    @default("active")
-  balance       Decimal  @default(0)
   xp            Int       @default(0)
   level         Int       @default(1)
   streak        Int       @default(0)
@@ -52,9 +50,7 @@ model User {
   safetyIncidents        SafetyIncident[]
   notificationSettings   NotificationSettings?
   knowledgeMastery       UserKnowledgeMastery[]
-  virtualAPIKeys         VirtualAPIKey[]
   apiUsageLogs           APIUsageLog[]
-  rechargeRecords        RechargeRecord[]
 }
 
 model StudentProfile {
@@ -450,38 +446,6 @@ model NotificationSettings {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-model VirtualAPIKey {
-  id           String   @id @default(uuid())
-  userId       String
-  name         String
-  keyHash      String   @unique
-  prefix       String
-  permissions  String   @default("{}")
-  rateLimitRpm Int      @default(120)
-  allowedIps   String   @default("[]")
-  status       String   @default("active")
-  lastUsedAt   DateTime?
-  createdAt    DateTime @default(now())
-  revokedAt    DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([keyHash])
-}
-
-model APIProvider {
-  id              String   @id @default(uuid())
-  name            String   @unique
-  apiKeyEncrypted String
-  endpoint        String
-  config          String   @default("{}")
-  status          String   @default("active")
-  healthStatus    String   @default("unknown")
-  lastHealthCheck DateTime?
-  createdAt       DateTime @default(now())
-}
-
 model APIUsageLog {
   id               String   @id @default(uuid())
   userId           String
@@ -504,19 +468,4 @@ model APIUsageLog {
   @@index([userId, createdAt])
   @@index([provider, createdAt])
   @@index([createdAt])
-}
-
-model RechargeRecord {
-  id            String   @id @default(uuid())
-  userId        String
-  amount        Decimal
-  paymentMethod String
-  transactionId String?
-  status        String   @default("pending")
-  createdAt     DateTime @default(now())
-  completedAt   DateTime?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, createdAt])
 }
