@@ -3,7 +3,6 @@
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { signIn } from "next-auth/react";
 import toast from "react-hot-toast";
 import { Eye, EyeOff, Loader2, GraduationCap } from "lucide-react";
 
@@ -18,9 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { login } from "@/lib/services/auth-service";
+import { useUserStore } from "@/stores/useUserStore";
 
 export default function LoginPage() {
   const router = useRouter();
+  const setUser = useUserStore((s) => s.setUser);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -36,21 +38,21 @@ export default function LoginPage() {
 
     setLoading(true);
     try {
-      const result = await signIn("credentials", {
-        email: email.trim(),
-        password,
-        redirect: false,
+      const user = await login(email.trim(), password);
+      setUser({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        grade: user.grade,
+        learningMode: user.learningMode,
+        avatar: user.avatar ?? null,
       });
-
-      if (result?.error) {
-        toast.error("邮箱或密码错误，请重试");
-      } else {
-        toast.success("登录成功！");
-        router.push("/home");
-        router.refresh();
-      }
-    } catch {
-      toast.error("登录失败，请稍后重试");
+      toast.success("登录成功！");
+      router.push("/home");
+      router.refresh();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "登录失败，请稍后重试";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

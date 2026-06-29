@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
 import { cn } from "@/lib/utils";
+import { register } from "@/lib/services/auth-service";
 
 const ROLES = [
   { value: "student", label: "学生" },
@@ -51,28 +52,12 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-          learningMode: selectedMode,
-          role,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        toast.error(data.message || "注册失败，请稍后重试");
-      } else {
-        toast.success("注册成功！请登录");
-        router.push("/login");
-      }
-    } catch {
-      toast.error("网络错误，请稍后重试");
+      await register(email.trim(), password, selectedMode, name.trim());
+      toast.success("注册成功！请登录");
+      router.push("/login");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "注册失败，请稍后重试";
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

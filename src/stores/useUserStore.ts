@@ -1,4 +1,6 @@
 import { create } from "zustand";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { getUserStats } from "@/lib/repositories/gamification.repository";
 
 interface UserState {
   id: string | null;
@@ -14,9 +16,10 @@ interface UserState {
   setUser: (user: Partial<UserState>) => void;
   addXP: (amount: number) => void;
   clearUser: () => void;
+  initFromAuth: () => Promise<void>;
 }
 
-export const useUserStore = create<UserState>((set) => ({
+export const useUserStore = create<UserState>((set, get) => ({
   id: null,
   name: null,
   email: null,
@@ -46,6 +49,32 @@ export const useUserStore = create<UserState>((set) => ({
       id: null, name: null, email: null, grade: null, learningMode: "PRIMARY",
       xp: 0, level: 1, streak: 0, avatar: null, weakPoints: [],
     }),
+  /**
+   * 从本地 auth-service 拉取当前用户并同步到 store。
+   * 用于 dashboard 页面挂载时初始化（替代原 fetch("/api/user/profile")）。
+   * 多页面调用是幂等的：若 store 已有 id 则直接返回。
+   */
+  initFromAuth: async () => {
+    if (get().id) return;
+    try {
+      const user = await getCurrentUser();
+      if (!user) return;
+      const stats = await getUserStats(user.id);
+      set({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        grade: user.grade,
+        learningMode: user.learningMode,
+        avatar: user.avatar ?? null,
+        xp: stats?.xp ?? 0,
+        level: stats?.level ?? 1,
+        streak: stats?.currentStreak ?? 0,
+      });
+    } catch (e) {
+      console.error("[useUserStore] initFromAuth failed:", e);
+    }
+  },
 }));
 
 interface GameState {
