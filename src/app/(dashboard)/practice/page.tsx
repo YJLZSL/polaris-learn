@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect, useRef } from "react";
+import { useState, useCallback, useEffect, useRef, useMemo } from "react";
 import {
   Check,
   X,
@@ -19,6 +19,13 @@ import {
 import toast from "react-hot-toast";
 
 import { cn } from "@/lib/utils";
+import { SUBJECT_MAP } from "@/lib/constants";
+import {
+  getSubjectsForMode,
+  getDifficultyRangeForMode,
+  getLearningModeConfig,
+} from "@/lib/learning-modes";
+import { useUserStore } from "@/stores/useUserStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -51,25 +58,29 @@ interface Question {
   gradeLevel?: string;
 }
 
-const subjects = ["数学", "语文", "英语", "物理", "化学"];
-
-// 难度映射：显示文本 <-> DB Int
+// 全部难度级别（1-5）；实际可见项由学习模式范围动态过滤
 const difficultyLevels = [
   { key: "easy", label: "基础", value: 1 },
   { key: "medium", label: "中等", value: 2 },
   { key: "hard", label: "困难", value: 3 },
+  { key: "expert", label: "极难", value: 4 },
+  { key: "hell", label: "地狱", value: 5 },
 ];
 
 const difficultyColor: Record<number, string> = {
   1: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   2: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   3: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
+  4: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  5: "bg-slate-200 text-slate-800 dark:bg-slate-700/60 dark:text-slate-200",
 };
 
 const xpForDifficulty: Record<number, number> = {
   1: 10,
   2: 25,
   3: 50,
+  4: 80,
+  5: 120,
 };
 
 const DIFFICULTY_LABEL: Record<number, string> = {
@@ -83,6 +94,51 @@ const DIFFICULTY_LABEL: Record<number, string> = {
 const PAGE_SIZE = 10;
 
 export default function PracticePage() {
+  /* ---------- user / learning mode ---------- */
+  const learningMode = useUserStore((s) => s.learningMode);
+  const setUser = useUserStore((s) => s.setUser);
+
+  // 挂载时主动拉取用户资料，确保 learningMode 与服务端一致
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.user?.learningMode) {
+          setUser({ learningMode: data.user.learningMode as string });
+        }
+      } catch {
+        /* 静默失败：将使用默认 PRIMARY 模式 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setUser]);
+
+  // 当前模式的有效学习模式 id（learningMode 未就绪时回退到 PRIMARY）
+  const effectiveMode = learningMode || "PRIMARY";
+
+  // 基于模式派生：可用学科标签、可用难度列表、默认年级
+  const subjects = useMemo(() => {
+    const ids = getSubjectsForMode(effectiveMode);
+    return ids
+      .map((id) => SUBJECT_MAP[id]?.label)
+      .filter((label): label is string => Boolean(label));
+  }, [effectiveMode]);
+
+  const availableDifficulties = useMemo(() => {
+    const [min, max] = getDifficultyRangeForMode(effectiveMode);
+    return difficultyLevels.filter((d) => d.value >= min && d.value <= max);
+  }, [effectiveMode]);
+
+  const gradeLevel = useMemo(
+    () => getLearningModeConfig(effectiveMode).defaultGrade,
+    [effectiveMode]
+  );
+
   /* ---------- state ---------- */
   const [subject, setSubject] = useState("数学");
   const [difficulty, setDifficulty] = useState(1);
@@ -108,9 +164,27 @@ export default function PracticePage() {
   // 缓存已提交的题目结果
   const submittedRef = useRef<Map<string, { correct: boolean; explanation?: string }>>(new Map());
 
+  // 当学习模式变化导致当前 subject/difficulty 不再可选时，回退到首个合法值
+  useEffect(() => {
+    if (subjects.length === 0) return;
+    if (!subjects.includes(subject)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setSubject(subjects[0]);
+    }
+  }, [subjects, subject]);
+
+  useEffect(() => {
+    if (availableDifficulties.length === 0) return;
+    const validValues = availableDifficulties.map((d) => d.value);
+    if (!validValues.includes(difficulty)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setDifficulty(availableDifficulties[0].value);
+    }
+  }, [availableDifficulties, difficulty]);
+
   /* ---------- fetch questions ---------- */
   const fetchQuestions = useCallback(
-    async (subj: string, diff: number, p: number) => {
+    async (subj: string, diff: number, p: number, grade?: string) => {
       setLoading(true);
       setFetchError(null);
       try {
@@ -120,6 +194,7 @@ export default function PracticePage() {
           page: String(p),
           limit: String(PAGE_SIZE),
         });
+        if (grade) params.set("gradeLevel", grade);
         const res = await fetch(`/api/questions?${params}`);
         if (!res.ok) {
           const data = await res.json();
@@ -150,8 +225,8 @@ export default function PracticePage() {
     setShowStreak(false);
     setComboCount(0);
     submittedRef.current.clear();
-    fetchQuestions(subject, difficulty, 1);
-  }, [subject, difficulty, fetchQuestions]);
+    fetchQuestions(subject, difficulty, 1, gradeLevel);
+  }, [subject, difficulty, fetchQuestions, gradeLevel]);
 
   // 翻页时重新加载
   useEffect(() => {
@@ -160,9 +235,9 @@ export default function PracticePage() {
       setCurrentIndex(0);
       setSelectedOption(null);
       setAnswered(false);
-      fetchQuestions(subject, difficulty, page);
+      fetchQuestions(subject, difficulty, page, gradeLevel);
     }
-  }, [page, subject, difficulty, fetchQuestions]);
+  }, [page, subject, difficulty, fetchQuestions, gradeLevel]);
 
   /* ---------- derived ---------- */
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -301,8 +376,8 @@ export default function PracticePage() {
     setComboCount(0);
     setTodayXP(0);
     submittedRef.current.clear();
-    fetchQuestions(subject, difficulty, 1);
-  }, [subject, difficulty, fetchQuestions]);
+    fetchQuestions(subject, difficulty, 1, gradeLevel);
+  }, [subject, difficulty, fetchQuestions, gradeLevel]);
 
   const handleSubjectChange = useCallback(
     (s: string) => {
@@ -368,7 +443,7 @@ export default function PracticePage() {
                 <SelectValue placeholder="选择难度" />
               </SelectTrigger>
               <SelectContent>
-                {difficultyLevels.map((d) => (
+                {availableDifficulties.map((d) => (
                   <SelectItem key={d.key} value={String(d.value)}>
                     {d.label} (+{xpForDifficulty[d.value]}XP)
                   </SelectItem>
@@ -416,7 +491,7 @@ export default function PracticePage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchQuestions(subject, difficulty, page)}
+            onClick={() => fetchQuestions(subject, difficulty, page, gradeLevel)}
             className="mt-2 gap-1"
           >
             <RotateCcw className="h-4 w-4" />
@@ -629,7 +704,7 @@ export default function PracticePage() {
               title="暂无题目"
               description="请尝试选择其他科目或难度"
               actionLabel="重新加载"
-              onAction={() => fetchQuestions(subject, difficulty, 1)}
+              onAction={() => fetchQuestions(subject, difficulty, 1, gradeLevel)}
             />
           )}
 

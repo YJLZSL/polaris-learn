@@ -14,10 +14,14 @@ export async function GET(request: Request) {
 
     const { searchParams } = new URL(request.url);
     const subject = searchParams.get("subject") || "数学";
+    const gradeLevel = searchParams.get("gradeLevel");
 
-    // 获取该学科所有知识点
+    // 获取该学科所有知识点（可选按年级过滤）
+    const where: Record<string, unknown> = { subject };
+    if (gradeLevel) where.gradeLevel = gradeLevel;
+
     const knowledgePoints = await prisma.knowledgePoint.findMany({
-      where: { subject },
+      where,
       orderBy: { orderIndex: "asc" },
       select: {
         id: true,

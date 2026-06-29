@@ -19,6 +19,8 @@ import {
 import { useUserStore } from "@/stores/useUserStore";
 
 import { cn } from "@/lib/utils";
+import { SUBJECT_MAP } from "@/lib/constants";
+import { getSubjectsForMode, getLearningModeConfig } from "@/lib/learning-modes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -57,13 +59,15 @@ interface KnowledgeEdge {
 }
 
 /* ====== Subject configs ====== */
-const subjects = [
-  { key: "数学", label: "数学", color: "bg-blue-500" },
-  { key: "语文", label: "语文", color: "bg-orange-500" },
-  { key: "英语", label: "英语", color: "bg-green-500" },
-  { key: "物理", label: "物理", color: "bg-purple-500" },
-  { key: "化学", label: "化学", color: "bg-teal-500" },
-];
+// 学科标识圆点颜色（仅用于 Select 项前的小色块）
+const SUBJECT_DOT_COLOR: Record<string, string> = {
+  数学: "bg-blue-500",
+  语文: "bg-orange-500",
+  英语: "bg-green-500",
+  物理: "bg-purple-500",
+  化学: "bg-teal-500",
+  生物: "bg-pink-500",
+};
 
 type MasteryFilter = "全部" | "已掌握" | "学习中" | "未学习";
 
@@ -191,7 +195,44 @@ const nodeRadius = () => 22;
 
 /* ====== Component ====== */
 export default function KnowledgeGraphPage() {
-  const { weakPoints: _weakPoints, addXP } = useUserStore();
+  const { weakPoints: _weakPoints, addXP, learningMode, setUser } = useUserStore();
+
+  // 当前有效学习模式 id（learningMode 未就绪时回退到 PRIMARY）
+  const effectiveMode = learningMode || "PRIMARY";
+
+  // 基于模式派生：可用学科列表、默认年级
+  const subjects = useMemo(() => {
+    const ids = getSubjectsForMode(effectiveMode);
+    return ids
+      .map((id) => SUBJECT_MAP[id])
+      .filter((s): s is NonNullable<typeof s> => Boolean(s));
+  }, [effectiveMode]);
+
+  const gradeLevel = useMemo(
+    () => getLearningModeConfig(effectiveMode).defaultGrade,
+    [effectiveMode]
+  );
+
+  // 挂载时主动拉取用户资料，确保 learningMode 与服务端一致
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.user?.learningMode) {
+          setUser({ learningMode: data.user.learningMode as string });
+        }
+      } catch {
+        /* 静默失败：将使用默认 PRIMARY 模式 */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setUser]);
+
   const [activeSubject, setActiveSubject] = useState("数学");
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
   const [zoomLevel, setZoomLevel] = useState(1);
@@ -205,12 +246,24 @@ export default function KnowledgeGraphPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchGraphData = useCallback(async (subject: string) => {
+  // 当学习模式变化导致当前 activeSubject 不再可选时，回退到首个合法学科
+  useEffect(() => {
+    if (subjects.length === 0) return;
+    const labels = subjects.map((s) => s.label);
+    if (!labels.includes(activeSubject)) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setActiveSubject(subjects[0].label);
+    }
+  }, [subjects, activeSubject]);
+
+  const fetchGraphData = useCallback(async (subject: string, grade?: string) => {
     setLoading(true);
     setError(null);
     setSelectedNode(null);
     try {
-      const res = await fetch(`/api/knowledge-graph?subject=${encodeURIComponent(subject)}`);
+      const params = new URLSearchParams({ subject });
+      if (grade) params.set("gradeLevel", grade);
+      const res = await fetch(`/api/knowledge-graph?${params}`);
       if (!res.ok) {
         throw new Error("获取数据失败");
       }
@@ -228,8 +281,8 @@ export default function KnowledgeGraphPage() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchGraphData(activeSubject);
-  }, [activeSubject, fetchGraphData]);
+    fetchGraphData(activeSubject, gradeLevel);
+  }, [activeSubject, fetchGraphData, gradeLevel]);
 
   // 计算节点坐标
   const nodePositions = useMemo(() => {
@@ -351,7 +404,7 @@ export default function KnowledgeGraphPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => fetchGraphData(activeSubject)}
+            onClick={() => fetchGraphData(activeSubject, gradeLevel)}
             className="mt-2 gap-1"
           >
             <RotateCw className="h-4 w-4" />
@@ -386,7 +439,7 @@ export default function KnowledgeGraphPage() {
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((sub) => (
-                  <SelectItem key={sub.key} value={sub.key}>
+                  <SelectItem key={sub.id} value={sub.label}>
                     {sub.label}
                   </SelectItem>
                 ))}
@@ -399,7 +452,7 @@ export default function KnowledgeGraphPage() {
           title="该学科暂无知识点数据"
           description="系统管理员正在建设中，敬请期待"
           actionLabel="重新加载"
-          onAction={() => fetchGraphData(activeSubject)}
+          onAction={() => fetchGraphData(activeSubject, gradeLevel)}
         />
       </div>
     );
@@ -451,9 +504,9 @@ export default function KnowledgeGraphPage() {
               </SelectTrigger>
               <SelectContent>
                 {subjects.map((sub) => (
-                  <SelectItem key={sub.key} value={sub.key}>
+                  <SelectItem key={sub.id} value={sub.label}>
                     <div className="flex items-center gap-2">
-                      <div className={`w-2.5 h-2.5 rounded-full ${sub.color}`} />
+                      <div className={`w-2.5 h-2.5 rounded-full ${SUBJECT_DOT_COLOR[sub.label] || "bg-gray-400"}`} />
                       {sub.label}
                     </div>
                   </SelectItem>
