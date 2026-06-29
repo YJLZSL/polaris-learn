@@ -31,6 +31,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
+import { useUserStore } from "@/stores/useUserStore";
 
 // ---- 类型定义 ----
 
@@ -235,6 +236,7 @@ export default function AnalyticsPage() {
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const learningMode = useUserStore((s) => s.learningMode);
 
   useEffect(() => {
     fetchReport(period);
@@ -270,7 +272,7 @@ export default function AnalyticsPage() {
     : 1;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 py-6 sm:px-6 lg:px-8 space-y-6" data-mode={learningMode}>
       {/* ---- 页面标题 ---- */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
@@ -411,8 +413,18 @@ export default function AnalyticsPage() {
             </Card>
           </div>
 
+          <Card className="kindergarten-friendly border-primary/30 bg-primary/5">
+            <CardContent className="p-6 text-center">
+              <div className="text-4xl mb-3">🌟</div>
+              <p className="text-lg font-semibold mb-1">小朋友，继续加油哦！</p>
+              <p className="text-sm text-muted-foreground">
+                完成更多练习就能看到详细的学习报告啦～
+              </p>
+            </CardContent>
+          </Card>
+
           {/* ===== 学习趋势图 ===== */}
-          <Card>
+          <Card className="complex-chart">
             <CardHeader className="pb-2">
               <div className="flex items-center gap-2">
                 <TrendingUp className="w-5 h-5 text-primary" />
@@ -558,7 +570,7 @@ export default function AnalyticsPage() {
           {/* ===== 正确率趋势 + 知识掌握雷达 ===== */}
           <div className="grid lg:grid-cols-2 gap-6">
             {/* 学科分布 */}
-            <Card>
+            <Card className="complex-chart">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-primary" />
@@ -632,7 +644,7 @@ export default function AnalyticsPage() {
             </Card>
 
             {/* 知识点掌握度雷达 */}
-            <Card>
+            <Card className="complex-chart">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <Brain className="w-5 h-5 text-primary" />

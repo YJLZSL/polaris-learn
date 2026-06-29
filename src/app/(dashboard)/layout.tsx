@@ -7,6 +7,7 @@ import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
 import { AndroidUpdateBanner } from "@/components/providers/AndroidUpdateBanner";
 import { pageTransitionProps } from "@/lib/motion";
+import { useUserStore } from "@/stores/useUserStore";
 
 export default function DashboardLayout({
   children,
@@ -15,9 +16,10 @@ export default function DashboardLayout({
 }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const learningMode = useUserStore((s) => s.learningMode);
 
   return (
-    <div className="flex min-h-screen bg-background">
+    <div className="flex min-h-screen bg-background" data-mode={learningMode}>
       {/* Android update banner (only renders on Capacitor native platforms) */}
       <AndroidUpdateBanner />
 

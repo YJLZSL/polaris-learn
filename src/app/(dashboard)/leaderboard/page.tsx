@@ -7,6 +7,7 @@ import {
   Flame,
   AlertTriangle,
   RotateCw,
+  EyeOff,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -35,6 +36,9 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, listItem, scaleIn } from "@/lib/motion";
+import { useUserStore } from "@/stores/useUserStore";
+
+const LEADERBOARD_VISIBLE_KEY = "polaris_leaderboard_visible";
 
 /* ====== Types ====== */
 interface LeaderboardUser {
@@ -189,7 +193,51 @@ export default function LeaderboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const learningMode = useUserStore((s) => s.learningMode);
+  const setUser = useUserStore((s) => s.setUser);
+  const [modeReady, setModeReady] = useState(false);
+  const [hidden, setHidden] = useState(false);
+
+  // 挂载时主动拉取用户资料，确保 learningMode 与服务端一致
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.user?.learningMode) {
+          setUser({ learningMode: data.user.learningMode as string });
+        }
+      } catch {
+        /* 静默失败 */
+      } finally {
+        if (!cancelled) setModeReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setUser]);
+
+  // 根据 learningMode 与 localStorage 决定是否隐藏排行榜
+  useEffect(() => {
+    if (!modeReady) return;
+    const stored = localStorage.getItem(LEADERBOARD_VISIBLE_KEY);
+    if (learningMode === "PROFESSIONAL" && stored === null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setHidden(true);
+    } else {
+      setHidden(false);
+    }
+  }, [learningMode, modeReady]);
+
+  useEffect(() => {
+    if (hidden) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setLoading(false);
+      return;
+    }
     async function fetchLeaderboard() {
       setLoading(true);
       setError(null);
@@ -211,12 +259,36 @@ export default function LeaderboardPage() {
       }
     }
     fetchLeaderboard();
-  }, [activeTab]);
+  }, [activeTab, hidden]);
 
   const top3 = data.slice(0, 3);
   const rest = data.slice(3);
   const isInTop10 =
     currentUserRank !== null && currentUserRank <= 10;
+
+  /* ---------- Hidden state (PROFESSIONAL mode default) ---------- */
+  if (hidden) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 py-6 lg:py-8 space-y-6 animate-fadeIn">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm">
+            <Trophy className="w-5 h-5 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">排行榜</h1>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              上班族模式已隐藏排行榜
+            </p>
+          </div>
+        </div>
+        <EmptyState
+          icon={EyeOff}
+          title="排行榜已隐藏"
+          description="上班族模式默认隐藏排行榜，帮助你在碎片化学习中保持专注。如需开启，请前往「设置 → 外观」打开显示排行榜开关。"
+        />
+      </div>
+    );
+  }
 
   /* ---------- Loading state ---------- */
   if (loading) {
