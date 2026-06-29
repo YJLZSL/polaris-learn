@@ -1,9 +1,16 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import { SessionProvider } from "@/components/providers/SessionProvider";
 import ServiceWorkerRegister from "@/components/providers/ServiceWorkerRegister";
 import ElectronDetector from "@/components/providers/ElectronDetector";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Polaris - 北极星学习平台",
@@ -13,6 +20,11 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
   themeColor: "#6366f1",
 };
 
@@ -24,7 +36,7 @@ export default function RootLayout({
   return (
     <html
       lang="zh-CN"
-      className="h-full antialiased"
+      className={`${inter.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <SessionProvider>

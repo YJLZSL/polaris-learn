@@ -5,7 +5,11 @@ import type { Variants, Transition } from "framer-motion";
  * Import these instead of inlining motion props for consistency.
  */
 
-// Page transition: fade + slight slide up (200ms ease-out)
+// Polaris 标准缓动曲线 — iOS 风格弹性
+export const EASE_OUT_EXPO = [0.16, 1, 0.3, 1] as const;
+export const EASE_IN_OUT = [0.4, 0, 0.2, 1] as const;
+
+// Page transition: fade + slight slide up (300ms ease-out-expo)
 export const pageTransition: Variants = {
   initial: { opacity: 0, y: 8 },
   animate: { opacity: 1, y: 0 },
@@ -17,7 +21,7 @@ export const pageTransitionProps = {
   animate: "animate",
   exit: "exit",
   variants: pageTransition,
-  transition: { duration: 0.2, ease: "easeOut" } as Transition,
+  transition: { duration: 0.3, ease: EASE_OUT_EXPO } as Transition,
 };
 
 // Stagger container — wraps lists so children animate in sequence
@@ -26,7 +30,7 @@ export const staggerContainer: Variants = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.05,
+      staggerChildren: 0.06,
       delayChildren: 0.04,
     },
   },
@@ -38,7 +42,7 @@ export const listItem: Variants = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: { duration: 0.4, ease: EASE_OUT_EXPO },
   },
 };
 
@@ -67,7 +71,7 @@ export const scaleIn: Variants = {
   show: {
     opacity: 1,
     scale: 1,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: { duration: 0.3, ease: EASE_OUT_EXPO },
   },
 };
 
@@ -77,7 +81,17 @@ export const slideInLeft: Variants = {
   show: {
     x: 0,
     opacity: 1,
-    transition: { duration: 0.25, ease: "easeOut" },
+    transition: { duration: 0.3, ease: EASE_OUT_EXPO },
+  },
+};
+
+// Slide in from right (for sheets, drawers on the right side)
+export const slideInRight: Variants = {
+  hidden: { x: 20, opacity: 0 },
+  show: {
+    x: 0,
+    opacity: 1,
+    transition: { duration: 0.3, ease: EASE_OUT_EXPO },
   },
 };
 
@@ -87,6 +101,6 @@ export const slideInBottom: Variants = {
   show: {
     y: 0,
     opacity: 1,
-    transition: { duration: 0.3, ease: "easeOut" },
+    transition: { duration: 0.35, ease: EASE_OUT_EXPO },
   },
 };

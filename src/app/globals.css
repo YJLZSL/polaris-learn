@@ -2,10 +2,50 @@
 
 @custom-variant dark (&:is(.dark *), @media (prefers-color-scheme: dark));
 
+/* ===== 移动端基础优化 ===== */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  overscroll-behavior-y: none;
+  touch-action: manipulation;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* 安全区变量 */
+:root {
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* 高 PPI 屏幕字号微调 */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  html {
+    font-size: 16px; /* 防止高 PPI 屏字号过小 */
+  }
+  /* 高 PPI 屏幕：边框使用 0.5px 细化，阴影更柔和 */
+  .border {
+    border-width: 0.5px;
+  }
+  .card,
+  [class*="rounded-xl"] {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 1px rgba(0, 0, 0, 0.02);
+  }
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, -apple-system, sans-serif;
+  --font-sans: var(--font-inter), "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", system-ui, -apple-system, sans-serif;
   --font-mono: "SF Mono", "Cascadia Code", "Fira Code", Consolas, monospace;
   --color-primary: #6366f1;
   --color-primary-dark: #4f46e5;
@@ -35,6 +75,20 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  /* 6 级字号阶梯 */
+  --text-xs: 0.75rem;   /* 12px */
+  --text-sm: 0.875rem;  /* 14px */
+  --text-base: 1rem;    /* 16px */
+  --text-lg: 1.125rem;  /* 18px */
+  --text-xl: 1.25rem;   /* 20px */
+  --text-2xl: 1.5rem;   /* 24px */
+  /* 阴影 tokens（引用 :root 中定义的值，inline 模式下不重复发射变量） */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+  --shadow-2xl: var(--shadow-2xl);
 }
 
 :root {
@@ -44,66 +98,81 @@
   --card-foreground: #0a0a0a;
   --popover: #ffffff;
   --popover-foreground: #0a0a0a;
-  --primary: #171717;
-  --primary-foreground: #fafafa;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
   --secondary: #f5f5f5;
   --secondary-foreground: #171717;
   --muted: #f5f5f5;
   --muted-foreground: #737373;
-  --accent: #f5f5f5;
-  --accent-foreground: #171717;
+  --accent: #f59e0b;
+  --accent-foreground: #1a1a1a;
   --destructive: #ef4444;
   --destructive-foreground: #fafafa;
   --border: #e5e5e5;
   --input: #e5e5e5;
   --ring: #0a0a0a;
-  --radius: 0.625rem;
+  --radius: 0.75rem;
+  /* 玻璃拟态 tokens */
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.2);
+  /* 阴影 tokens */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #0a0a0f;
     --foreground: #fafafa;
-    --card: #0a0a0a;
+    --card: #111118;
     --card-foreground: #fafafa;
-    --popover: #0a0a0a;
+    --popover: #111118;
     --popover-foreground: #fafafa;
-    --primary: #fafafa;
-    --primary-foreground: #171717;
+    --primary: #818cf8;
+    --primary-foreground: #0a0a0f;
     --secondary: #262626;
     --secondary-foreground: #fafafa;
     --muted: #262626;
     --muted-foreground: #a3a3a3;
-    --accent: #262626;
-    --accent-foreground: #fafafa;
+    --accent: #fbbf24;
+    --accent-foreground: #0a0a0f;
     --destructive: #7f1d1d;
     --destructive-foreground: #fafafa;
-    --border: #262626;
-    --input: #262626;
+    --border: #1f1f2e;
+    --input: #2a2a3a;
     --ring: #d4d4d4;
+    /* 玻璃拟态 tokens（暗色） */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
   }
 }
 
 .dark {
-  --background: #0a0a0a;
+  --background: #0a0a0f;
   --foreground: #fafafa;
-  --card: #0a0a0a;
+  --card: #111118;
   --card-foreground: #fafafa;
-  --popover: #0a0a0a;
+  --popover: #111118;
   --popover-foreground: #fafafa;
-  --primary: #fafafa;
-  --primary-foreground: #171717;
+  --primary: #818cf8;
+  --primary-foreground: #0a0a0f;
   --secondary: #262626;
   --secondary-foreground: #fafafa;
   --muted: #262626;
   --muted-foreground: #a3a3a3;
-  --accent: #262626;
-  --accent-foreground: #fafafa;
+  --accent: #fbbf24;
+  --accent-foreground: #0a0a0f;
   --destructive: #7f1d1d;
   --destructive-foreground: #fafafa;
-  --border: #333333;
-  --input: #404040;
+  --border: #1f1f2e;
+  --input: #2a2a3a;
   --ring: #f5f5f5;
+  /* 玻璃拟态 tokens（暗色） */
+  --glass-bg: rgba(255, 255, 255, 0.05);
+  --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 body {
@@ -174,6 +243,10 @@ body {
 /* 幼儿园模式：大圆角、大字号、大按钮 */
 [data-mode="KINDERGARTEN"] {
   --radius: 1rem;
+  --primary: #6366f1;
+}
+[data-mode="KINDERGARTEN"] .card {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.9), rgba(255, 255, 255, 0.7));
 }
 [data-mode="KINDERGARTEN"] .card,
 [data-mode="KINDERGARTEN"] [class*="rounded-xl"] {
