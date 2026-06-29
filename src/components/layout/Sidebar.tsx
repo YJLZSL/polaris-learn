@@ -37,20 +37,27 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 
-const NAV_ITEMS = [
+type NavItemConfig = {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  disabled?: boolean;
+};
+
+const NAV_ITEMS: NavItemConfig[] = [
   { href: "/home", label: "首页", icon: Home },
-  { href: "/ai-tutor", label: "AI老师", icon: MessageSquare },
+  { href: "/ai-teacher", label: "AI老师", icon: MessageSquare },
   { href: "/practice", label: "练习", icon: BookOpen },
   { href: "/knowledge-graph", label: "知识图谱", icon: Network },
   { href: "/error-notes", label: "错题本", icon: FileQuestion },
-  { href: "/progress", label: "学习报告", icon: BarChart3 },
+  { href: "/analytics", label: "学习报告", icon: BarChart3 },
   { href: "/leaderboard", label: "排行榜", icon: Trophy },
   { href: "/courses", label: "课程", icon: GraduationCap },
-  { href: "/photo-search", label: "拍题", icon: Camera },
-  { href: "/badges", label: "徽章", icon: Layers },
-  { href: "/study-group", label: "学习小组", icon: Users },
-  { href: "/pk", label: "PK挑战", icon: Zap },
-  { href: "/plans", label: "学习计划", icon: ClipboardList },
+  { href: "/photo-search", label: "拍题", icon: Camera, disabled: true },
+  { href: "/badges", label: "徽章", icon: Layers, disabled: true },
+  { href: "/study-group", label: "学习小组", icon: Users, disabled: true },
+  { href: "/pk", label: "PK挑战", icon: Zap, disabled: true },
+  { href: "/plans", label: "学习计划", icon: ClipboardList, disabled: true },
 ];
 
 interface SidebarProps {
@@ -64,12 +71,29 @@ function NavItem({
   collapsed,
   onClick,
 }: {
-  item: { href: string; label: string; icon: React.ComponentType<{ className?: string }> };
+  item: NavItemConfig;
   isActive: boolean;
   collapsed: boolean;
   onClick?: () => void;
 }) {
   const Icon = item.icon;
+
+  if (item.disabled) {
+    return (
+      <div
+        title="敬请期待"
+        aria-disabled="true"
+        className={cn(
+          "flex w-full items-center gap-3 h-10 px-3 font-medium cursor-not-allowed opacity-50 text-muted-foreground select-none",
+          collapsed && "justify-center px-0"
+        )}
+      >
+        <Icon className="h-5 w-5 shrink-0" />
+        {!collapsed && <span>{item.label}</span>}
+      </div>
+    );
+  }
+
   return (
     <motion.div
       whileHover={{ x: collapsed ? 0 : 4 }}

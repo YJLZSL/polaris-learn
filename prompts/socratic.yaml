@@ -4,6 +4,10 @@
 # 支持社区提交PR改进Prompt
 # 版本：v2.0
 
+# ⚠️ 设计参考文档（非运行时加载）
+# 实际苏格拉底 prompt 在 src/lib/llm-adapter.ts 的 buildSocraticSystemPrompt() 中
+# 本文件仅作为 prompt 设计参考与文档说明
+
 version: "2.0"
 contributors: ["core-team"]
 

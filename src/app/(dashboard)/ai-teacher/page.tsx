@@ -17,6 +17,8 @@ import {
   RotateCw,
 } from "lucide-react";
 import { useUserStore } from "@/stores/useUserStore";
+import { SUBJECTS } from "@/lib/constants";
+import { getSubjectsForMode } from "@/lib/learning-modes";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -66,11 +68,15 @@ interface Conversation {
   createdAt: string;
 }
 
-type SocraticStage = "diagnostic" | "guide" | "reasoning" | "reflect";
+type SocraticStage =
+  | "diagnostic"
+  | "clarification"
+  | "hypothesis"
+  | "reasoning"
+  | "verification"
+  | "reflection";
 
 /* ---------- constants ---------- */
-const SUBJECTS = ["数学", "语文", "英语", "物理", "化学", "生物"] as const;
-
 const SUBJECT_CONFIG: Record<string, { icon: string; color: string; desc: string; bgGradient: string }> = {
   数学: { icon: "📐", color: "from-blue-400 to-blue-600", desc: "代数、几何、函数", bgGradient: "from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20" },
   语文: { icon: "📖", color: "from-orange-400 to-orange-600", desc: "阅读、写作、文言文", bgGradient: "from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20" },
@@ -82,12 +88,21 @@ const SUBJECT_CONFIG: Record<string, { icon: string; color: string; desc: string
 
 const STAGE_INFO: Record<SocraticStage, { label: string; color: string; icon: string }> = {
   diagnostic: { label: "诊断", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300", icon: "🔍" },
-  guide: { label: "引导", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", icon: "💡" },
+  clarification: { label: "澄清", color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", icon: "💡" },
+  hypothesis: { label: "假设", color: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300", icon: "🤔" },
   reasoning: { label: "推理", color: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300", icon: "🧠" },
-  reflect: { label: "反思", color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300", icon: "🪞" },
+  verification: { label: "验证", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300", icon: "✅" },
+  reflection: { label: "反思", color: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300", icon: "🪞" },
 };
 
-const STAGE_ORDER: SocraticStage[] = ["diagnostic", "guide", "reasoning", "reflect"];
+const STAGE_ORDER: SocraticStage[] = [
+  "diagnostic",
+  "clarification",
+  "hypothesis",
+  "reasoning",
+  "verification",
+  "reflection",
+];
 
 const DIRECT_ANSWER_RESPONSE = "我理解你想要直接答案，但苏格拉底教学法的核心是引导你自己发现问题。试着告诉我：你对这道题有什么初步的想法？哪怕是直觉也可以，我们一起来分析。";
 
@@ -109,7 +124,32 @@ function generateId(): string {
 
 /* ---------- component ---------- */
 export default function AITeacherPage() {
-  const { weakPoints, addXP } = useUserStore();
+  const { weakPoints, addXP, learningMode, setUser } = useUserStore();
+
+  /* ----- 拉取用户 learningMode（用于学科过滤与样式适配） ----- */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch("/api/user/profile");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (!cancelled && data?.user?.learningMode) {
+          setUser({ learningMode: data.user.learningMode as string });
+        }
+      } catch {
+        // silent: 失败时使用默认 PRIMARY 模式
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [setUser]);
+
+  /* ----- 基于学习模式派生可用学科与 UI 风格 ----- */
+  const allowedSubjectIds = getSubjectsForMode(learningMode);
+  const visibleSubjects = SUBJECTS.filter((s) => allowedSubjectIds.includes(s.id));
+  const isKindergarten = learningMode === "KINDERGARTEN";
 
   /* ----- state ----- */
   const [subject, setSubject] = useState<string | null>(null);
@@ -183,6 +223,7 @@ export default function AITeacherPage() {
             conversationId,
             subject,
             message: msg,
+            learningMode,
           }),
         });
 
@@ -229,7 +270,7 @@ export default function AITeacherPage() {
         setIsLoading(false);
       }
     },
-    [input, subject, isLoading, conversationId, currentStage, addXP, loadConversations]
+    [input, subject, isLoading, conversationId, currentStage, addXP, loadConversations, learningMode]
   );
 
   /* ----- handle "直接告诉我答案" ----- */
@@ -239,11 +280,11 @@ export default function AITeacherPage() {
       id: generateId(),
       role: "assistant",
       content: DIRECT_ANSWER_RESPONSE,
-      stage: "guide",
+      stage: "clarification",
       timestamp: Date.now(),
     };
     setMessages((prev) => [...prev, aiMsg]);
-    setCurrentStage("guide");
+    setCurrentStage("clarification");
   }, [isLoading]);
 
   /* ----- handle keypress ----- */
@@ -347,22 +388,22 @@ export default function AITeacherPage() {
               <DialogDescription>选择一个学科，开始与 AI 老师对话</DialogDescription>
             </DialogHeader>
             <div className="grid grid-cols-2 gap-3 py-4">
-              {SUBJECTS.map((s) => {
-                const cfg = SUBJECT_CONFIG[s];
-                const isSelected = newConvSubject === s;
+              {visibleSubjects.map((s) => {
+                const cfg = SUBJECT_CONFIG[s.label];
+                const isSelected = newConvSubject === s.label;
                 return (
                   <Card
-                    key={s}
+                    key={s.id}
                     className={`cursor-pointer transition-all hover:shadow-sm ${
                       isSelected
                         ? "ring-2 ring-indigo-500 border-indigo-300 dark:border-indigo-700"
                         : ""
                     }`}
-                    onClick={() => setNewConvSubject(s)}
+                    onClick={() => setNewConvSubject(s.label)}
                   >
                     <CardContent className="p-3 flex flex-col items-center gap-1.5">
                       <span className="text-xl">{cfg.icon}</span>
-                      <span className="text-sm font-semibold">{s}</span>
+                      <span className="text-sm font-semibold">{s.label}</span>
                       <span className="text-[10px] text-muted-foreground">{cfg.desc}</span>
                     </CardContent>
                   </Card>
@@ -494,15 +535,15 @@ export default function AITeacherPage() {
 
         {/* Subject tabs — desktop always, mobile when subject is selected */}
         <div className="flex gap-1.5 px-4 pb-3 lg:pb-3 lg:pt-3 overflow-x-auto">
-          {SUBJECTS.map((s) => {
-            const cfg = SUBJECT_CONFIG[s];
-            const isActive = s === subject;
+          {visibleSubjects.map((s) => {
+            const cfg = SUBJECT_CONFIG[s.label];
+            const isActive = s.label === subject;
             return (
               <Button
-                key={s}
+                key={s.id}
                 variant={isActive ? "default" : "secondary"}
                 size="sm"
-                onClick={() => handleSubjectSelect(s)}
+                onClick={() => handleSubjectSelect(s.label)}
                 className={`shrink-0 gap-1.5 ${
                   isActive
                     ? `bg-gradient-to-r ${cfg.color} text-white shadow-md hover:opacity-90`
@@ -510,7 +551,7 @@ export default function AITeacherPage() {
                 }`}
               >
                 <span className="text-xs">{cfg.icon}</span>
-                {s}
+                {s.label}
               </Button>
             );
           })}
@@ -578,17 +619,17 @@ export default function AITeacherPage() {
               {/* Subject cards */}
               {!subject && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 w-full max-w-lg">
-                  {SUBJECTS.map((s) => {
-                    const cfg = SUBJECT_CONFIG[s];
+                  {visibleSubjects.map((s) => {
+                    const cfg = SUBJECT_CONFIG[s.label];
                     return (
                       <Card
-                        key={s}
+                        key={s.id}
                         className="group cursor-pointer transition-all duration-200 hover:shadow-sm hover:-translate-y-0.5"
-                        onClick={() => handleSubjectSelect(s)}
+                        onClick={() => handleSubjectSelect(s.label)}
                       >
                         <CardContent className={`p-4 flex flex-col items-center gap-2 bg-gradient-to-br ${cfg.bgGradient} rounded-xl`}>
                           <span className="text-2xl">{cfg.icon}</span>
-                          <span className="text-sm font-semibold">{s}</span>
+                          <span className="text-sm font-semibold">{s.label}</span>
                           <span className="text-[10px] text-muted-foreground">{cfg.desc}</span>
                         </CardContent>
                       </Card>
@@ -643,10 +684,12 @@ export default function AITeacherPage() {
                         {STAGE_INFO[msg.stage as SocraticStage].label}
                       </Badge>
                     )}
-                    <div className={`px-4 py-2.5 rounded-2xl text-sm shadow-sm transition-all duration-200 ${
+                    <div className={`px-4 py-2.5 rounded-2xl shadow-sm transition-all duration-200 ${
                       msg.role === "user"
-                        ? "bg-primary text-primary-foreground rounded-tr-sm"
-                        : "bg-muted text-foreground rounded-tl-sm"
+                        ? "bg-primary text-primary-foreground rounded-tr-sm text-sm"
+                        : isKindergarten
+                        ? "bg-muted text-foreground rounded-tl-sm text-lg leading-relaxed"
+                        : "bg-muted text-foreground rounded-tl-sm text-sm"
                     }`}>
                       <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                     </div>
@@ -727,9 +770,9 @@ export default function AITeacherPage() {
                   <SelectValue placeholder="学科" />
                 </SelectTrigger>
                 <SelectContent>
-                  {SUBJECTS.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {SUBJECT_CONFIG[s].icon} {s}
+                  {visibleSubjects.map((s) => (
+                    <SelectItem key={s.id} value={s.label}>
+                      {SUBJECT_CONFIG[s.label].icon} {s.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
