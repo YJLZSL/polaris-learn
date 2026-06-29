@@ -17,7 +17,9 @@ import {
   Moon,
   Smartphone,
   Globe,
+  GraduationCap,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +38,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserStore } from "@/stores/useUserStore";
+import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
 
 /* ---------- LLM 配置 localStorage 读写 ---------- */
 const LLM_STORAGE_PREFIX = "llm_config_";
@@ -61,6 +64,16 @@ function saveLlmConfig(config: Record<string, string | number>) {
   }
 }
 
+const LEADERBOARD_VISIBLE_KEY = "polaris_leaderboard_visible";
+function loadLeaderboardVisible(): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem(LEADERBOARD_VISIBLE_KEY) !== "false";
+}
+function saveLeaderboardVisible(visible: boolean) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(LEADERBOARD_VISIBLE_KEY, String(visible));
+}
+
 const reminderTimeOptions = [
   { label: "8:00", value: "08:00" },
   { label: "9:00", value: "09:00" },
@@ -70,7 +83,7 @@ const reminderTimeOptions = [
 ];
 
 export default function SettingsPage() {
-  const { name, grade, avatar, setUser, clearUser } = useUserStore();
+  const { name, grade, avatar, learningMode, setUser, clearUser } = useUserStore();
 
   /* ---------- loading state ---------- */
   const [loading, setLoading] = useState(true);
@@ -85,8 +98,14 @@ export default function SettingsPage() {
   const [notifySaveSuccess, setNotifySaveSuccess] = useState(false);
   const [notifySaveError, setNotifySaveError] = useState<string | null>(null);
 
+  /* ---------- learning mode settings ---------- */
+  const [modeSaving, setModeSaving] = useState(false);
+  const [modeSaveSuccess, setModeSaveSuccess] = useState(false);
+  const [modeSaveError, setModeSaveError] = useState<string | null>(null);
+
   /* ---------- appearance settings ---------- */
   const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
+  const [leaderboardVisible, setLeaderboardVisible] = useState(true);
 
   /* ---------- security settings ---------- */
   const [currentPassword, setCurrentPassword] = useState("");
@@ -131,6 +150,7 @@ export default function SettingsPage() {
         level: data.user.level,
         streak: data.user.streak,
         email: data.user.email,
+        learningMode: data.user.learningMode,
       });
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "获取设置失败");
@@ -164,6 +184,7 @@ export default function SettingsPage() {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setThemeMode(saved);
     }
+    setLeaderboardVisible(loadLeaderboardVisible());
   }, []);
 
   /* ---------- LLM config update ---------- */
@@ -221,6 +242,36 @@ export default function SettingsPage() {
     }
   };
 
+  /* ---------- switch learning mode ---------- */
+  const handleSelectMode = async (modeId: LearningModeId) => {
+    // 乐观更新：如果与当前一致则无需请求
+    if (modeId === learningMode) return;
+    setModeSaving(true);
+    setModeSaveError(null);
+    setModeSaveSuccess(false);
+    // 立即更新本地 store，让 UI 即时反馈
+    setUser({ learningMode: modeId });
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ learningMode: modeId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "保存失败");
+      }
+      setModeSaveSuccess(true);
+      setTimeout(() => setModeSaveSuccess(false), 2000);
+    } catch (err) {
+      // 回滚到上一次的 mode
+      setUser({ learningMode });
+      setModeSaveError(err instanceof Error ? err.message : "保存失败");
+    } finally {
+      setModeSaving(false);
+    }
+  };
+
   /* ---------- save notification settings ---------- */
   const handleSaveNotifications = async () => {
     setNotifySaving(true);
@@ -260,30 +311,45 @@ export default function SettingsPage() {
   const handleChangePassword = async () => {
     setPasswordSaveError(null);
     if (!currentPassword || !newPassword || !confirmPassword) {
-      setPasswordSaveError("请填写所有密码字段");
+      const msg = "请填写所有密码字段";
+      setPasswordSaveError(msg);
+      toast.error(msg);
       return;
     }
     if (newPassword !== confirmPassword) {
-      setPasswordSaveError("两次输入的新密码不一致");
+      const msg = "两次输入的新密码不一致";
+      setPasswordSaveError(msg);
+      toast.error(msg);
       return;
     }
     if (newPassword.length < 6) {
-      setPasswordSaveError("新密码至少需要6个字符");
+      const msg = "新密码至少需要6个字符";
+      setPasswordSaveError(msg);
+      toast.error(msg);
       return;
     }
     setPasswordSaving(true);
     setPasswordSaveSuccess(false);
     try {
-      // Client-side flow: just show success for now
-      // In production, this would call a password change API
-      await new Promise((resolve) => setTimeout(resolve, 800));
+      const res = await fetch("/api/auth/change-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPassword: currentPassword, newPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "修改密码失败");
+      }
       setPasswordSaveSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      toast.success("密码修改成功");
       setTimeout(() => setPasswordSaveSuccess(false), 2000);
-    } catch {
-      setPasswordSaveError("修改密码失败，请重试");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "修改密码失败，请重试";
+      setPasswordSaveError(msg);
+      toast.error(msg);
     } finally {
       setPasswordSaving(false);
     }
@@ -333,8 +399,13 @@ export default function SettingsPage() {
       </div>
 
       {/* ====== Tabs Layout ====== */}
-      <Tabs defaultValue="notifications" className="space-y-4">
+      <Tabs defaultValue="learning-mode" className="space-y-4">
         <TabsList className="w-full sm:w-auto">
+          <TabsTrigger value="learning-mode" className="gap-1.5">
+            <GraduationCap className="w-4 h-4" />
+            <span className="hidden sm:inline">学习模式</span>
+            <span className="sm:hidden">模式</span>
+          </TabsTrigger>
           <TabsTrigger value="notifications" className="gap-1.5">
             <Bell className="w-4 h-4" />
             <span className="hidden sm:inline">通知设置</span>
@@ -351,6 +422,87 @@ export default function SettingsPage() {
             <span className="sm:hidden">安全</span>
           </TabsTrigger>
         </TabsList>
+
+        {/* ====== 学习模式 Tab ====== */}
+        <TabsContent value="learning-mode" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <GraduationCap className="w-4 h-4 text-primary" />
+                学习模式
+              </CardTitle>
+              <CardDescription>
+                选择适合你的学习阶段，系统将根据模式调整内容难度、学科范围与界面风格
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {modeSaveError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{modeSaveError}</AlertDescription>
+                </Alert>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {LEARNING_MODES.map((mode) => {
+                  const isSelected = mode.id === learningMode;
+                  const Icon = mode.icon;
+                  return (
+                    <button
+                      key={mode.id}
+                      type="button"
+                      onClick={() => handleSelectMode(mode.id)}
+                      disabled={modeSaving}
+                      className={`group relative text-left rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
+                        isSelected
+                          ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`w-10 h-10 rounded-lg bg-gradient-to-br ${mode.color} flex items-center justify-center shadow-sm shrink-0`}
+                        >
+                          <Icon className="w-5 h-5 text-white" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5">
+                            <p className="text-sm font-semibold">{mode.label}</p>
+                            {isSelected && (
+                              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
+                            {mode.description}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* 状态提示条 */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">
+                  {modeSaving ? (
+                    <span className="inline-flex items-center gap-1.5">
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      正在保存...
+                    </span>
+                  ) : modeSaveSuccess ? (
+                    <span className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      保存成功
+                    </span>
+                  ) : (
+                    <>当前模式：{LEARNING_MODES.find((m) => m.id === learningMode)?.label ?? "小学"}</>
+                  )}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* ====== 通知设置 Tab ====== */}
         <TabsContent value="notifications" className="space-y-4">
@@ -529,6 +681,22 @@ export default function SettingsPage() {
                     <SelectItem value="zh-CN">简体中文</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <Separator />
+
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5">
+                  <Label>显示排行榜</Label>
+                  <p className="text-xs text-muted-foreground">上班族模式可隐藏排行榜以专注学习</p>
+                </div>
+                <Switch
+                  checked={leaderboardVisible}
+                  onCheckedChange={(v) => {
+                    setLeaderboardVisible(v);
+                    saveLeaderboardVisible(v);
+                  }}
+                />
               </div>
             </CardContent>
           </Card>

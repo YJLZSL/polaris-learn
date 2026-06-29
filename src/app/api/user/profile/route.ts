@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getLevelInfo } from "@/lib/game";
 import { hasAPIKey } from "@/lib/llm-adapter";
+import { LEARNING_MODES } from "@/lib/learning-modes";
 
 // GET: 获取当前用户资料和统计数据
 export async function GET() {
@@ -68,6 +69,7 @@ export async function GET() {
         name: safeUser.name,
         email: safeUser.email,
         grade: safeUser.grade,
+        learningMode: safeUser.learningMode,
         avatar: safeUser.avatar,
         xp: safeUser.xp,
         level: safeUser.level,
@@ -193,5 +195,51 @@ export async function PUT(request: Request) {
     const status = message.includes("不能为空") || message.includes("应在") ? 400 : 500;
     console.error("更新用户资料失败:", error);
     return NextResponse.json({ error: message }, { status });
+  }
+}
+
+// PATCH: 更新学习模式
+export async function PATCH(request: Request) {
+  try {
+    const session = await auth();
+    if (!session || !session.user) {
+      return NextResponse.json({ error: "请先登录" }, { status: 401 });
+    }
+
+    const userId = (session.user as Record<string, unknown>).id as string;
+
+    const body = await request.json();
+    const { learningMode } = body;
+
+    if (learningMode === undefined) {
+      return NextResponse.json({ error: "缺少 learningMode 字段" }, { status: 400 });
+    }
+
+    // 校验 learningMode 是否在 LEARNING_MODES 列表中
+    const validModeIds = LEARNING_MODES.map((m) => m.id);
+    if (!validModeIds.includes(learningMode)) {
+      return NextResponse.json(
+        { error: `学习模式无效，可选值：${validModeIds.join(", ")}` },
+        { status: 400 }
+      );
+    }
+
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { learningMode },
+      select: {
+        id: true,
+        name: true,
+        learningMode: true,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error("更新学习模式失败:", error);
+    return NextResponse.json({ error: "更新学习模式失败" }, { status: 500 });
   }
 }

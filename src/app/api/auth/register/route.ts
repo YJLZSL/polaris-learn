@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { LEARNING_MODES, getLearningModeConfig, type LearningModeId } from "@/lib/learning-modes";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { name, email, password, grade } = body;
+    const { name, email, password } = body;
 
     // 参数校验
     if (!name || typeof name !== "string" || name.trim().length === 0) {
@@ -19,6 +20,16 @@ export async function POST(request: Request) {
     if (!password || typeof password !== "string" || password.length < 6) {
       return NextResponse.json({ error: "密码至少需要6位" }, { status: 400 });
     }
+
+    // 校验学习模式
+    const validModeIds = LEARNING_MODES.map((m) => m.id);
+    const rawMode =
+      typeof body.learningMode === "string" ? body.learningMode : "PRIMARY";
+    if (!validModeIds.includes(rawMode as LearningModeId)) {
+      return NextResponse.json({ error: "无效的学习模式" }, { status: 400 });
+    }
+    const learningMode = rawMode as LearningModeId;
+    const grade = getLearningModeConfig(learningMode).defaultGrade;
 
     // 检查邮箱唯一性
     const existingUser = await prisma.user.findUnique({
@@ -38,7 +49,8 @@ export async function POST(request: Request) {
         name: name.trim(),
         email: email.trim().toLowerCase(),
         password: hashedPassword,
-        grade: grade || null,
+        grade,
+        learningMode,
         studentProfile: {
           create: {
             weakPoints: "[]",
@@ -51,6 +63,7 @@ export async function POST(request: Request) {
         name: true,
         email: true,
         grade: true,
+        learningMode: true,
         createdAt: true,
       },
     });

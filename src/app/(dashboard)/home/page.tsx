@@ -10,6 +10,7 @@ import {
   CheckCircle,
   MessageSquare,
   Network,
+  BookOpen,
   FileQuestion,
   Play,
   ChevronRight,
@@ -22,6 +23,8 @@ import {
   Camera,
   RotateCw,
   AlertTriangle,
+  ChevronDown,
+  Check,
 } from "lucide-react";
 import { motion, useInView, useMotionValue, animate } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +35,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
 import { staggerContainer, listItem } from "@/lib/motion";
+import { useUserStore } from "@/stores/useUserStore";
+import { LEARNING_MODES, getLearningModeConfig } from "@/lib/learning-modes";
 
 /* ---------- helpers ---------- */
 function xpForLevel(lvl: number) {
@@ -85,6 +96,7 @@ interface HomeStats {
   level: number;
   streak: number;
   maxStreak: number;
+  learningMode?: string;
   todayDuration: number;
   todayQuestions: number;
   todayCorrect: number;
@@ -122,6 +134,11 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 从 useUserStore 获取 learningMode，并暴露 setUser 用于同步
+  const learningMode = useUserStore((s) => s.learningMode);
+  const setUser = useUserStore((s) => s.setUser);
+  const [modeSwitching, setModeSwitching] = useState(false);
+
   useEffect(() => {
     async function fetchStats() {
       try {
@@ -133,6 +150,10 @@ export default function HomePage() {
         }
         const data = await res.json();
         setStats(data);
+        // 同步 learningMode 到 store，让徽章即时显示正确模式
+        if (data.learningMode) {
+          setUser({ learningMode: data.learningMode });
+        }
       } catch (e) {
         setError(e instanceof Error ? e.message : "加载失败");
       } finally {
@@ -140,7 +161,32 @@ export default function HomePage() {
       }
     }
     fetchStats();
-  }, []);
+  }, [setUser, learningMode]);
+
+  /* ---------- 快速切换学习模式 ---------- */
+  const handleQuickSwitchMode = async (modeId: string) => {
+    if (modeId === learningMode || modeSwitching) return;
+    setModeSwitching(true);
+    // 乐观更新
+    setUser({ learningMode: modeId });
+    try {
+      const res = await fetch("/api/user/profile", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ learningMode: modeId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "切换失败");
+      }
+    } catch (err) {
+      // 回滚
+      setUser({ learningMode });
+      console.error("切换学习模式失败:", err);
+    } finally {
+      setModeSwitching(false);
+    }
+  };
 
   const level = stats?.level ?? 1;
   const xp = stats?.xp ?? 0;
@@ -372,6 +418,46 @@ export default function HomePage() {
                 今天又是元气满满的一天！
               </h1>
               <div className="flex flex-wrap items-center gap-2 mt-4">
+                {/* 学习模式徽章 - 点击快速切换 */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      disabled={modeSwitching}
+                      className="inline-flex items-center gap-1.5 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm transition-colors hover:bg-white/30 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60 disabled:opacity-60 disabled:cursor-not-allowed"
+                      aria-label="切换学习模式"
+                    >
+                      {(() => {
+                        const ModeIcon = getLearningModeConfig(learningMode).icon;
+                        return <ModeIcon className="w-3.5 h-3.5 text-white" />;
+                      })()}
+                      <span className="font-semibold">{getLearningModeConfig(learningMode).label}</span>
+                      <ChevronDown className="w-3 h-3 text-white/80" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    {LEARNING_MODES.map((mode) => {
+                      const ModeIcon = mode.icon;
+                      const isActive = mode.id === learningMode;
+                      return (
+                        <DropdownMenuItem
+                          key={mode.id}
+                          onSelect={() => handleQuickSwitchMode(mode.id)}
+                          className="gap-2.5 cursor-pointer"
+                        >
+                          <span className={`w-7 h-7 rounded-md bg-gradient-to-br ${mode.color} flex items-center justify-center shrink-0`}>
+                            <ModeIcon className="w-4 h-4 text-white" />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium">{mode.label}</p>
+                            <p className="text-xs text-muted-foreground truncate">{mode.description}</p>
+                          </div>
+                          {isActive && <Check className="w-4 h-4 text-primary shrink-0" />}
+                        </DropdownMenuItem>
+                      );
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
                 <Badge variant="secondary" className="bg-white/20 text-white hover:bg-white/30 border-0 gap-1.5 backdrop-blur-sm">
                   <Flame className="w-3.5 h-3.5 text-amber-300" />
                   <span className="font-semibold">{streak}</span> 天连胜
@@ -444,6 +530,51 @@ export default function HomePage() {
           </motion.div>
         ))}
       </motion.div>
+
+      {/* ====== Micro Learning (PROFESSIONAL mode only) ====== */}
+      <div className="micro-learning-card">
+        <div className="grid grid-cols-3 gap-2">
+          <Link href="/ai-teacher" className="group">
+            <Card className="transition-all hover:shadow-sm hover:-translate-y-0.5">
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 flex items-center justify-center shrink-0">
+                  <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">5 分钟速学</p>
+                  <p className="text-[10px] text-muted-foreground truncate">AI 快速答疑</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/practice" className="group">
+            <Card className="transition-all hover:shadow-sm hover:-translate-y-0.5">
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center shrink-0">
+                  <BookOpen className="w-4 h-4 text-emerald-600 dark:text-emerald-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">5 分钟速学</p>
+                  <p className="text-[10px] text-muted-foreground truncate">刷 3 道题</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/error-notes" className="group">
+            <Card className="transition-all hover:shadow-sm hover:-translate-y-0.5">
+              <CardContent className="p-3 flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                  <FileQuestion className="w-4 h-4 text-amber-600 dark:text-amber-300" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold">5 分钟速学</p>
+                  <p className="text-[10px] text-muted-foreground truncate">复习错题</p>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+      </div>
 
       {/* ====== Daily Challenge + Quick Actions Grid ====== */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-6">

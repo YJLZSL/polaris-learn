@@ -24,6 +24,7 @@ export async function GET() {
         level: true,
         streak: true,
         maxStreak: true,
+        learningMode: true,
       },
     });
 
@@ -75,6 +76,7 @@ export async function GET() {
       level: user.level,
       streak: user.streak,
       maxStreak: user.maxStreak,
+      learningMode: user.learningMode,
       todayDuration,
       todayQuestions,
       todayCorrect,

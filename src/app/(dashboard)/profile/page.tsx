@@ -55,6 +55,7 @@ interface ProfileData {
   name: string;
   email: string;
   grade: string | null;
+  learningMode: string;
   avatar: string | null;
   xp: number;
   level: number;
@@ -145,6 +146,7 @@ export default function ProfilePage() {
       setUser({
         name: data.user.name,
         grade: data.user.grade,
+        learningMode: data.user.learningMode,
         avatar: data.user.avatar,
         xp: data.user.xp,
         level: data.user.level,

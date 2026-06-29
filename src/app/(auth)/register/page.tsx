@@ -17,21 +17,9 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const GRADES = [
-  "小学一年级", "小学二年级", "小学三年级",
-  "小学四年级", "小学五年级", "小学六年级",
-  "初一", "初二", "初三",
-  "高一", "高二", "高三",
-];
+import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
+import { cn } from "@/lib/utils";
 
 const ROLES = [
   { value: "student", label: "学生" },
@@ -43,7 +31,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [grade, setGrade] = useState("");
+  const [selectedMode, setSelectedMode] = useState<LearningModeId>("PRIMARY");
   const [role, setRole] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -51,7 +39,7 @@ export default function RegisterPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!name.trim() || !email.trim() || !password.trim() || !grade) {
+    if (!name.trim() || !email.trim() || !password.trim()) {
       toast.error("请填写所有必填字段");
       return;
     }
@@ -70,7 +58,7 @@ export default function RegisterPage() {
           name: name.trim(),
           email: email.trim(),
           password,
-          grade,
+          learningMode: selectedMode,
           role,
         }),
       });
@@ -158,19 +146,30 @@ export default function RegisterPage() {
           </div>
 
           <div className="space-y-2">
-            <Label>年级</Label>
-            <Select value={grade} onValueChange={setGrade}>
-              <SelectTrigger>
-                <SelectValue placeholder="请选择年级" />
-              </SelectTrigger>
-              <SelectContent>
-                {GRADES.map((g) => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>选择学习模式</Label>
+            <div className="grid grid-cols-2 gap-3">
+              {LEARNING_MODES.map((mode) => {
+                const Icon = mode.icon;
+                return (
+                  <div
+                    key={mode.id}
+                    onClick={() => setSelectedMode(mode.id)}
+                    className={cn(
+                      "flex flex-col items-center gap-2 rounded-xl border-2 p-4 cursor-pointer transition-all",
+                      selectedMode === mode.id
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                  >
+                    <Icon className="size-8" />
+                    <span className="font-medium text-sm">{mode.label}</span>
+                    <span className="text-xs text-muted-foreground text-center">
+                      {mode.description}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="space-y-2">
