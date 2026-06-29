@@ -12,6 +12,14 @@ datasource db {
   provider = "sqlite"
 }
 
+enum LearningMode {
+  KINDERGARTEN
+  PRIMARY
+  MIDDLE_HIGH
+  COLLEGE
+  PROFESSIONAL
+}
+
 model User {
   id            String    @id @default(uuid())
   name          String
@@ -25,6 +33,8 @@ model User {
   streak        Int       @default(0)
   maxStreak     Int       @default(0)
   lastStudyDate DateTime?
+  learningMode  LearningMode @default(PRIMARY)
+  birthDate     DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
