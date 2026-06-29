@@ -29,7 +29,7 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 1024,
+    minWidth: Math.floor(1024 * scaleFactor),
     minHeight: 768,
     title: "Polaris",
     icon: path.join(__dirname, "..", "public", "icon-512.png"),

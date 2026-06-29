@@ -64,7 +64,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   });
 
   return (
-    <header className="sticky top-0 z-20 h-14 bg-background/80 backdrop-blur-md border-b flex items-center px-4 gap-4">
+    <header className="sticky top-0 z-20 h-14 bg-background/80 backdrop-blur-md border-b flex items-center px-4 gap-4 pt-[env(safe-area-inset-top)]">
       {/* Mobile hamburger menu */}
       <Button
         variant="ghost"

@@ -17,7 +17,8 @@
     "android:open": "npx cap open android",
     "android:build": "npm run build && npx cap sync android",
     "android:dev": "npm run dev & npx cap run android",
-    "version:check": "node -e \"console.log(require('./package.json').version)\""
+    "version:check": "node -e \"console.log(require('./package.json').version)\"",
+    "seed:web": "echo 'Seed runs automatically on first launch via SessionProvider'"
   },
   "dependencies": {
     "@capacitor/cli": "^8.3.2",
