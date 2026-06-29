@@ -1,86 +1,31 @@
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { app, BrowserWindow, shell, ipcMain } = require("electron");
+const { app, BrowserWindow, shell, ipcMain, screen } = require("electron");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const { autoUpdater } = require("electron-updater");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path");
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { spawn } = require("child_process");
+const serve = require("electron-serve");
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 let mainWindow = null;
-let nextServer = null;
-const NEXT_PORT = 3000;
-const NEXT_URL = `http://localhost:${NEXT_PORT}`;
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 const isDev = !app.isPackaged;
-
-/**
- * In production mode, start the Next.js server as a child process.
- * In development mode, the server is started externally by concurrently.
- */
-function startNextServer() {
-  if (isDev) return Promise.resolve();
-
-  return new Promise((resolve, reject) => {
-    // Resolve the local next binary installed in node_modules
-    const nextBin = path.join(
-      __dirname,
-      "..",
-      "node_modules",
-      ".bin",
-      process.platform === "win32" ? "next.cmd" : "next"
-    );
-
-    nextServer = spawn(nextBin, ["start", "--port", String(NEXT_PORT)], {
-      cwd: path.join(__dirname, ".."),
-      stdio: ["ignore", "pipe", "pipe"],
-      env: { ...process.env, NODE_ENV: "production" },
-    });
-
-    let started = false;
-
-    const onData = (data) => {
-      const text = data.toString();
-      // Next.js prints "Ready" or "started server" when it's ready
-      if (!started && (text.includes("Ready") || text.includes("ready"))) {
-        started = true;
-        resolve();
-      }
-    };
-
-    nextServer.stdout.on("data", onData);
-    nextServer.stderr.on("data", onData);
-
-    nextServer.on("error", (err) => {
-      if (!started) reject(err);
-    });
-
-    nextServer.on("close", (code) => {
-      if (!started) {
-        reject(new Error(`Next.js server exited with code ${code}`));
-      }
-    });
-
-    // Safety timeout: if the server doesn't report ready within 30s, proceed anyway
-    setTimeout(() => {
-      if (!started) {
-        started = true;
-        resolve();
-      }
-    }, 30_000);
-  });
-}
+const loadURL = serve({ directory: "out" });
 
 // ---------------------------------------------------------------------------
 // Window creation
 // ---------------------------------------------------------------------------
 function createWindow() {
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { scaleFactor } = primaryDisplay;
+  console.log("[DPI] Primary display scaleFactor:", scaleFactor);
+
   mainWindow = new BrowserWindow({
     width: 1280,
     height: 800,
@@ -95,6 +40,7 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: false, // required for preload to use Node.js APIs
+      zoomFactor: 1.0, // 默认 1.0，Electron 自动处理 DPI
     },
   });
 
@@ -112,7 +58,11 @@ function createWindow() {
   });
 
   // Load the Next.js app
-  mainWindow.loadURL(NEXT_URL);
+  if (isDev) {
+    mainWindow.loadURL("http://localhost:3000");
+  } else {
+    loadURL(mainWindow);
+  }
 
   // Open DevTools in development mode
   if (isDev) {
@@ -167,13 +117,14 @@ if (!isDev) {
 // App lifecycle
 // ---------------------------------------------------------------------------
 app.whenReady().then(async () => {
-  try {
-    await startNextServer();
-  } catch (err) {
-    console.error("Failed to start Next.js server:", err);
-  }
-
   createWindow();
+
+  // 监听 DPI 变化（仅记录日志，不强制调整 zoom，Electron 自动处理 DPI）
+  screen.on("display-metrics-changed", (_event, _display, changedMetrics) => {
+    if (changedMetrics.includes("scaleFactor")) {
+      console.log("[DPI] scaleFactor changed to", screen.getPrimaryDisplay().scaleFactor);
+    }
+  });
 
   // macOS: re-create window when dock icon clicked and no windows exist
   app.on("activate", () => {
@@ -187,14 +138,6 @@ app.on("window-all-closed", () => {
   // On macOS, apps typically stay active until Cmd+Q
   if (process.platform !== "darwin") {
     app.quit();
-  }
-});
-
-app.on("before-quit", () => {
-  // Clean up the Next.js child process
-  if (nextServer && !nextServer.killed) {
-    nextServer.kill("SIGTERM");
-    nextServer = null;
   }
 });
 
