@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import Sidebar from "@/components/layout/Sidebar";
 import Header from "@/components/layout/Header";
+import MobileNav from "@/components/layout/MobileNav";
 import { AndroidUpdateBanner } from "@/components/providers/AndroidUpdateBanner";
 import { pageTransitionProps } from "@/lib/motion";
 import { useUserStore } from "@/stores/useUserStore";
@@ -31,12 +32,15 @@ export default function DashboardLayout({
         {/* Header */}
         <Header onMenuClick={() => setMobileMenuOpen(true)} />
 
+        {/* Mobile bottom navigation (<lg only) */}
+        <MobileNav />
+
         {/* Page content with animated route transitions */}
         <AnimatePresence mode="wait">
           <motion.main
             key={pathname}
             {...pageTransitionProps}
-            className="flex-1 p-4 md:p-6 pb-20 md:pb-6 overflow-auto"
+            className="flex-1 p-4 md:p-6 pb-24 lg:pb-6 overflow-auto"
           >
             {children}
           </motion.main>

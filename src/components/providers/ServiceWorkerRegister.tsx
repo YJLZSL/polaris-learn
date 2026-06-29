@@ -14,6 +14,16 @@ export default function ServiceWorkerRegister() {
       return;
     }
 
+    // 检测 Capacitor 原生环境
+    const isCapacitorNative =
+      typeof window !== "undefined" &&
+      (window as any).Capacitor?.isNativePlatform === true;
+
+    if (isCapacitorNative) {
+      // 原生 App 环境不需要 Service Worker
+      return;
+    }
+
     // 检测新 Service Worker 接管 (PWA 更新)
     const handleControllerChange = () => setUpdateAvailable(true);
     navigator.serviceWorker.addEventListener("controllerchange", handleControllerChange);
