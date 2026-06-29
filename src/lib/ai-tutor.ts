@@ -131,7 +131,8 @@ export function simulateAIResponse(
   subject: string,
   question: string,
   stage: string,
-  studentMessage: string
+  studentMessage: string,
+  learningMode?: string
 ): { content: string; nextStage: string; isCorrect?: boolean } {
   const lowered = studentMessage.toLowerCase().trim();
 
@@ -149,7 +150,10 @@ export function simulateAIResponse(
 
   if (isAskingForAnswer) {
     return {
-      content: getSocraticPrompt(subject, stage, "直接告诉我答案"),
+      content: applyModeToneToSocratic(
+        getSocraticPrompt(subject, stage, "直接告诉我答案"),
+        learningMode
+      ),
       nextStage: stage,
     };
   }
@@ -157,7 +161,10 @@ export function simulateAIResponse(
   if (isCorrect && stage !== "reflection") {
     const nextStage = getNextStage(stage);
     return {
-      content: getSocraticPrompt(subject, nextStage, studentMessage, true),
+      content: applyModeToneToSocratic(
+        getSocraticPrompt(subject, nextStage, studentMessage, true),
+        learningMode
+      ),
       nextStage,
       isCorrect: true,
     };
@@ -165,7 +172,10 @@ export function simulateAIResponse(
 
   if (!isCorrect && lowered.length > 0 && stage !== "diagnostic") {
     return {
-      content: getSocraticPrompt(subject, stage, studentMessage, false),
+      content: applyModeToneToSocratic(
+        getSocraticPrompt(subject, stage, studentMessage, false),
+        learningMode
+      ),
       nextStage: stage,
       isCorrect: false,
     };
@@ -173,7 +183,32 @@ export function simulateAIResponse(
 
   const nextStage = isCorrect ? getNextStage(stage) : stage;
   return {
-    content: getSocraticPrompt(subject, nextStage, studentMessage),
+    content: applyModeToneToSocratic(
+      getSocraticPrompt(subject, nextStage, studentMessage),
+      learningMode
+    ),
     nextStage,
   };
+}
+
+/**
+ * 根据学习模式对苏格拉底式引导文案做语气适配。
+ * - KINDERGARTEN：追加 emoji 与鼓励性短语
+ * - PROFESSIONAL：去除冗余 emoji，保持简洁
+ * - 其他模式：原样返回
+ */
+function applyModeToneToSocratic(text: string, learningMode?: string): string {
+  const mode = (learningMode || "PRIMARY").toUpperCase();
+  if (mode === "KINDERGARTEN") {
+    // 已有 emoji 则不再重复堆叠，仅补充鼓励语
+    if (/[🎉🌟🎈🎁✨]/.test(text)) {
+      return `${text} 你真棒，继续加油哦！🌟`;
+    }
+    return `🌟 ${text} 🎈 你真棒，继续加油哦！`;
+  }
+  if (mode === "PROFESSIONAL") {
+    // 上班族模式：剥离常见装饰性 emoji，保持干练
+    return text.replace(/[🎉🌟🎈🎁✨👍💪😀😊]/gu, "").replace(/\s{2,}/g, " ").trim();
+  }
+  return text;
 }

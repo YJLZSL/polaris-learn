@@ -8,6 +8,7 @@ import {
   buildSocraticSystemPrompt,
   getFallbackResponse,
   getLLMConfig,
+  applyModeToneToResponse,
 } from "@/lib/llm-adapter";
 import type { ChatMessage } from "@/lib/llm-adapter";
 
@@ -64,6 +65,13 @@ export async function POST(request: Request) {
     if (!message || typeof message !== "string" || message.trim().length === 0) {
       return NextResponse.json({ error: "消息不能为空" }, { status: 400 });
     }
+
+    // 拉取用户的 learningMode（学习模式），用于驱动 prompt 分层与降级响应适配
+    const userRow = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { grade: true, learningMode: true },
+    });
+    const learningMode: string = (userRow?.learningMode as string) || "PRIMARY";
 
     // 安全检查
     const safetyResult = checkInputSafety(message.trim());
@@ -146,8 +154,9 @@ export async function POST(request: Request) {
 
     // ---- 构建 LLM 对话消息 ----
     const systemPrompt = buildSocraticSystemPrompt({
-      grade: (session.user as Record<string, unknown>).grade as string | undefined,
+      grade: userRow?.grade || (session.user as Record<string, unknown>).grade as string | undefined,
       subject,
+      learningMode,
     });
 
     const existingMessages: ChatMessage[] = (conversation.messages || [])
@@ -184,16 +193,19 @@ export async function POST(request: Request) {
         completionTokens = aiResponse.usage?.completionTokens || 0;
       } else {
         // 无 API Key 时使用本地降级响应
-        aiContent = getFallbackResponse(subject, currentStage, message.trim());
+        aiContent = getFallbackResponse(subject, currentStage, message.trim(), learningMode);
         aiStage = currentStage;
         isCorrect = undefined;
       }
     } catch (llmError) {
       console.error("LLM 调用失败，使用降级响应:", llmError);
-      aiContent = getFallbackResponse(subject, currentStage, message.trim());
+      aiContent = getFallbackResponse(subject, currentStage, message.trim(), learningMode);
       aiStage = currentStage;
       isCorrect = undefined;
     }
+
+    // 根据学习模式做语气后处理（如 PROFESSIONAL 剥离装饰性 emoji）
+    aiContent = applyModeToneToResponse(aiContent, learningMode);
 
     // 运行输出安全检查
     const { checkOutputSafety } = await import("@/lib/safety");
