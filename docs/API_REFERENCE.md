@@ -1,5 +1,10 @@
 # Polaris API 参考文档
 
+> **⚠️ 已废弃（v3.0.0）**
+> 本文档描述的 API Routes 在 v3.0.0 中已全部移除。
+> 应用改为纯前端架构，所有数据通过 IndexedDB repository 访问，AI 通过客户端 service 直连。
+> 本文档保留作为历史参考。
+
 > 在线文档: `/docs/api` | OpenAPI 规范: `public/openapi.yaml`
 
 ## 认证

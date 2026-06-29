@@ -2,6 +2,65 @@
 
 本项目所有重要变更记录均会写入此文件。版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [3.0.0] - 2026-06-30
+
+### 重构亮点
+- **纯前端架构**：移除所有后端依赖，Next.js 静态导出模式，无服务器即可运行
+- **IndexedDB 数据层**：浏览器原生持久化存储，替代 Prisma + SQLite
+- **客户端直连 LLM**：直接调用 DeepSeek/Qwen/OpenAI/Ollama API，不经服务器转发
+- **本地认证系统**：Web Crypto API PBKDF2 哈希，无 NextAuth 依赖
+- **跨平台适配**：PC（Electron）+ Android（Capacitor）+ Web（PWA）三端统一
+- **响应式与高 PPI**：移动端底部导航栏、安全区适配、高 PPI 字号优化
+- **前端美术升级**：玻璃拟态设计、Inter 可变字体、统一缓动曲线动画系统
+
+### 新增
+- IndexedDB schema 与封装（`src/lib/db/`）
+- 8 个 repository（user/auth/practice/error-notes/knowledge/gamification/conversation/leaderboard）
+- courses.repository.ts（静态示例课程）
+- home-stats 聚合函数
+- ai-service.ts（客户端 AI 直连，支持 5 个 provider）
+- auth-service.ts（Web Crypto API PBKDF2 认证）
+- version.ts（静态版本信息）
+- 3 个响应式 hooks（use-media-query / use-is-mobile / use-device-pixel-ratio）
+- MobileNav 底部导航栏组件
+- Inter 可变字体引入
+- 玻璃拟态 design tokens（--glass-bg / --glass-border）
+- 5 级阴影 tokens
+- slideInRight 动画预设
+- EASE_OUT_EXPO 统一缓动曲线
+
+### 变更
+- Next.js 启用 `output: 'export'` 静态导出模式
+- Capacitor 配置：`webDir: 'out'`，移除 `server.url`，`androidScheme: 'https'`
+- Electron 改用 `electron-serve` 加载静态文件，移除 Next.js 子进程
+- Electron 添加 DPI 缩放检测（`screen.getPrimaryDisplay().scaleFactor`）
+- viewport 配置：`viewportFit: 'cover'`，`userScalable: false`
+- globals.css：主色 `#6366f1`，强调色 `#f59e0b`（金色），暗色模式色板优化
+- globals.css：`--radius` 从 `0.625rem` 调整为 `0.75rem`
+- Card 组件：玻璃拟态效果（`backdrop-blur-md` + `bg-card/80`）
+- Input 组件：focus ring 改为 `ring-primary/50`
+- motion.ts：所有动画统一使用 `EASE_OUT_EXPO` 缓动曲线
+- Header/Sidebar：从 next-auth/react 迁移到本地 SessionProvider
+- SessionProvider：完全移除 NextAuth，改为 React Context + auth-service
+- manifest.json：添加 `display_override` 和 `purpose: "maskable"` 图标
+- ServiceWorkerRegister：在 Capacitor 原生环境跳过注册
+- package.json build.files：`.next/**/*` 改为 `out/**/*`
+
+### 移除
+- Prisma ORM（`prisma/` 目录、`src/lib/prisma.ts`、`prisma.config.ts`）
+- NextAuth（`src/auth.ts`、`src/app/api/auth/`）
+- 所有 API Routes（`src/app/api/` 整个目录，20 个路由）
+- `src/lib/llm-adapter.ts`（逻辑内联到 ai-service.ts）
+- `src/lib/ai-tutor.ts`（未使用）
+- 依赖：`@prisma/client`、`prisma`、`@prisma/adapter-libsql`、`@prisma/adapter-pg`、`@libsql/client`、`pg`、`bcryptjs`、`next-auth`、`dotenv`
+- scripts：`db:migrate`、`db:seed`、`db:migrate-pg`
+
+### 修复
+- Android `ERR_CLEARTEXT_NOT_PERMITTED`：添加 network_security_config.xml + usesCleartextTraffic
+- home 页面死链：`/error-book` → `/error-notes`，`/camera-search` → `/practice`
+
+---
+
 ## [2.1.0] - 2026-06-29
 
 ### 重磅变更
