@@ -21,6 +21,8 @@ import { useUserStore } from "@/stores/useUserStore";
 import { cn } from "@/lib/utils";
 import { SUBJECT_MAP } from "@/lib/constants";
 import { getSubjectsForMode, getLearningModeConfig } from "@/lib/learning-modes";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { getKnowledgePoints, getUserMastery } from "@/lib/repositories/knowledge.repository";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -195,7 +197,7 @@ const nodeRadius = () => 22;
 
 /* ====== Component ====== */
 export default function KnowledgeGraphPage() {
-  const { weakPoints: _weakPoints, addXP, learningMode, setUser } = useUserStore();
+  const { weakPoints: _weakPoints, addXP, learningMode, setUser, id: userId, initFromAuth } = useUserStore();
 
   // 当前有效学习模式 id（learningMode 未就绪时回退到 PRIMARY）
   const effectiveMode = learningMode || "PRIMARY";
@@ -218,11 +220,10 @@ export default function KnowledgeGraphPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/user/profile");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.user?.learningMode) {
-          setUser({ learningMode: data.user.learningMode as string });
+        await initFromAuth();
+        const user = await getCurrentUser();
+        if (!cancelled && user?.learningMode) {
+          setUser({ learningMode: user.learningMode });
         }
       } catch {
         /* 静默失败：将使用默认 PRIMARY 模式 */
@@ -231,7 +232,7 @@ export default function KnowledgeGraphPage() {
     return () => {
       cancelled = true;
     };
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   const [activeSubject, setActiveSubject] = useState("数学");
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
@@ -261,15 +262,33 @@ export default function KnowledgeGraphPage() {
     setError(null);
     setSelectedNode(null);
     try {
-      const params = new URLSearchParams({ subject });
-      if (grade) params.set("gradeLevel", grade);
-      const res = await fetch(`/api/knowledge-graph?${params}`);
-      if (!res.ok) {
-        throw new Error("获取数据失败");
+      const [points, masteryList] = await Promise.all([
+        getKnowledgePoints({ subject, gradeLevel: grade }),
+        userId ? getUserMastery(userId) : Promise.resolve([]),
+      ]);
+      const masteryMap: Record<string, number> = {};
+      for (const m of masteryList) {
+        masteryMap[m.knowledgePointId] = m.mastery;
       }
-      const data = await res.json();
-      setNodes(data.nodes || []);
-      setEdges(data.edges || []);
+      // 映射 KnowledgePoint -> 本地 KnowledgeNode 结构
+      const mappedNodes: KnowledgeNode[] = points.map((p) => ({
+        id: p.id,
+        name: p.title,
+        masteryLevel: masteryMap[p.id] ?? 0,
+        parentId: p.parentId ?? null,
+        subject: p.subject,
+        description: p.description ?? null,
+        gradeLevel: p.gradeLevel ?? null,
+        orderIndex: p.order,
+        timesCorrect: 0,
+        timesWrong: 0,
+      }));
+      // 由 parentId 推导 edges
+      const mappedEdges: KnowledgeEdge[] = mappedNodes
+        .filter((n) => n.parentId)
+        .map((n) => ({ from: n.parentId as string, to: n.id, relation: "前置" }));
+      setNodes(mappedNodes);
+      setEdges(mappedEdges);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载知识图谱数据失败");
       setNodes([]);
@@ -277,7 +296,7 @@ export default function KnowledgeGraphPage() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect

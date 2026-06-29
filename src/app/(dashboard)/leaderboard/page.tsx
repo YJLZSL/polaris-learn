@@ -37,6 +37,9 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { staggerContainer, listItem, scaleIn } from "@/lib/motion";
 import { useUserStore } from "@/stores/useUserStore";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { getTopUsers as repoGetTopUsers } from "@/lib/repositories/leaderboard.repository";
+import { getUserStats } from "@/lib/repositories/gamification.repository";
 
 const LEADERBOARD_VISIBLE_KEY = "polaris_leaderboard_visible";
 
@@ -195,6 +198,8 @@ export default function LeaderboardPage() {
 
   const learningMode = useUserStore((s) => s.learningMode);
   const setUser = useUserStore((s) => s.setUser);
+  const userId = useUserStore((s) => s.id);
+  const initFromAuth = useUserStore((s) => s.initFromAuth);
   const [modeReady, setModeReady] = useState(false);
   const [hidden, setHidden] = useState(false);
 
@@ -203,11 +208,10 @@ export default function LeaderboardPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/user/profile");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.user?.learningMode) {
-          setUser({ learningMode: data.user.learningMode as string });
+        await initFromAuth();
+        const user = await getCurrentUser();
+        if (!cancelled && user?.learningMode) {
+          setUser({ learningMode: user.learningMode });
         }
       } catch {
         /* 静默失败 */
@@ -218,7 +222,7 @@ export default function LeaderboardPage() {
     return () => {
       cancelled = true;
     };
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   // 根据 learningMode 与 localStorage 决定是否隐藏排行榜
   useEffect(() => {
@@ -242,15 +246,39 @@ export default function LeaderboardPage() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/game/leaderboard?period=${activeTab}`);
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || "获取排行榜失败");
+        // 本地存储无法提供真实的跨用户排行，使用 repository 提供的"本机用户虚拟排行"
+        const { entries, userRank } = await repoGetTopUsers(50, userId || undefined);
+        const mapped: LeaderboardUser[] = entries.map((e) => ({
+          rank: e.rank,
+          userId: e.userId,
+          name: e.name,
+          avatar: e.avatar ?? null,
+          level: e.level,
+          xp: e.xp,
+          streak: e.currentStreak,
+        }));
+        setData(mapped);
+
+        // 拉取当前用户完整 stats，构造 currentUser 视图
+        if (userId) {
+          const stats = await getUserStats(userId);
+          if (stats) {
+            const me: LeaderboardUser = {
+              rank: userRank ?? 0,
+              userId,
+              name: "我",
+              avatar: null,
+              level: stats.level,
+              xp: stats.xp,
+              streak: stats.currentStreak,
+            };
+            setCurrentUser(me);
+            setCurrentUserRank(userRank ?? null);
+          } else {
+            setCurrentUser(null);
+            setCurrentUserRank(null);
+          }
         }
-        const result = await res.json();
-        setData(result.leaderboard || []);
-        setCurrentUser(result.currentUser || null);
-        setCurrentUserRank(result.currentUserRank || null);
       } catch (e) {
         setError(e instanceof Error ? e.message : "加载失败");
         setData([]);
@@ -259,7 +287,7 @@ export default function LeaderboardPage() {
       }
     }
     fetchLeaderboard();
-  }, [activeTab, hidden]);
+  }, [activeTab, hidden, userId]);
 
   const top3 = data.slice(0, 3);
   const rest = data.slice(3);

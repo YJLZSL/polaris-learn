@@ -1,12 +1,18 @@
 "use client";
 
-import { useVersionCheck } from "@/hooks/useVersionCheck";
-import packageJson from "../../../package.json";
+import { getVersion, getReleaseNotes } from "@/lib/version";
 
+/**
+ * Android 更新提示横幅。
+ * 静态化后无服务端版本检查端点；版本信息由 @/lib/version 静态提供。
+ * 当本地版本与最新版本不一致时显示更新提示（目前无远程源，恒不触发）。
+ */
 export function AndroidUpdateBanner() {
-  const update = useVersionCheck(packageJson.version);
+  const localVersion = getVersion();
+  const latestVersion = getVersion();
+  const releaseNotes = getReleaseNotes();
 
-  if (!update) return null;
+  if (latestVersion === localVersion) return null;
 
   return (
     <div
@@ -25,24 +31,7 @@ export function AndroidUpdateBanner() {
         fontSize: "14px",
       }}
     >
-      <span>✨ 发现新版本 {update.version},点击下载更新</span>
-      {update.androidUrl ? (
-        <a
-          href={update.androidUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{
-            background: "white",
-            color: "#4f46e5",
-            padding: "4px 12px",
-            borderRadius: "6px",
-            fontWeight: 600,
-            textDecoration: "none",
-          }}
-        >
-          下载
-        </a>
-      ) : null}
+      <span>✨ 发现新版本 {latestVersion}，{releaseNotes.join("；")}</span>
     </div>
   );
 }

@@ -27,6 +27,12 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
+import { useUserStore } from "@/stores/useUserStore";
+import {
+  getErrorNotes as repoGetErrorNotes,
+  markReviewed as repoMarkReviewed,
+} from "@/lib/repositories/error-notes.repository";
+import { getQuestionById } from "@/lib/repositories/practice.repository";
 import {
   Dialog,
   DialogContent,
@@ -140,6 +146,9 @@ function LoadingSkeleton() {
 
 /* ====== Component ====== */
 export default function ErrorNotesPage() {
+  const userId = useUserStore((s) => s.id);
+  const initFromAuth = useUserStore((s) => s.initFromAuth);
+
   // Filters
   const [activeSubject, setActiveSubject] = useState("");
   const [activeStatus, setActiveStatus] = useState<string>("active");
@@ -167,31 +176,67 @@ export default function ErrorNotesPage() {
 
   const limit = 20;
 
+  // 首次挂载时同步登录状态
+  useEffect(() => {
+    initFromAuth();
+  }, [initFromAuth]);
+
   const fetchErrorNotes = useCallback(async () => {
+    if (!userId) {
+      setErrorNotes([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (activeSubject) params.set("subject", activeSubject);
-      if (activeStatus) params.set("status", activeStatus);
-      params.set("page", String(currentPage));
-      params.set("limit", String(limit));
+      // 映射 UI 状态到 repository 状态：active -> new/reviewing, eliminated -> mastered
+      const statusFilter = activeStatus === "eliminated" ? "mastered" : activeStatus === "active" ? undefined : undefined;
+      const repoNotes = await repoGetErrorNotes(userId, { subject: activeSubject || undefined, status: statusFilter });
+      // 二次过滤：active 显示 new + reviewing；eliminated 显示 mastered
+      const filtered = activeStatus === "eliminated"
+        ? repoNotes.filter((n) => n.status === "mastered")
+        : activeStatus === "active"
+          ? repoNotes.filter((n) => n.status !== "mastered")
+          : repoNotes;
 
-      const res = await fetch(`/api/error-notes?${params.toString()}`);
-      if (!res.ok) {
-        throw new Error("获取数据失败");
-      }
-      const data = await res.json();
-      setErrorNotes(data.errorNotes || []);
-      setTotal(data.total || 0);
-      setTotalPages(data.totalPages || 0);
+      // 拉取关联题目（含 content/options/correctAnswer/explanation）
+      const items: ErrorNoteItem[] = await Promise.all(
+        filtered.map(async (n) => {
+          const q = await getQuestionById(n.questionId);
+          return {
+            id: n.id,
+            question: {
+              id: n.questionId,
+              content: q?.content ?? "",
+              subject: n.subject,
+              type: "choice",
+              difficulty: q?.difficulty ?? 1,
+              options: q?.options ?? [],
+              answer: n.correctAnswer,
+              explanation: q?.explanation ?? null,
+            },
+            wrongAnswer: n.userAnswer,
+            errorType: null,
+            status: n.status === "mastered" ? "eliminated" : "active",
+            correctCount: n.reviewCount,
+            createdAt: n.createdAt,
+            nextReviewAt: null,
+          };
+        })
+      );
+
+      setTotal(items.length);
+      setTotalPages(Math.max(1, Math.ceil(items.length / limit)));
+      const start = (currentPage - 1) * limit;
+      setErrorNotes(items.slice(start, start + limit));
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载错题列表失败");
       setErrorNotes([]);
     } finally {
       setLoading(false);
     }
-  }, [activeSubject, activeStatus, currentPage]);
+  }, [userId, activeSubject, activeStatus, currentPage]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -216,13 +261,26 @@ export default function ErrorNotesPage() {
 
     setReviewing(true);
     try {
-      const res = await fetch(`/api/error-notes/${reviewingNote.id}/review`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ answer: reviewAnswer.trim() }),
+      const userAnswer = reviewAnswer.trim();
+      const correctAnswer = reviewingNote.question.answer.trim();
+      const isCorrect = userAnswer === correctAnswer;
+      // 客户端检测：连续 2 次答对则消除
+      const newCorrectCount = (reviewingNote.correctCount || 0) + (isCorrect ? 1 : 0);
+      const eliminated = isCorrect && newCorrectCount >= 2;
+
+      await repoMarkReviewed(reviewingNote.id, eliminated);
+
+      setReviewResult({
+        correct: isCorrect,
+        correctAnswer: isCorrect ? undefined : correctAnswer,
+        explanation: reviewingNote.question.explanation ?? undefined,
+        eliminated,
+        message: isCorrect
+          ? eliminated
+            ? "回答正确！连续答对 2 次，错题已消除"
+            : "回答正确！再答对 1 次即可消除"
+          : "回答错误，请继续复习",
       });
-      const data = await res.json();
-      setReviewResult(data);
 
       // Refresh the list after review
       fetchErrorNotes();

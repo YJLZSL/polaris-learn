@@ -20,7 +20,6 @@ import {
   Clock,
   Lightbulb,
   Sparkles,
-  Camera,
   RotateCw,
   AlertTriangle,
   ChevronDown,
@@ -44,6 +43,9 @@ import {
 import { staggerContainer, listItem } from "@/lib/motion";
 import { useUserStore } from "@/stores/useUserStore";
 import { LEARNING_MODES, getLearningModeConfig } from "@/lib/learning-modes";
+import { getHomeStats } from "@/lib/repositories/home-stats.repository";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { updateUser } from "@/lib/repositories/user.repository";
 
 /* ---------- helpers ---------- */
 function xpForLevel(lvl: number) {
@@ -67,9 +69,9 @@ const greeting = () => {
 /* ---------- quick actions ---------- */
 const quickActions = [
   { href: "/ai-teacher", label: "AI 老师", icon: MessageSquare, color: "bg-indigo-500", desc: "智能辅导答疑" },
-  { href: "/camera-search", label: "拍题搜题", icon: Camera, color: "bg-purple-500", desc: "拍照快速解题" },
+  { href: "/practice", label: "开始练习", icon: BookOpen, color: "bg-purple-500", desc: "题库刷题" },
   { href: "/knowledge-graph", label: "知识图谱", icon: Network, color: "bg-cyan-500", desc: "知识点掌握情况" },
-  { href: "/error-book", label: "错题本", icon: FileQuestion, color: "bg-amber-500", desc: "查漏补缺复习" },
+  { href: "/error-notes", label: "错题本", icon: FileQuestion, color: "bg-amber-500", desc: "查漏补缺复习" },
 ];
 
 const subjectColor: Record<string, string> = {
@@ -137,18 +139,17 @@ export default function HomePage() {
   // 从 useUserStore 获取 learningMode，并暴露 setUser 用于同步
   const learningMode = useUserStore((s) => s.learningMode);
   const setUser = useUserStore((s) => s.setUser);
+  const initFromAuth = useUserStore((s) => s.initFromAuth);
   const [modeSwitching, setModeSwitching] = useState(false);
 
   useEffect(() => {
     async function fetchStats() {
       try {
         setLoading(true);
-        const res = await fetch("/api/user/home-stats");
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "获取数据失败");
-        }
-        const data = await res.json();
+        // 先确保 store 已从本地 session 初始化
+        await initFromAuth();
+        const user = await getCurrentUser();
+        const data = await getHomeStats(user);
         setStats(data);
         // 同步 learningMode 到 store，让徽章即时显示正确模式
         if (data.learningMode) {
@@ -161,7 +162,7 @@ export default function HomePage() {
       }
     }
     fetchStats();
-  }, [setUser, learningMode]);
+  }, [setUser, learningMode, initFromAuth]);
 
   /* ---------- 快速切换学习模式 ---------- */
   const handleQuickSwitchMode = async (modeId: string) => {
@@ -170,15 +171,10 @@ export default function HomePage() {
     // 乐观更新
     setUser({ learningMode: modeId });
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ learningMode: modeId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "切换失败");
-      }
+      const user = await getCurrentUser();
+      if (!user) throw new Error("未登录");
+      user.learningMode = modeId;
+      await updateUser(user);
     } catch (err) {
       // 回滚
       setUser({ learningMode });

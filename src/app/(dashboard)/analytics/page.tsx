@@ -32,6 +32,16 @@ import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { useUserStore } from "@/stores/useUserStore";
+import { getUserStats } from "@/lib/repositories/gamification.repository";
+import {
+  getUserPracticeRecords,
+  getPracticeStats,
+} from "@/lib/repositories/practice.repository";
+import { getErrorNotes } from "@/lib/repositories/error-notes.repository";
+import {
+  getKnowledgePoints,
+  getUserMastery,
+} from "@/lib/repositories/knowledge.repository";
 
 // ---- 类型定义 ----
 
@@ -237,25 +247,131 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const learningMode = useUserStore((s) => s.learningMode);
+  const userId = useUserStore((s) => s.id);
+  const initFromAuth = useUserStore((s) => s.initFromAuth);
+
+  useEffect(() => {
+    initFromAuth();
+  }, [initFromAuth]);
 
   useEffect(() => {
     fetchReport(period);
-  }, [period]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period, userId]);
 
   async function fetchReport(p: Period) {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/analytics/report?period=${p}`);
-      if (!res.ok) {
-        if (res.status === 401) {
-          setError("请先登录后再查看学习报告");
-          return;
-        }
-        throw new Error("获取报告失败");
+      if (!userId) {
+        setError("请先登录后再查看学习报告");
+        return;
       }
-      const json = await res.json();
-      setData(json);
+      // 客户端聚合：从各 repository 拉取数据组装成 ReportData
+      const periodDays = p === "7d" ? 7 : p === "30d" ? 30 : 90;
+      const sinceMs = Date.now() - periodDays * 86400000;
+
+      const [stats, records, _errorNotes, knowledgePoints, masteryList] = await Promise.all([
+        getUserStats(userId),
+        getUserPracticeRecords(userId),
+        getErrorNotes(userId),
+        getKnowledgePoints(),
+        getUserMastery(userId),
+      ]);
+      void _errorNotes; // 暂未参与聚合，保留以备未来使用
+
+      // 过滤周期内记录
+      const periodRecords = records.filter((r) => new Date(r.createdAt).getTime() >= sinceMs);
+
+      // 每日统计
+      const dailyMap = new Map<string, { studyMinutes: number; questionsDone: number; correct: number; xpEarned: number }>();
+      for (const r of periodRecords) {
+        const date = r.createdAt.slice(0, 10);
+        const entry = dailyMap.get(date) || { studyMinutes: 0, questionsDone: 0, correct: 0, xpEarned: 0 };
+        entry.questionsDone += 1;
+        if (r.isCorrect) entry.correct += 1;
+        entry.studyMinutes += Math.max(1, Math.round((r.timeSpentMs || 0) / 60000));
+        entry.xpEarned += r.isCorrect ? 10 : 0;
+        dailyMap.set(date, entry);
+      }
+      const dailyStats: DailyStat[] = Array.from(dailyMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([date, v]) => ({
+          date,
+          studyMinutes: v.studyMinutes,
+          questionsDone: v.questionsDone,
+          correctRate: v.questionsDone > 0 ? Math.round((v.correct / v.questionsDone) * 100) : 0,
+          xpEarned: v.xpEarned,
+        }));
+
+      // 学科分布
+      const subjectMap = new Map<string, { questionsDone: number; correct: number; studyMinutes: number }>();
+      for (const r of periodRecords) {
+        const entry = subjectMap.get(r.subject) || { questionsDone: 0, correct: 0, studyMinutes: 0 };
+        entry.questionsDone += 1;
+        if (r.isCorrect) entry.correct += 1;
+        entry.studyMinutes += Math.max(1, Math.round((r.timeSpentMs || 0) / 60000));
+        subjectMap.set(r.subject, entry);
+      }
+      const subjectBreakdown: SubjectBreakdown[] = Array.from(subjectMap.entries()).map(([subject, v]) => ({
+        subject,
+        questionsDone: v.questionsDone,
+        correctRate: v.questionsDone > 0 ? Math.round((v.correct / v.questionsDone) * 100) : 0,
+        studyMinutes: v.studyMinutes,
+      }));
+
+      // 知识点掌握度
+      const masteryMap = new Map(masteryList.map((m) => [m.knowledgePointId, m.mastery]));
+      const knowledgeMastery: KnowledgeItem[] = knowledgePoints.map((kp) => ({
+        knowledgePointId: kp.id,
+        name: kp.title,
+        subject: kp.subject,
+        masteryLevel: masteryMap.get(kp.id) ?? 0,
+        timesCorrect: 0,
+        timesWrong: 0,
+      }));
+
+      // 薄弱/已掌握
+      const weakPoints = knowledgeMastery.filter((k) => k.masteryLevel > 0 && k.masteryLevel < 40);
+      const strengths = knowledgeMastery.filter((k) => k.masteryLevel >= 80);
+
+      // XP/Level
+      const xp = stats?.xp ?? 0;
+      const level = stats?.level ?? 1;
+      const levelTitle = level >= 10 ? "学霸" : level >= 5 ? "学霸预备" : "初学者";
+      const levelThresholds = [0, 100, 200, 350, 500, 700, 950, 1250, 1600, 2000, 2500, 3100, 3800, 4600, 5500, 6500, 7600, 8800, 10000, 12000];
+      const curXp = levelThresholds[Math.min(level - 1, levelThresholds.length - 1)] ?? 0;
+      const nextXp = levelThresholds[Math.min(level, levelThresholds.length - 1)] ?? curXp + 100;
+      const xpToNextLevel = Math.max(0, nextXp - xp);
+      const levelProgress = nextXp > curXp ? Math.min(100, Math.round(((xp - curXp) / (nextXp - curXp)) * 100)) : 100;
+
+      const statsSummary = await getPracticeStats(userId);
+      const totalCorrect = statsSummary.correct;
+      const totalQuestions = statsSummary.total;
+      const correctRate = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
+
+      const report: ReportData = {
+        summary: {
+          totalStudyHours: Math.round((stats?.totalStudyTimeMs ?? 0) / 3600000),
+          totalQuestions,
+          correctRate,
+          xpGained: xp,
+          streakDays: stats?.currentStreak ?? 0,
+          currentLevel: level,
+          levelTitle,
+          xpToNextLevel,
+          levelProgress,
+        },
+        dailyStats,
+        subjectBreakdown,
+        knowledgeMastery,
+        weakPoints,
+        strengths,
+        recommendations: [], // 简化处理：暂不生成 AI 建议
+        period: p,
+        generatedAt: new Date().toISOString(),
+      };
+      setData(report);
     } catch (e) {
       setError(e instanceof Error ? e.message : "获取学习报告时发生错误");
     } finally {

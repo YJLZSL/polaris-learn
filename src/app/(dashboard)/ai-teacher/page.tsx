@@ -19,6 +19,15 @@ import {
 import { useUserStore } from "@/stores/useUserStore";
 import { SUBJECTS } from "@/lib/constants";
 import { getSubjectsForMode } from "@/lib/learning-modes";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { chat as aiChat, type ChatMessage } from "@/lib/services/ai-service";
+import {
+  getConversations as repoGetConversations,
+  saveConversation as repoSaveConversation,
+  deleteConversation as repoDeleteConversation,
+  getConversationById as repoGetConversationById,
+  type AIConversation,
+} from "@/lib/repositories/conversation.repository";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -124,18 +133,17 @@ function generateId(): string {
 
 /* ---------- component ---------- */
 export default function AITeacherPage() {
-  const { weakPoints, addXP, learningMode, setUser } = useUserStore();
+  const { weakPoints, addXP, learningMode, setUser, id: userId, initFromAuth } = useUserStore();
 
   /* ----- 拉取用户 learningMode（用于学科过滤与样式适配） ----- */
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/user/profile");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.user?.learningMode) {
-          setUser({ learningMode: data.user.learningMode as string });
+        await initFromAuth();
+        const user = await getCurrentUser();
+        if (!cancelled && user?.learningMode) {
+          setUser({ learningMode: user.learningMode });
         }
       } catch {
         // silent: 失败时使用默认 PRIMARY 模式
@@ -144,7 +152,7 @@ export default function AITeacherPage() {
     return () => {
       cancelled = true;
     };
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   /* ----- 基于学习模式派生可用学科与 UI 风格 ----- */
   const allowedSubjectIds = getSubjectsForMode(learningMode);
@@ -170,23 +178,40 @@ export default function AITeacherPage() {
 
   /* ----- load conversations ----- */
   const loadConversations = useCallback(async () => {
+    if (!userId) {
+      setConversations([]);
+      return;
+    }
     setConvsLoading(true);
     setConvsError(null);
     try {
-      const res = await fetch("/api/ai/conversations");
-      if (res.ok) {
-        const data = await res.json();
-        setConversations(data.conversations || []);
-      } else {
-        throw new Error("加载对话列表失败");
-      }
+      const list = await repoGetConversations(userId);
+      // 映射 AIConversation -> 本地 Conversation 结构
+      const mapped: Conversation[] = list.map((c) => {
+        const lastMsg = c.messages?.[c.messages.length - 1];
+        return {
+          id: c.id,
+          subject: c.subject,
+          title: c.title || `${c.subject} 学习对话`,
+          lastMessage: lastMsg
+            ? {
+                content: lastMsg.content,
+                role: lastMsg.role,
+                createdAt: lastMsg.timestamp,
+              }
+            : null,
+          updatedAt: c.updatedAt,
+          createdAt: c.createdAt,
+        };
+      });
+      setConversations(mapped);
     } catch (err) {
       setConversations([]);
       setConvsError(err instanceof Error ? err.message : "加载对话列表失败");
     } finally {
       setConvsLoading(false);
     }
-  }, []);
+  }, [userId]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -216,47 +241,58 @@ export default function AITeacherPage() {
       setIsLoading(true);
 
       try {
-        const res = await fetch("/api/ai/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            conversationId,
-            subject,
-            message: msg,
-            learningMode,
-          }),
-        });
+        // 构造 ChatMessage 数组（包含历史消息）
+        const chatMessages: ChatMessage[] = [
+          ...messages.map((m) => ({
+            role: (m.role === "user" ? "user" : "assistant") as "user" | "assistant",
+            content: m.content,
+          })),
+          { role: "user" as const, content: msg },
+        ];
 
-        if (res.ok) {
-          const data = await res.json();
-          setConversationId(data.conversationId);
-          setCurrentStage(data.stage as SocraticStage);
+        const result = await aiChat(chatMessages, learningMode);
 
-          const aiMsg: Message = {
-            id: generateId(),
-            role: "assistant",
-            content: data.response,
-            stage: data.stage,
-            timestamp: Date.now(),
+        // 持久化对话到 IndexedDB（替代原服务端的 conversationId 生成）
+        const convId = conversationId || generateId();
+        if (userId) {
+          const existing = await repoGetConversationById(convId);
+          const nowIso = new Date().toISOString();
+          const newMessages: AIConversation["messages"] = [
+            ...(existing?.messages || []),
+            { role: "user", content: msg, timestamp: nowIso },
+            { role: "assistant", content: result.content, timestamp: nowIso },
+          ];
+          const conv: AIConversation = {
+            id: convId,
+            userId,
+            subject: subject || "数学",
+            title: existing?.title || msg.slice(0, 24),
+            messages: newMessages,
+            createdAt: existing?.createdAt || nowIso,
+            updatedAt: nowIso,
           };
-
-          setMessages((prev) => [...prev, aiMsg]);
-
-          // award XP for interaction
-          addXP(5);
-          // reload conversations list
-          loadConversations();
-        } else {
-          const err = await res.json();
-          const errMsg: Message = {
-            id: generateId(),
-            role: "assistant",
-            content: err.error || "对话处理失败，请稍后重试",
-            stage: currentStage,
-            timestamp: Date.now(),
-          };
-          setMessages((prev) => [...prev, errMsg]);
+          await repoSaveConversation(conv);
         }
+
+        setConversationId(convId);
+        // 简单按消息数推进阶段
+        const nextStage = STAGE_ORDER[(STAGE_ORDER.indexOf(currentStage) + 1) % STAGE_ORDER.length];
+        setCurrentStage(nextStage);
+
+        const aiMsg: Message = {
+          id: generateId(),
+          role: "assistant",
+          content: result.content,
+          stage: nextStage,
+          timestamp: Date.now(),
+        };
+
+        setMessages((prev) => [...prev, aiMsg]);
+
+        // award XP for interaction
+        addXP(5);
+        // reload conversations list
+        loadConversations();
       } catch {
         const errMsg: Message = {
           id: generateId(),
@@ -270,7 +306,7 @@ export default function AITeacherPage() {
         setIsLoading(false);
       }
     },
-    [input, subject, isLoading, conversationId, currentStage, addXP, loadConversations, learningMode]
+    [input, subject, isLoading, conversationId, currentStage, addXP, loadConversations, learningMode, userId, messages]
   );
 
   /* ----- handle "直接告诉我答案" ----- */
@@ -304,12 +340,17 @@ export default function AITeacherPage() {
       setCurrentStage("diagnostic");
       setShowConvsMobile(false);
 
-      // try loading messages from server
+      // 从 IndexedDB 加载历史消息
       try {
-        const res = await fetch(`/api/ai/conversations`);
-        if (res.ok) {
-          await res.json();
-          // for simplicity, start fresh
+        const existing = await repoGetConversationById(conv.id);
+        if (existing?.messages?.length) {
+          const restored: Message[] = existing.messages.map((m, i) => ({
+            id: `${conv.id}_${i}`,
+            role: m.role === "user" ? "user" : "assistant",
+            content: m.content,
+            timestamp: new Date(m.timestamp).getTime(),
+          }));
+          setMessages(restored);
         }
       } catch {
         // silent
@@ -343,16 +384,12 @@ export default function AITeacherPage() {
     async (convId: string, e: React.MouseEvent) => {
       e.stopPropagation();
       try {
-        const res = await fetch(`/api/ai/conversations/${convId}`, {
-          method: "DELETE",
-        });
-        if (res.ok) {
-          loadConversations();
-          if (convId === conversationId) {
-            setConversationId(null);
-            setMessages([]);
-            setSubject(null);
-          }
+        await repoDeleteConversation(convId);
+        loadConversations();
+        if (convId === conversationId) {
+          setConversationId(null);
+          setMessages([]);
+          setSubject(null);
         }
       } catch {
         // silent

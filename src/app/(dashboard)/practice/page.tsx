@@ -46,6 +46,14 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { motion } from "framer-motion";
 import { staggerContainer, listItem, fadeIn } from "@/lib/motion";
+import {
+  getQuestions as repoGetQuestions,
+  savePracticeRecord,
+  getQuestionById,
+} from "@/lib/repositories/practice.repository";
+import { addXP, updateStreak, getUserStats as getUserStatsSnapshot } from "@/lib/repositories/gamification.repository";
+import { addErrorNote } from "@/lib/repositories/error-notes.repository";
+import { getCurrentUser } from "@/lib/services/auth-service";
 
 /* ====== Types ====== */
 interface Question {
@@ -53,7 +61,7 @@ interface Question {
   subject: string;
   difficulty: number;
   content: string;
-  options: string[];
+  options?: string[];
   explanation?: string;
   gradeLevel?: string;
 }
@@ -97,17 +105,18 @@ export default function PracticePage() {
   /* ---------- user / learning mode ---------- */
   const learningMode = useUserStore((s) => s.learningMode);
   const setUser = useUserStore((s) => s.setUser);
+  const initFromAuth = useUserStore((s) => s.initFromAuth);
+  const userId = useUserStore((s) => s.id);
 
-  // 挂载时主动拉取用户资料，确保 learningMode 与服务端一致
+  // 挂载时主动从本地 session 同步用户资料，确保 learningMode 与本地一致
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch("/api/user/profile");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (!cancelled && data?.user?.learningMode) {
-          setUser({ learningMode: data.user.learningMode as string });
+        await initFromAuth();
+        const user = await getCurrentUser();
+        if (!cancelled && user?.learningMode) {
+          setUser({ learningMode: user.learningMode });
         }
       } catch {
         /* 静默失败：将使用默认 PRIMARY 模式 */
@@ -116,7 +125,7 @@ export default function PracticePage() {
     return () => {
       cancelled = true;
     };
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   // 当前模式的有效学习模式 id（learningMode 未就绪时回退到 PRIMARY）
   const effectiveMode = learningMode || "PRIMARY";
@@ -188,21 +197,16 @@ export default function PracticePage() {
       setLoading(true);
       setFetchError(null);
       try {
-        const params = new URLSearchParams({
+        const all = await repoGetQuestions({
           subject: subj,
-          difficulty: String(diff),
-          page: String(p),
-          limit: String(PAGE_SIZE),
+          difficulty: diff,
+          gradeLevel: grade,
         });
-        if (grade) params.set("gradeLevel", grade);
-        const res = await fetch(`/api/questions?${params}`);
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.error || "获取题目失败");
-        }
-        const data = await res.json();
-        setQuestions(data.questions || []);
-        setTotal(data.total || 0);
+        const total = all.length;
+        const startIdx = (p - 1) * PAGE_SIZE;
+        const paged = all.slice(startIdx, startIdx + PAGE_SIZE);
+        setQuestions(paged);
+        setTotal(total);
       } catch (e) {
         setFetchError(e instanceof Error ? e.message : "加载失败");
         setQuestions([]);
@@ -275,54 +279,104 @@ export default function PracticePage() {
       }
 
       try {
-        const res = await fetch("/api/questions/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        // 拉取完整题目（含 correctAnswer / explanation）
+        const fullQuestion = await getQuestionById(question.id);
+        const correctAnswer = fullQuestion?.correctAnswer ?? "";
+        const userAnswer = String.fromCharCode(65 + idx);
+        const isCorrect = userAnswer === correctAnswer;
+        const explanation = fullQuestion?.explanation ?? question.explanation ?? "";
+
+        // 难度 → XP 奖励映射（与原服务端规则一致）
+        const xpReward = xpForDifficulty[question.difficulty] ?? 10;
+
+        // 保存练习记录
+        if (userId) {
+          const record = {
+            id: `${userId}_${question.id}_${Date.now()}`,
+            userId,
             questionId: question.id,
-            answer: String.fromCharCode(65 + idx),
-          }),
-        });
+            subject: question.subject,
+            difficulty: question.difficulty,
+            isCorrect,
+            userAnswer,
+            correctAnswer,
+            timeSpentMs: 0,
+            createdAt: new Date().toISOString(),
+          };
+          await savePracticeRecord(record);
 
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || "提交失败");
-        }
+          // 更新 XP / 连续天数
+          if (isCorrect) {
+            const beforeStats = await getUserStatsSnapshot(userId);
+            const afterStats = await addXP(userId, xpReward);
+            await updateStreak(userId);
+            const leveledUp = afterStats.level > (beforeStats?.level ?? 1);
 
-        const data = await res.json();
+            // 缓存结果
+            submittedRef.current.set(question.id, {
+              correct: true,
+              explanation,
+            });
 
-        // 缓存结果
-        submittedRef.current.set(question.id, {
-          correct: data.correct,
-          explanation: data.explanation,
-        });
+            setXpAmount(xpReward);
+            setShowXP(true);
+            setStreakCount((s) => s + 1);
+            if (streakCount + 1 >= 3) setShowStreak(true);
+            setComboCount((c) => c + 1);
+            setTodayXP((prev) => prev + xpReward);
+            setScore((s) => ({ ...s, correct: s.correct + 1 }));
 
-        if (data.correct) {
-          setXpAmount(data.xpEarned || 0);
-          setShowXP(true);
-          setStreakCount((s) => s + 1);
-          if (streakCount + 1 >= 3) setShowStreak(true);
-          setComboCount((c) => c + 1);
-          setTodayXP((prev) => prev + (data.xpEarned || 0));
-          setScore((s) => ({ ...s, correct: s.correct + 1 }));
-
-          if (data.xpEarned) {
-            toast.success(`+${data.xpEarned} XP`, {
+            toast.success(`+${xpReward} XP`, {
               icon: <Sparkles className="w-4 h-4 text-amber-400" />,
               duration: 2000,
             });
-          }
-          if (data.leveledUp) {
-            toast(`恭喜升级到 Lv.${data.newLevel}！`, {
-              icon: "🎉",
-              duration: 3000,
+            if (leveledUp) {
+              toast(`恭喜升级到 Lv.${afterStats.level}！`, {
+                icon: "🎉",
+                duration: 3000,
+              });
+            }
+          } else {
+            // 答错：加入错题本
+            await addErrorNote({
+              id: `${userId}_${question.id}_err_${Date.now()}`,
+              userId,
+              questionId: question.id,
+              subject: question.subject,
+              userAnswer,
+              correctAnswer,
+              status: "new" as const,
+              reviewCount: 0,
+              createdAt: new Date().toISOString(),
             });
+            submittedRef.current.set(question.id, {
+              correct: false,
+              explanation,
+            });
+            setStreakCount(0);
+            setShowStreak(false);
+            setComboCount(0);
+            toast.error("回答错误，看看解析吧", { duration: 2000 });
           }
         } else {
-          setStreakCount(0);
-          setShowStreak(false);
-          setComboCount(0);
-          toast.error("回答错误，看看解析吧", { duration: 2000 });
+          // 未登录情况下也缓存结果
+          submittedRef.current.set(question.id, {
+            correct: isCorrect,
+            explanation,
+          });
+          if (isCorrect) {
+            setXpAmount(xpReward);
+            setShowXP(true);
+            setStreakCount((s) => s + 1);
+            setComboCount((c) => c + 1);
+            setTodayXP((prev) => prev + xpReward);
+            setScore((s) => ({ ...s, correct: s.correct + 1 }));
+          } else {
+            setStreakCount(0);
+            setShowStreak(false);
+            setComboCount(0);
+            toast.error("回答错误，看看解析吧", { duration: 2000 });
+          }
         }
         setScore((s) => ({ ...s, total: s.total + 1 }));
 
@@ -334,7 +388,7 @@ export default function PracticePage() {
         setSubmitting(false);
       }
     },
-    [answered, question, submitting, streakCount]
+    [answered, question, submitting, streakCount, userId]
   );
 
   const handleNext = useCallback(() => {
@@ -584,7 +638,7 @@ export default function PracticePage() {
                       disabled={answered || submitting}
                       className="space-y-3"
                     >
-                      {question.options.map((opt, idx) => {
+                      {(question.options ?? []).map((opt, idx) => {
                         const isSelected = selectedOption === idx;
                         const isCorrectAnswer = answered && isCorrect && isSelected;
                         const isIncorrectAnswer = answered && isCorrect === false && isSelected;

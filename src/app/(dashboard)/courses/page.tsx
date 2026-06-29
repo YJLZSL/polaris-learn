@@ -44,6 +44,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { getCourses as repoGetCourses } from "@/lib/repositories/courses.repository";
 
 interface CourseItem {
   id: string;
@@ -127,14 +128,11 @@ export default function CoursesPage() {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams();
-      if (subject && subject !== "全部") params.set("subject", subject);
-      if (sort) params.set("sort", sort);
-
-      const res = await fetch(`/api/courses?${params.toString()}`);
-      if (!res.ok) throw new Error("获取课程失败");
-      const data = await res.json();
-      setCourses(data.courses || []);
+      const list = await repoGetCourses({
+        subject: subject !== "全部" ? subject : undefined,
+        sort: sort as "latest" | "popular" | "progress",
+      });
+      setCourses(list);
     } catch (err) {
       setError(err instanceof Error ? err.message : "获取课程列表失败");
       toast({ title: "加载失败", description: "无法获取课程列表，请稍后重试", variant: "destructive" });

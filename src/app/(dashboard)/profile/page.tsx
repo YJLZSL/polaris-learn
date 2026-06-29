@@ -39,6 +39,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useUserStore } from "@/stores/useUserStore";
+import { getCurrentUser } from "@/lib/services/auth-service";
+import { updateUser as repoUpdateUser } from "@/lib/repositories/user.repository";
+import { getUserStats, getUserBadges } from "@/lib/repositories/gamification.repository";
+import { getConversations } from "@/lib/repositories/conversation.repository";
+import { getErrorNotes } from "@/lib/repositories/error-notes.repository";
+import { getUserPracticeRecords } from "@/lib/repositories/practice.repository";
 
 /* ---------- helpers ---------- */
 function xpForLevel(lvl: number) {
@@ -109,7 +115,7 @@ const dailyTimeOptions = [
 ];
 
 export default function ProfilePage() {
-  const { name, level, xp, streak, avatar, grade, setUser } = useUserStore();
+  const { name, level, xp, streak, avatar, grade, setUser, initFromAuth } = useUserStore();
 
   /* ---------- state ---------- */
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
@@ -130,35 +136,98 @@ export default function ProfilePage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch("/api/user/profile");
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "获取资料失败");
+      await initFromAuth();
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error("未登录");
       }
-      const data = await res.json();
-      setProfileData(data.user);
-      // Sync form state with fetched data
-      if (data.user.name) setFormName(data.user.name);
-      if (data.user.grade) setFormGrade(data.user.grade);
-      if (data.user.studentProfile?.learningStyle) setFormLearningGoal(data.user.studentProfile.learningStyle);
-      if (data.user.studentProfile?.dailyGoalMin) setFormDailyTime(String(data.user.studentProfile.dailyGoalMin));
-      // Sync zustand store
+
+      const [stats, badges, convs, errorNotes, records] = await Promise.all([
+        getUserStats(user.id),
+        getUserBadges(user.id),
+        getConversations(user.id),
+        getErrorNotes(user.id),
+        getUserPracticeRecords(user.id),
+      ]);
+
+      const userXp = stats?.xp ?? 0;
+      const userLevel = stats?.level ?? 1;
+      const userStreak = stats?.currentStreak ?? 0;
+      const maxStreak = stats?.longestStreak ?? userStreak;
+
+      const today = new Date().toISOString().slice(0, 10);
+      const todayRecords = records.filter((r) => r.createdAt.slice(0, 10) === today);
+      const todayCorrect = todayRecords.filter((r) => r.isCorrect).length;
+      const todayXp = todayRecords.filter((r) => r.isCorrect).length * 10;
+
+      const levelThresholds = [0, 100, 200, 350, 500, 700, 950, 1250, 1600, 2000, 2500, 3100, 3800, 4600, 5500, 6500, 7600, 8800, 10000, 12000];
+      const curThreshold = levelThresholds[Math.min(userLevel - 1, levelThresholds.length - 1)] ?? 0;
+      const nextThreshold = levelThresholds[Math.min(userLevel, levelThresholds.length - 1)] ?? curThreshold + 100;
+      const levelProgress = nextThreshold > curThreshold
+        ? Math.min(100, Math.round(((userXp - curThreshold) / (nextThreshold - curThreshold)) * 100))
+        : 100;
+
+      const data: ProfileData = {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        grade: user.grade,
+        learningMode: user.learningMode,
+        avatar: user.avatar ?? null,
+        xp: userXp,
+        level: userLevel,
+        streak: userStreak,
+        maxStreak,
+        createdAt: user.createdAt,
+        studentProfile: null,
+        levelInfo: {
+          level: userLevel,
+          currentXP: userXp,
+          nextLevelXP: nextThreshold,
+          progress: levelProgress,
+        },
+        todayStats: {
+          questionsDone: todayRecords.length,
+          questionsCorrect: todayCorrect,
+          xpEarned: todayXp,
+          studyDuration: 0,
+        },
+        badges: badges.map((b) => ({
+          id: b.badgeId,
+          name: b.badgeId,
+          description: "",
+          icon: "🏆",
+          category: "",
+          rarity: "common",
+          earnedAt: b.awardedAt,
+        })),
+        stats: {
+          totalConversations: convs.length,
+          totalErrorNotes: errorNotes.length,
+          totalNotes: 0,
+          totalLearningRecords: records.length,
+        },
+      };
+
+      setProfileData(data);
+      if (user.name) setFormName(user.name);
+      if (user.grade) setFormGrade(user.grade);
       setUser({
-        name: data.user.name,
-        grade: data.user.grade,
-        learningMode: data.user.learningMode,
-        avatar: data.user.avatar,
-        xp: data.user.xp,
-        level: data.user.level,
-        streak: data.user.streak,
-        email: data.user.email,
+        name: user.name,
+        grade: user.grade,
+        learningMode: user.learningMode,
+        avatar: user.avatar ?? null,
+        xp: userXp,
+        level: userLevel,
+        streak: userStreak,
+        email: user.email,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : "获取资料失败");
     } finally {
       setLoading(false);
     }
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -194,21 +263,14 @@ export default function ProfilePage() {
     setSaveError(null);
     setSaveSuccess(false);
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formName,
-          grade: formGrade,
-          avatar: currentAvatar,
-          learningStyle: formLearningGoal || undefined,
-          dailyGoalMin: formDailyTime ? parseInt(formDailyTime) : undefined,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "保存失败");
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error("未登录");
       }
+      user.name = formName;
+      user.grade = formGrade;
+      if (currentAvatar) user.avatar = currentAvatar;
+      await repoUpdateUser(user);
       setUser({ name: formName, grade: formGrade });
       setSaveSuccess(true);
       setTimeout(() => setSaveSuccess(false), 2000);

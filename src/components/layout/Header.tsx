@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signOut } from "@/components/providers/SessionProvider";
 import Link from "next/link";
 import { Search, Bell, Menu, User, Settings, LogOut, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -181,7 +181,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="cursor-pointer text-destructive focus:text-destructive"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={async () => {
+                await signOut();
+                window.location.href = "/login";
+              }}
             >
               <LogOut className="mr-2 h-4 w-4" />
               退出登录

@@ -39,6 +39,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useUserStore } from "@/stores/useUserStore";
 import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
+import { changePassword, getCurrentUser } from "@/lib/services/auth-service";
+import { updateUser as repoUpdateUser } from "@/lib/repositories/user.repository";
+import { chat as aiChat, type ChatMessage } from "@/lib/services/ai-service";
 
 /* ---------- LLM 配置 localStorage 读写 ---------- */
 const LLM_STORAGE_PREFIX = "llm_config_";
@@ -83,7 +86,7 @@ const reminderTimeOptions = [
 ];
 
 export default function SettingsPage() {
-  const { name, grade, avatar, learningMode, setUser, clearUser } = useUserStore();
+  const { name, grade, avatar, learningMode, setUser, clearUser, initFromAuth } = useUserStore();
 
   /* ---------- loading state ---------- */
   const [loading, setLoading] = useState(true);
@@ -135,29 +138,24 @@ export default function SettingsPage() {
     setLoading(true);
     setFetchError(null);
     try {
-      const res = await fetch("/api/user/profile");
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "获取设置失败");
+      await initFromAuth();
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error("未登录");
       }
-      const data = await res.json();
-      // Sync store
       setUser({
-        name: data.user.name,
-        grade: data.user.grade,
-        avatar: data.user.avatar,
-        xp: data.user.xp,
-        level: data.user.level,
-        streak: data.user.streak,
-        email: data.user.email,
-        learningMode: data.user.learningMode,
+        name: user.name,
+        grade: user.grade,
+        avatar: user.avatar ?? null,
+        learningMode: user.learningMode,
+        email: user.email,
       });
     } catch (err) {
       setFetchError(err instanceof Error ? err.message : "获取设置失败");
     } finally {
       setLoading(false);
     }
-  }, [setUser]);
+  }, [setUser, initFromAuth]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -205,16 +203,16 @@ export default function SettingsPage() {
     setTestingConnection(true);
     setConnectionResult(null);
     try {
-      const res = await fetch("/api/ai/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject: "math", message: "你好，请做一个简短的自我介绍。" }),
-      });
-      const data = await res.json();
-      if (res.ok && data.response) {
+      const messages: ChatMessage[] = [
+        { role: "user", content: "你好，请做一个简短的自我介绍。" },
+      ];
+      const result = await aiChat(messages, learningMode);
+      if (result.content && !result.fallback) {
         setConnectionResult({ ok: true, message: "连接成功！模型已就绪。" });
+      } else if (result.fallback) {
+        setConnectionResult({ ok: false, message: "未配置 API Key 或调用失败，当前为降级模式。" });
       } else {
-        setConnectionResult({ ok: false, message: data.error || "连接失败，请检查配置。" });
+        setConnectionResult({ ok: false, message: "连接失败，请检查配置。" });
       }
     } catch {
       setConnectionResult({ ok: false, message: "网络错误，无法连接到API服务。" });
@@ -252,15 +250,12 @@ export default function SettingsPage() {
     // 立即更新本地 store，让 UI 即时反馈
     setUser({ learningMode: modeId });
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ learningMode: modeId }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "保存失败");
+      const user = await getCurrentUser();
+      if (!user) {
+        throw new Error("未登录");
       }
+      user.learningMode = modeId;
+      await repoUpdateUser(user);
       setModeSaveSuccess(true);
       setTimeout(() => setModeSaveSuccess(false), 2000);
     } catch (err) {
@@ -278,25 +273,20 @@ export default function SettingsPage() {
     setNotifySaveError(null);
     setNotifySaveSuccess(false);
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name,
-          grade: grade,
-          avatar: avatar,
-          // Store notification preferences as part of profile metadata
-          notificationSettings: {
-            learningReminder: notifyLearningReminder,
-            dailyReport: notifyDailyReport,
-            achievement: notifyAchievement,
-            reminderTime,
-          },
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "保存失败");
+      // 通知设置仅持久化到 localStorage（无后端存储）
+      localStorage.setItem("polaris_notification_settings", JSON.stringify({
+        learningReminder: notifyLearningReminder,
+        dailyReport: notifyDailyReport,
+        achievement: notifyAchievement,
+        reminderTime,
+      }));
+      // 同步用户基本信息到 repository（确保 name/grade/avatar 不丢失）
+      const user = await getCurrentUser();
+      if (user) {
+        if (name !== undefined) user.name = name ?? user.name;
+        if (grade !== undefined) user.grade = grade ?? user.grade;
+        if (avatar !== undefined) user.avatar = avatar ?? user.avatar;
+        await repoUpdateUser(user);
       }
       setNotifySaveSuccess(true);
       setTimeout(() => setNotifySaveSuccess(false), 2000);
@@ -331,15 +321,7 @@ export default function SettingsPage() {
     setPasswordSaving(true);
     setPasswordSaveSuccess(false);
     try {
-      const res = await fetch("/api/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ oldPassword: currentPassword, newPassword }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "修改密码失败");
-      }
+      await changePassword(currentPassword, newPassword);
       setPasswordSaveSuccess(true);
       setCurrentPassword("");
       setNewPassword("");
