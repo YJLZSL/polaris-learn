@@ -14,8 +14,9 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| POST | `/api/auth/register` | 用户注册 |
+| POST | `/api/auth/register` | 用户注册（含 learningMode 字段） |
 | POST | `/api/auth/[...nextauth]` | NextAuth 登录 |
+| POST | `/api/auth/change-password` | 修改密码（验证旧密码后更新） |
 
 ---
 
@@ -74,9 +75,10 @@
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/user/home-stats` | 首页聚合数据 |
+| GET | `/api/user/home-stats` | 首页聚合数据（含 learningMode） |
 | GET | `/api/user/profile` | 用户资料 |
-| GET | `/api/knowledge-graph` | 知识图谱 |
+| PATCH | `/api/user/profile` | 更新用户资料（支持 learningMode） |
+| GET | `/api/knowledge-graph` | 知识图谱（支持 gradeLevel 查询参数） |
 | GET | `/api/analytics/report` | 学习报告 |
 | GET | `/api/error-notes` | 错题本 |
 | POST | `/api/error-notes/[id]/review` | 错题复习 |
