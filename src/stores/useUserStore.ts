@@ -1,19 +1,22 @@
 import { create } from "zustand";
 import { getCurrentUser } from "@/lib/services/auth-service";
 import { getUserStats } from "@/lib/repositories/gamification.repository";
+import { type LearningModeId, migrateLearningMode } from "@/lib/learning-modes";
 
 interface UserState {
   id: string | null;
   name: string | null;
   email: string | null;
   grade: string | null;
-  learningMode: string;
+  /** Task 1.4：learningMode 强类型为 5 学段联合，setUser 内部自动迁移旧值 */
+  learningMode: LearningModeId;
   xp: number;
   level: number;
   streak: number;
   avatar: string | null;
   weakPoints: string[];
-  setUser: (user: Partial<UserState>) => void;
+  // learningMode 接受 string 以兼容外部 string 入参，内部自动迁移为 LearningModeId
+  setUser: (user: Partial<Omit<UserState, "learningMode"> & { learningMode?: string }>) => void;
   addXP: (amount: number) => void;
   clearUser: () => void;
   initFromAuth: () => Promise<void>;
@@ -24,13 +27,20 @@ export const useUserStore = create<UserState>((set, get) => ({
   name: null,
   email: null,
   grade: null,
-  learningMode: "PRIMARY",
+  learningMode: "ELEMENTARY",
   xp: 0,
   level: 1,
   streak: 0,
   avatar: null,
   weakPoints: [],
-  setUser: (user) => set((state) => ({ ...state, ...user })),
+  setUser: (user) =>
+    set((state) => {
+      const next = { ...state, ...user } as UserState;
+      if (user.learningMode !== undefined) {
+        next.learningMode = migrateLearningMode(user.learningMode);
+      }
+      return next;
+    }),
   addXP: (amount) =>
     set((state) => {
       const newXP = state.xp + amount;
@@ -46,7 +56,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     }),
   clearUser: () =>
     set({
-      id: null, name: null, email: null, grade: null, learningMode: "PRIMARY",
+      id: null, name: null, email: null, grade: null, learningMode: "ELEMENTARY",
       xp: 0, level: 1, streak: 0, avatar: null, weakPoints: [],
     }),
   /**
@@ -65,7 +75,7 @@ export const useUserStore = create<UserState>((set, get) => ({
         name: user.name,
         email: user.email,
         grade: user.grade,
-        learningMode: user.learningMode,
+        learningMode: migrateLearningMode(user.learningMode),
         avatar: user.avatar ?? null,
         xp: stats?.xp ?? 0,
         level: stats?.level ?? 1,

@@ -16,7 +16,7 @@ let mainWindow = null;
 // Helpers
 // ---------------------------------------------------------------------------
 const isDev = !app.isPackaged;
-const loadURL = serve({ directory: "out" });
+const loadURL = serve({ directory: "dist" });
 
 // ---------------------------------------------------------------------------
 // Window creation
@@ -59,7 +59,7 @@ function createWindow() {
 
   // Load the Next.js app
   if (isDev) {
-    mainWindow.loadURL("http://localhost:3000");
+    mainWindow.loadURL("http://localhost:5173");
   } else {
     loadURL(mainWindow);
   }

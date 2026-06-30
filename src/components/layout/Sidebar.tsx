@@ -1,8 +1,5 @@
-"use client";
-
 import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router-dom";
 import { useSession } from "@/components/providers/SessionProvider";
 import { useUserStore } from "@/stores/useUserStore";
 import { getLevelInfo } from "@/lib/game";
@@ -112,7 +109,7 @@ function NavItem({
         )}
         onClick={onClick}
       >
-        <Link href={item.href}>
+        <Link to={item.href}>
           <Icon className="h-5 w-5 shrink-0" />
           {!collapsed && <span>{item.label}</span>}
         </Link>
@@ -122,7 +119,7 @@ function NavItem({
 }
 
 export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   const { data: session } = useSession();
   const { name, xp, level: _level, streak, avatar } = useUserStore();
 

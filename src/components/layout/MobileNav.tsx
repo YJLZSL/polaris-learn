@@ -1,6 +1,4 @@
-"use client";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { Link, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Home, MessageSquare, BookOpen, FileQuestion, User } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -14,7 +12,7 @@ const NAV_ITEMS = [
 ];
 
 export default function MobileNav() {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
   return (
     <nav
       className="lg:hidden fixed bottom-0 left-0 right-0 z-40 h-16 backdrop-blur-md bg-background/80 border-t"
@@ -27,7 +25,7 @@ export default function MobileNav() {
           return (
             <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               className={cn(
                 "flex flex-col items-center justify-center gap-0.5 relative",
                 isActive ? "text-primary" : "text-muted-foreground"

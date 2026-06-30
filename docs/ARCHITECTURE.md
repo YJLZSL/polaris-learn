@@ -1,191 +1,127 @@
-# Polaris 架构说明（v3.0.0 静态化）
+# Polaris 架构说明（v5.0.0 Vite SPA）
 
-> 本文档描述 Polaris v3.0.0 的纯前端静态化架构，包括数据流、IndexedDB schema 设计、Repository 模式、客户端 AI 直连、本地认证流程与跨平台部署方案。
+> 本文档描述 Polaris v5.0.0 的纯前端 SPA 架构：整体架构、数据层设计、AI 老师链、游戏化系统、跨功能数据流与跨端策略。v5.0.0 在 v4.0.0 纯 SPA 基础上完成体验重构，未改变"无服务器 / 无数据库 / 客户端直连 LLM"的核心架构。
 
-## 1. 架构概览
+## 1. 整体架构
 
 ### 1.1 设计哲学
 
-v3.0.0 重构的核心目标是**完全消除后端依赖**：
+Polaris v5.0.0 仍是**纯前端单页应用（SPA）**，构建产物为纯静态文件，运行时无需任何服务端进程：
 
-- **无服务器**：应用部署后无需运行任何 Node.js 服务进程，仅需静态文件托管
+- **无服务器**：部署后无需运行任何 Node.js 服务进程，仅需静态文件加载
 - **无数据库**：所有数据由浏览器原生 IndexedDB 持久化，按用户设备隔离
-- **无中间层**：LLM 调用由客户端 `fetch` 直连供应商 API，无代理转发
+- **无中间层**：LLM 调用由客户端 `fetch` 直连供应商 API，SSE 流式响应
 - **无会话服务**：认证完全在客户端完成，token 存 localStorage + IndexedDB
 
-### 1.2 架构图（ASCII）
+### 1.2 整体数据流（文字 + 箭头）
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       浏览器 / WebView                        │
-│                                                               │
-│  ┌─────────────────────────────────────────────────────────┐ │
-│  │                  React 应用（Next.js 静态导出）          │ │
-│  │                                                           │ │
-│  │  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐ │ │
-│  │  │   Pages      │──→│   Hooks /    │──→│  Stores      │ │ │
-│  │  │  (app/)      │   │   Components  │   │ (Zustand)    │ │ │
-│  │  └──────┬───────┘   └──────────────┘   └──────────────┘ │ │
-│  │         │                                                 │ │
-│  │         ▼                                                 │ │
-│  │  ┌──────────────────────────────────────────────────────┐│ │
-│  │  │              Services 层（客户端逻辑）                ││ │
-│  │  │  ┌──────────────┐  ┌──────────────┐  ┌────────────┐  ││ │
-│  │  │  │ ai-service   │  │ auth-service │  │ home-stats │  ││ │
-│  │  │  │ (直连 LLM)   │  │ (PBKDF2)     │  │ (聚合)     │  ││ │
-│  │  │  └──────┬───────┘  └──────┬───────┘  └─────┬──────┘  ││ │
-│  │  └─────────┼─────────────────┼────────────────┼─────────┘│ │
-│  │            │                 │                │          │ │
-│  │  ┌─────────▼─────────────────▼────────────────▼─────────┐ │ │
-│  │  │           Repository 层（数据访问抽象）                │ │ │
-│  │  │  user │ auth │ practice │ error-notes │ knowledge     │ │ │
-│  │  │  gamification │ conversation │ leaderboard │ courses │ │ │
-│  │  └─────────────────────┬────────────────────────────────┘ │ │
-│  │                        │                                  │ │
-│  │  ┌─────────────────────▼────────────────────────────────┐ │ │
-│  │  │       IndexedDB 封装（src/lib/db/indexeddb.ts）      │ │ │
-│  │  │       使用 idb 库，封装 openDB / 事务 / CRUD          │ │ │
-│  │  └─────────────────────┬────────────────────────────────┘ │ │
-│  │                        │                                  │ │
-│  │  ┌─────────────────────▼─────┐  ┌──────────────────────┐ │ │
-│  │  │   IndexedDB（浏览器原生）  │  │  localStorage         │ │ │
-│  │  │   持久化学习数据           │  │  API Key / Session    │ │ │
-│  │  └───────────────────────────┘  └──────────────────────┘ │ │
-│  └───────────────────────────────────────────────────────────┘ │
-│                              │                                 │
-└──────────────────────────────┼─────────────────────────────────┘
-                               │ fetch（HTTPS）
-                               ▼
-            ┌──────────────────────────────────┐
-            │     LLM 供应商 API（外部）         │
-            │  DeepSeek / Qwen / OpenAI / Ollama │
-            └──────────────────────────────────┘
+浏览器 / WebView
+   │
+   ▼
+React 19 SPA（Vite 构建）
+   │
+   ├─ Pages (src/pages/) ──► Hooks / Components ──► Stores (Zustand)
+   │
+   ▼
+React Router 7（HashRouter）
+   │  routes/index.tsx + ProtectedRoute + PublicOnlyRoute
+   ▼
+Services 层（客户端业务逻辑）
+   ├─ ai-service.ts        （直连 LLM，SSE 流式，6 阶段苏格拉底）
+   ├─ auth-service.ts      （PBKDF2 本地认证）
+   ├─ voice-service.ts     （TTS / STT 语音）
+   └─ home-stats / game    （聚合、游戏化结算）
+   │
+   ▼
+Repository 层（数据访问抽象，12 个 repository）
+   │
+   ▼
+IndexedDB 封装（src/lib/db/indexeddb.ts，idb 库）
+   │
+   ├─► IndexedDB（浏览器原生，DB_VERSION=3，14 个 store）
+   └─► localStorage（API Key 加密 / Session token / 多 LLM 配置）
+                                    │
+                                    ▼ fetch（HTTPS / SSE）
+                          LLM 供应商 API（外部）
+                          DeepSeek / Qwen / OpenAI / Ollama
 ```
 
 ### 1.3 关键设计原则
 
-1. **静态优先**：所有页面在构建时生成 HTML，运行时不再访问服务端
-2. **Repository 模式**：数据访问层抽象，未来如需切换到云端可平滑替换
-3. **Service 层**：业务逻辑封装，与 UI 解耦
-4. **客户端隔离**：每个浏览器/设备的数据独立，无中心化数据共享
+1. **纯 SPA**：构建产物为单个 `index.html` + 静态资源包，运行时由浏览器/WebView 加载执行
+2. **HashRouter 路由**：hash 路由兼容 Capacitor 本地文件加载，无需服务端 SPA fallback
+3. **Repository 模式**：数据访问层抽象，未来如需切换到云端可平滑替换
+4. **Service 层**：业务逻辑封装，与 UI 解耦
+5. **学段自适应**：通过根元素 `data-mode` 属性下发，CSS variables（`--radius-scale` / `--text-scale` / `--game-strength`）全局响应
+6. **客户端隔离**：每个浏览器/设备的数据独立，无中心化数据共享
 
-## 2. 静态导出模式说明
+## 2. 技术栈
 
-### 2.1 Next.js `output: 'export'`
+| 层级 | 技术 | 说明 |
+|------|------|------|
+| 构建框架 | **Vite 7** | 极速冷启动 + HMR，纯 SPA 构建产物 |
+| UI 框架 | **React 19** | 函数组件 + Hooks |
+| 语言 | **TypeScript 5** | 严格模式，零类型错误（`npx tsc --noEmit`） |
+| 路由 | **React Router 7**（HashRouter） | 客户端路由，兼容 Capacitor |
+| 样式 | **Tailwind CSS 4** | 原子化 CSS + PostCSS |
+| 组件库 | **shadcn/ui**（基于 Radix UI） | 可定制、可复制粘贴的组件库 |
+| 动画 | **Framer Motion 12** | 统一 EASE_OUT_EXPO，`useSafeMotion` 包裹无障碍降级 |
+| 状态管理 | **Zustand** + React Context | 用户状态 + SessionProvider |
+| 本地存储 | **IndexedDB**（通过 `idb` 库封装） | 浏览器原生持久化，DB_VERSION=3 |
+| 语音 | Web Speech API + Capacitor TextToSpeech | TTS / STT，移动端 fallback |
+| 认证 | **Web Crypto API**（PBKDF2） | 客户端密码哈希 |
+| AI 服务 | 客户端 `fetch` 直连 + SSE | DeepSeek / Qwen / OpenAI / Ollama |
+| 字体 | Inter Variable + 思源黑体 / PingFang SC | 中文优先 |
+| 桌面端 | **Electron 42** + electron-serve + electron-builder + electron-updater | PC 桌面应用打包与自动更新 |
+| 移动端 | **Capacitor 8** | Android APK 壳 |
+| PWA | manifest.json + Service Worker（可选，Capacitor 原生环境跳过） | 可安装到桌面/主屏 |
 
-```ts
-// next.config.ts
-const nextConfig = {
-  output: 'export',
-  images: {
-    unoptimized: true,
-  },
-};
-```
+## 3. 数据层设计
 
-启用后，`next build` 会将所有页面预渲染为静态 HTML，输出到 `out/` 目录。整个应用不再需要 Node.js 运行时。
+### 3.1 IndexedDB Schema
 
-### 2.2 静态导出的约束
+定义在 `src/lib/db/schema.ts`，使用 idb 库的版本化迁移机制。当前 `DB_VERSION = 3`：
 
-- ❌ 不能使用 Server Actions、Route Handlers（`app/api/`）
-- ❌ 不能使用 `cookies()`、`headers()`、`draftMode()` 等服务端 API
-- ❌ 不能使用 `generateMetadata` 中的动态数据获取
-- ❌ 不能使用 middleware
-- ✅ 可以使用 Client Components、静态 `generateStaticParams`、`fetch` 客户端调用
-
-### 2.3 构建产物结构
-
-```
-out/
-├── index.html              # 首页
-├── 404.html                # 404 页面
-├── _next/                  # Next.js 静态资源（JS/CSS/字体）
-│   ├── static/
-│   └── ...
-├── (auth)/                 # 认证相关页面
-├── (dashboard)/            # 主应用页面
-│   ├── home/
-│   ├── practice/
-│   ├── ai-teacher/
-│   └── ...
-├── manifest.json           # PWA manifest
-├── icons/                  # PWA 图标
-└── sw.js                   # Service Worker
-```
-
-## 3. IndexedDB Schema 设计
-
-### 3.1 Schema 概览
-
-定义在 `src/lib/db/schema.ts`，使用 idb 库的版本化迁移机制。
-
-```
-Database: polaris-learn (version 1)
-
-┌─────────────────────┬──────────────────────────────────┬─────────────────┐
-│ Store 名称           │ 主键 (keyPath)                    │ 索引 (indexes)  │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ users               │ id (uuid)                        │ email (unique)  │
-│                     │                                  │ learningMode    │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ sessions            │ token (uuid)                     │ userId          │
-│                     │                                  │ expiresAt       │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ practice_records    │ id                               │ userId          │
-│                     │                                  │ questionId      │
-│                     │                                  │ subject         │
-│                     │                                  │ createdAt       │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ error_notes         │ id                               │ userId          │
-│                     │                                  │ questionId      │
-│                     │                                  │ reviewed        │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ knowledge_points    │ id                               │ subject         │
-│                     │                                  │ gradeLevel      │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ badges              │ id                               │ -               │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ user_badges         │ id                               │ userId          │
-│                     │                                  │ badgeId         │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ streak_records      │ userId                           │ date            │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ ai_conversations    │ id                               │ userId          │
-│                     │                                  │ updatedAt       │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ subjects            │ id                               │ -               │
-├─────────────────────┼──────────────────────────────────┼─────────────────┤
-│ questions           │ id                               │ subject         │
-│                     │                                  │ difficulty      │
-│                     │                                  │ gradeLevel      │
-└─────────────────────┴──────────────────────────────────┴─────────────────┘
-```
+| Store | 主键 (keyPath) | 索引 | 说明 |
+|------|----------------|------|------|
+| users | id (uuid) | email (unique), learningMode | 用户 |
+| sessions | token (uuid) | userId, expiresAt | 会话 |
+| practice_records | id | userId, subject, questionId, createdAt | 练习记录 |
+| error_notes | id | userId, subject, status | 错题（new/reviewing/mastered） |
+| knowledge_points | id | subject, gradeLevel | 知识点 |
+| badges | id | category | 徽章定义 |
+| user_badges | id | userId, badgeId | 用户徽章 |
+| streak_records | userId | - | 连胜记录 |
+| ai_conversations | id | userId, createdAt | AI 对话 |
+| subjects | id | mode | 学科 |
+| questions | id | subject, difficulty, gradeLevel | 题库 |
+| user_stats | userId | - | XP / 等级 / 学习时长 |
+| currency_transactions | id | userId, createdAt, currency | 双货币流水（v2 新增） |
+| daily_quests | id | userId, date, templateId | 每日任务（v3 新增） |
 
 ### 3.2 版本化迁移
 
-```ts
+```typescript
 // src/lib/db/indexeddb.ts
-const DB_VERSION = 1;
+const DB_VERSION = 3;
 
-openDB('polaris-learn', DB_VERSION, {
+openDB('polaris_learn', DB_VERSION, {
   upgrade(db) {
-    // v1: 创建所有 stores
-    if (!db.objectStoreNames.contains('users')) {
-      const usersStore = db.createObjectStore('users', { keyPath: 'id' });
-      usersStore.createIndex('email', 'email', { unique: true });
-      usersStore.createIndex('learningMode', 'learningMode');
-    }
-    // ... 其他 stores
+    // upgrade 回调按 objectStoreNames 兜底创建
+    // v1: 基础 stores
+    // v2: 新增 currency_transactions
+    // v3: 新增 daily_quests
   },
 });
 ```
 
-未来如需新增字段或 store，升级 `DB_VERSION` 到 2 并在 `upgrade` 函数中添加迁移逻辑即可，浏览器会自动调用。
+`upgrade` 回调按 `objectStoreNames` 兜底创建，对 v1/v2 既有库平滑迁移，老用户打开应用即自动升级。
 
 ### 3.3 通用 CRUD 封装
 
-```ts
-// 通用工具函数
+```typescript
+// 通用工具函数（src/lib/db/indexeddb.ts）
 getAll<T>(store): Promise<T[]>
 getByKey<T>(store, key): Promise<T | undefined>
 put<T>(store, value): Promise<void>
@@ -195,208 +131,233 @@ queryByIndex<T>(store, index, value): Promise<T[]>
 
 所有 repository 都基于这 5 个工具函数构建，无需直接操作事务。
 
-## 4. Repository 模式
+### 3.4 Repository 模式
 
-### 4.1 设计意图
+数据访问逻辑集中到一层，UI 和业务逻辑层无需关心数据来源。可测试（UI 层可 mock repository）、可替换（未来切换云端 API 仅替换 repository 实现）、统一接口。
 
-Repository 模式将数据访问逻辑集中到一层，使 UI 和业务逻辑层无需关心数据来源。这种抽象有以下好处：
-
-- **可测试**：UI 层可对 repository 进行 mock
-- **可替换**：未来若需切换到云端 API，仅需替换 repository 实现
-- **统一接口**：所有数据访问风格一致
-
-### 4.2 Repository 清单
-
-| Repository | 文件 | 主要方法 |
+| Repository | 文件 | 主要职责 |
 |-----------|------|---------|
-| User | `src/lib/repositories/user.repository.ts` | `createUser`, `getUserByEmail`, `updateUser`, `updateUserLearningMode` |
-| Auth | `src/lib/repositories/auth.repository.ts` | `register`, `login`, `changePassword`, `getSession`, `setSession`, `clearSession` |
-| Practice | `src/lib/repositories/practice.repository.ts` | `getQuestions`, `saveAnswer`, `getPracticeStats` |
-| ErrorNotes | `src/lib/repositories/error-notes.repository.ts` | `addErrorNote`, `getErrorNotes`, `removeErrorNote`, `markReviewed` |
-| Knowledge | `src/lib/repositories/knowledge.repository.ts` | `getKnowledgePoints`, `updateMastery` |
-| Gamification | `src/lib/repositories/gamification.repository.ts` | `getBadges`, `awardBadge`, `getUserBadges`, `getStreak`, `updateStreak`, `addXP` |
-| Conversation | `src/lib/repositories/conversation.repository.ts` | `saveConversation`, `getConversations`, `deleteConversation` |
-| Leaderboard | `src/lib/repositories/leaderboard.repository.ts` | `getTopUsers`, `getUserRank` |
-| Courses | `src/lib/repositories/courses.repository.ts` | `getCourses`, `getCourseById`（静态示例课程） |
+| User | `user.repository.ts` | 用户 CRUD、学段切换、`totalStudyHours` / `starlight` / `crystal` / `freezeCards` / `shieldCount` 字段 |
+| Auth | `auth.repository.ts` | 注册、登录、改密、会话管理 |
+| Practice | `practice.repository.ts` | 题库查询、答题记录、统计 |
+| ErrorNotes | `error-notes.repository.ts` | 错题收录、按薄弱度排序、消灭战取题 |
+| Knowledge | `knowledge.repository.ts` | 知识点、掌握度更新、`getDecayedNodes()` 超期节点、`bumpSubjectRootMastery` |
+| Gamification | `gamification.repository.ts` | 徽章、连胜、XP |
+| Conversation | `conversation.repository.ts` | AI 对话持久化 |
+| Leaderboard | `leaderboard.repository.ts` | 5-15 人小队列、个人进步榜 |
+| Courses | `courses.repository.ts` | 静态示例课程 |
+| HomeStats | `home-stats.repository.ts` | 首页 Bento 统计聚合 |
+| **Currency** | `currency.repository.ts` | 双货币（星光 / 晶核）产出 / 消耗 / 余额（v5 新增） |
+| **Quest** | `quest.repository.ts` | 每日任务模板与生成、进度上报（v5 新增） |
 
-### 4.3 使用示例
+使用示例：
 
-```ts
-// 在页面组件中
+```typescript
 import { practiceRepository } from '@/lib/repositories/practice.repository';
 
-async function loadQuestions() {
-  const questions = await practiceRepository.getQuestions({
-    subject: 'math',
-    difficulty: 'medium',
-    learningMode: 'MIDDLE_HIGH',
-  });
-  setQuestions(questions);
-}
+const questions = await practiceRepository.getQuestions({
+  subject: 'math',
+  difficulty: 'medium',
+  learningMode: 'MIDDLE',
+});
 ```
 
-## 5. 客户端 AI 直连架构
+## 4. AI 老师链设计
 
-### 5.1 数据流
+AI 老师是 Polaris 的核心模块，v5.0.0 完成全链路升级。定义在 `src/lib/services/ai-service.ts`。
 
-```
-用户在 AI 老师页输入消息
-         │
-         ▼
-┌─────────────────────────┐
-│  ai-service.ts          │
-│  - buildSocraticPrompt  │
-│  - applyModeTone        │
-│  - chat(messages, mode, │
-│         apiKey, provider)│
-└────────┬────────────────┘
-         │ fetch POST
-         ▼
-┌─────────────────────────┐
-│  LLM 供应商 API          │
-│  - DeepSeek             │
-│  - Qwen (通义千问)       │
-│  - OpenAI               │
-│  - Ollama (本地)        │
-│  - Custom (OpenAI 兼容)  │
-└────────┬────────────────┘
-         │ JSON response
-         ▼
-┌─────────────────────────┐
-│  conversation.repo      │
-│  - saveConversation     │
-└────────┬────────────────┘
-         │
-         ▼
-    IndexedDB 持久化
-```
+### 4.1 6 阶段苏格拉底教学
 
-### 5.2 Provider 适配
-
-`ai-service.ts` 内部根据 `provider` 字段构造不同的请求：
-
-| Provider | Endpoint | 认证 |
-|----------|----------|------|
-| deepseek | `https://api.deepseek.com/v1/chat/completions` | `Bearer ${apiKey}` |
-| qwen | `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions` | `Bearer ${apiKey}` |
-| openai | `https://api.openai.com/v1/chat/completions` | `Bearer ${apiKey}` |
-| ollama | `http://localhost:11434/v1/chat/completions` | 无 |
-| custom | 用户自定义 `baseUrl` | `Bearer ${apiKey}` |
-
-所有 provider 都遵循 OpenAI Chat Completions 协议，便于统一适配。
-
-### 5.3 API Key 存储
-
-API Key 仅存储在 `localStorage`，**永不上传任何服务器**：
-
-```ts
-// 写入
-localStorage.setItem('llm_api_key', apiKey);
-localStorage.setItem('llm_provider', provider);
-
-// 读取（仅在客户端）
-const apiKey = localStorage.getItem('llm_api_key');
-```
-
-### 5.4 降级响应
-
-当 API Key 缺失、网络错误或限流时，`ai-service.ts` 会调用 `simulateAIResponse()` 返回本地生成的占位回复，确保用户体验不中断。
-
-## 6. 本地认证流程
-
-### 6.1 注册流程
+苏格拉底式教学分 6 个阶段，AI 在每次回复末尾以 `<stage>` 标签标注当前阶段：
 
 ```
-用户填写 email + password + learningMode
-         │
-         ▼
-┌─────────────────────────────────┐
-│  auth-service.register()        │
-│                                  │
-│  1. 检查 email 是否已存在         │
-│     └→ auth.repository           │
-│         .getUserByEmail(email)   │
-│                                  │
-│  2. 生成 16 字节 salt            │
-│     └→ crypto.getRandomValues    │
-│                                  │
-│  3. PBKDF2 哈希密码               │
-│     └→ crypto.subtle.deriveBits  │
-│        - iterations: 100000      │
-│        - hash: SHA-256           │
-│        - keylen: 32 bytes        │
-│                                  │
-│  4. 写入 users store             │
-│     └→ user.repository           │
-│         .createUser({            │
-│             id, email,           │
-│             passwordHash,        │
-│             salt, learningMode   │
-│           })                     │
-│                                  │
-│  5. 生成会话 token                │
-│     └→ crypto.randomUUID()      │
-│                                  │
-│  6. 写入 sessions store          │
-│     └→ auth.repository           │
-│         .setSession(...)         │
-│                                  │
-│  7. localStorage 存 token        │
-└─────────────────────────────────┘
+diagnostic（诊断）
+   │
+   ▼
+clarification（澄清）
+   │
+   ▼
+hypothesis（假设）
+   │
+   ▼
+reasoning（推理）
+   │
+   ▼
+verification（验证）
+   │
+   ▼
+reflection（反思）
 ```
 
-### 6.2 登录流程
+- **System Prompt 注入**：`buildSocraticSystemPrompt()` 末尾追加指令，要求模型以 `<stage>diagnostic|clarification|hypothesis|reasoning|verification|reflection</stage>` 标注阶段
+- **前端解析**：`AiTeacherPage` 用正则 `/^<stage>(\w+)<\/stage>$/m` 解析 stage 标签驱动 `setCurrentStage`，渲染时剥离标签不显示给用户
+- **阶段缺失兜底**：stage 标签缺失时保持当前阶段不变，不报错
+- **学段差异化**：`buildModeStyleBlock()` 按 5 学段注入差异化教学风格（幼儿园亲切 emoji / 初高中学术严谨 / 上班族实用干练），`buildLengthRule()` 控制回复长度
 
-```
-用户填写 email + password
-         │
-         ▼
-┌─────────────────────────────────┐
-│  auth-service.login()           │
-│                                  │
-│  1. 根据 email 查用户            │
-│  2. 取出 salt，对输入密码做       │
-│     PBKDF2 哈希                  │
-│  3. 对比 passwordHash            │
-│  4. 匹配 → 生成新 token          │
-│     └→ crypto.randomUUID()      │
-│  5. 写入 sessions store          │
-│  6. localStorage 存 token        │
-│  7. 返回 user 对象               │
-└─────────────────────────────────┘
+### 4.2 weakPoints 薄弱点注入
+
+```typescript
+// chat() 调用链从 useUserStore 读取 weakPoints，传入 system prompt
+const systemPrompt = buildSocraticSystemPromptForMode(learningMode, messages, weakPoints);
 ```
 
-### 6.3 会话验证
+`weakPoints` 注入到 system prompt 的"当前学生信息"块，让 AI 针对学生薄弱点教学。
 
-`SessionProvider` 在应用启动时：
+### 4.3 流式响应（SSE）
 
-1. 从 `localStorage` 读取 token
-2. 用 token 查询 `sessions` store
-3. 检查 `expiresAt` 是否有效
-4. 用 `userId` 查询 `users` store 获取用户信息
-5. 注入到 React Context 供全局使用
+```typescript
+export async function chat(
+  messages: ChatMessage[],
+  learningMode: string,
+  apiKey?: string,
+  provider?: LLMProvider,
+  signal?: AbortSignal,        // AbortController 支持停止生成
+  weakPoints?: string[],       // 薄弱点注入
+  onChunk?: (chunk: string) => void  // 逐块回调
+): Promise<ChatResult>
+```
 
-### 6.4 安全特性
+- `stream: true` 开启流式
+- `ReadableStream` + `TextDecoder` 解析 SSE 流（`data: {...}` 格式）
+- `onChunk(chunk)` 回调逐块返回内容，`AiTeacherPage` 每 50ms 一个字符流入气泡
+- "停止生成"按钮触发 `abortController.abort()`，已接收内容保留，气泡标记"已中断"
+- 流式结束后解析末尾 `<stage>` 标签更新进度条
 
-- ✅ PBKDF2 100000 次迭代，防止暴力破解
-- ✅ 每个用户独立 salt，防止彩虹表攻击
-- ✅ 会话 token 使用 `crypto.randomUUID()`，密码学安全
-- ✅ 密码哈希永不离开客户端设备
-- ⚠️ **局限**：因为是纯客户端，无法防止用户查看自己的数据。但用户本就该能查看自己的数据。
+### 4.4 模型配置（多配置 + 加密 + 连接测试）
 
-## 7. 跨平台部署方案
+- **多配置**：`llm_config_profiles` 数组 + `llm_config_active_id`，支持新建/切换/删除
+- **加密存储**：`secure-storage.ts` 的 `obscureValue` / `deobscureValue`，Electron 用 `safeStorage`，Capacitor 用 Preferences + AES，Web 用 `btoa` + 指纹混淆
+- **Ollama 自动探测**：`fetchOllamaModels()` 调用 `http://localhost:11434/api/tags` 列出已装模型
+- **连接测试**：`testConnection()` 发送最小请求（"ping", max_tokens:5），返回延迟与模型名
+- **配置向导**：`ModelConfigWizard`（3 步：选 provider → 输入 Key → 测试）+ `ModelConfigAdvanced`（baseUrl / model / temperature 三档 / maxTokens / topP）
 
-### 7.1 三端统一架构
+### 4.5 降级响应
+
+API Key 缺失、网络错误或限流时，`getFallbackResponse()` 返回本地生成的占位回复（按学科 × 阶段 × 学段语气适配），确保用户体验不中断。
+
+## 5. 游戏化系统设计
+
+游戏化逻辑集中在 `src/lib/game.ts` 与各 repository，遵循"避免多巴胺赌博机"原则。
+
+### 5.1 双货币
+
+| 货币 | 产出场景 | 用途 |
+|------|---------|------|
+| **星光（starlight）** | 日常产出：每日任务、节点掌握、错题消灭、专注时长、全对、连胜每日 | 购买冻结卡、个性化 |
+| **晶核（crystal）** | 仅里程碑：7/30/100/365 天连胜、升入学霸/大师、稀有徽章、一周全勤 | 解锁特殊内容 |
+
+设计原则：星光锚定 mastery 进步，每个动作产出固定无随机倍率；晶核仅里程碑产出，避免高频变动奖励。
+
+### 5.2 连胜容错
+
+- **冻结卡**：某日未学习时自动消耗冻结卡（若有），连胜不断
+- **里程碑保护盾**：7/30/100 天奖励保护盾（`shieldCount`），专注护盾兜底
+- **历史最高纪录**：断签后保留 `bestStreak` 展示
+
+### 5.3 每日任务
+
+- **每日生成**：首次打开应用时生成 3 个任务（基于当日学习目标）
+- **任务模板**：完成 1 个新节点 / 消灭 5 道错题 / 专注 15 分钟等
+- **复合键**：`${userId}_${date}_${templateId}` 保证唯一
+- **完成反馈**：打勾动画 + 星光 count-up；全部完成触发宝箱动画 + 徽章碎片掉落
+
+### 5.4 专注心流护盾
+
+- 25 分钟番茄钟 + 5 分钟休息循环
+- 心流能量条可视化（渐变填充，非倒计时数字）
+- 深色聚焦态（背景变暗、侧边栏收起为图标条）
+- 通知延后到专注结束
+- 结束集中结算：专注 XP × 1.5 加成、消灭错题数、解锁节点
+
+### 5.5 知识星图
+
+- **自研轻量力导向图**（未引入新依赖）替代扁平节点图
+- **三态编码**：已掌握亮星（白色+光晕）/ 未解锁星云遮蔽（半透明灰）/ 薄弱红光脉冲（红色+脉冲）
+- **交互**：滚轮缩放、节点拖拽、点击亮星复习 / 红星进入消灭战
+- **裂纹衰减**：超过复习周期（默认 7 天）的已掌握节点自动裂纹，进度环回退到 80%；`getDecayedNodes()` 查询超期节点；裂纹用 SVG filter（feTurbulence + feDisplacementMap）
+
+### 5.6 错题消灭战
+
+- 60 秒倒计时（心流能量条形式，非数字）
+- 从 `error-notes.repository` 按薄弱度排序取题
+- 连续答对将红色节点点亮成绿色（scaleIn + 颜色过渡）
+- 答错节点闪烁但不退出（shake 动画）
+- 结算页：消灭节点数 + 星光奖励 count-up
+
+### 5.7 学习伙伴养成
+
+- Polaris 小灵 4 形态：蛋（0h）→ 幼体（10h）→ 成体（50h）→ 觉醒（200h）
+- 按累计学习时长（`totalStudyHours`）进化
+- 情绪规则触发（非 AI）：连续学习开心、断签担心、攻克难题欢呼
+- 进化时播放进化动画 + 庆祝特效
+- 首页右下角常驻，可点击查看状态与心情
+
+## 6. 跨功能数据流
+
+v5.0.0（Task 19）打通各模块数据流，避免信息孤岛：
+
+### 6.1 练习 / 错题 → AI 老师
+
+```
+PracticePage 答错
+   │ 保存错题上下文
+   ▼
+答错页"问 AI 老师"按钮
+   │ 跳转 AiTeacherPage 携带 router state
+   ▼
+AiTeacherPage 读取 location.state
+   │ 构造苏格拉底 prompt 自动发送
+   ▼
+ErrorNotesPage 每条错题"问 AI"按钮
+   │ 携带 {errorNoteId, question, userAnswer, correctAnswer, subject}
+   ▼
+AiTeacherPage 构造 prompt 自动发送
+```
+
+### 6.2 AI 老师 → 知识图谱掌握度
+
+```
+AI 对话进入 reflection 阶段
+   │
+   ▼
+bumpSubjectRootMastery（学科根节点 mastery +5，封顶 100）
+   │
+   ▼
+每轮对话 updateQuestProgress（ai_chat +1）
+```
+
+### 6.3 各模块 → 每日任务进度上报
+
+```
+PracticePage 答对 ──► correct_answers +1
+knowledge.repository 首次达掌握阈值 70 ──► complete_node +1
+ErrorEliminationBattle 每消灭一个红节点 ──► eliminate_errors +1
+FocusShield 专注 ──► focus_minutes 上报
+```
+
+### 6.4 知识节点掌握 → 星光产出
+
+```
+knowledge.repository updateMastery
+   │ 首次达满掌握 100
+   ▼
+addStarlight(10)
+   │ 用 masteryRewardClaimed 幂等标志
+   ▼
+避免重复发放
+```
+
+## 7. 跨端策略
+
+三端共用同一份 `dist/` 产物：
 
 ```
                     ┌──────────────┐
-                    │  next build  │
-                    │  (output:    │
-                    │   'export')  │
+                    │  vite build  │
                     └──────┬───────┘
                            │
                     ┌──────▼───────┐
-                    │   out/ 目录   │
+                    │   dist/ 目录  │
                     │ (静态文件)    │
                     └──────┬───────┘
                            │
@@ -405,149 +366,65 @@ const apiKey = localStorage.getItem('llm_api_key');
           ▼                ▼                ▼
    ┌──────────┐     ┌──────────┐     ┌──────────┐
    │   Web    │     │ Android  │     │ Electron │
-   │  (PWA)   │     │ (Capacitor)│   │          │
+   │  (PWA)   │     │(Capacitor)│    │   (PC)   │
    └──────────┘     └──────────┘     └──────────┘
    静态托管          内嵌 WebView      electron-serve
-   Vercel/           加载 out/        加载 out/
-   Netlify/Nginx     androidScheme:   + DPI 缩放
+   Vercel/           加载 dist/        加载 dist/
+   Netlify/Nginx     androidScheme:    + DPI 缩放
                      https
 ```
 
-### 7.2 Web（PWA）
+### 7.1 Web（PWA）
 
-- **构建**：`npm run build` → `out/`
-- **部署**：上传 `out/` 到任意静态托管平台
-- **PWA**：`manifest.json` + Service Worker，可安装到桌面/主屏
-- **离线**：Service Worker 缓存静态资源，IndexedDB 数据天然离线
+- `npm run build` → `dist/`
+- 上传到任意静态托管平台，`manifest.json` + Service Worker 可安装到桌面/主屏
+- Service Worker 缓存静态资源，IndexedDB 数据天然离线
 
-### 7.3 Android（Capacitor）
+### 7.2 Android（Capacitor）
 
-```ts
+```typescript
 // capacitor.config.ts
 export default {
   appId: 'com.polaris.learn',
   appName: 'Polaris',
-  webDir: 'out',                    // 静态导出目录
-  server: {
-    androidScheme: 'https',        // 强制 https
-    // 不设置 server.url，让 webview 加载本地 out/ 文件
-  },
+  webDir: 'dist',
+  server: { androidScheme: 'https' },
 };
 ```
 
-- **构建**：`npm run android:build` → `cap sync android` → `gradlew assembleDebug`
-- **网络**：`network_security_config.xml` 白名单 localhost / 局域网 IP，允许 Ollama 本地连接
-- **Service Worker**：在 Capacitor 原生环境跳过注册（避免与 webview 冲突）
+- 纯本地加载 `dist/`，APK 启动无任何 HTTP 请求（彻底解决 `ERR_CLEARTEXT_NOT_PERMITTED`）
+- `network_security_config.xml` 白名单 localhost / 局域网 IP，允许 Ollama 本地连接
+- Service Worker 在 Capacitor 原生环境跳过注册
+- 语音 STT 移动端用 `MediaRecorder` + Whisper API
 
-### 7.4 Electron（PC）
+### 7.3 Electron（PC）
 
-```js
+```javascript
 // electron/main.js
-const loadURL = require('electron-serve')({ directory: 'out' });
-
-app.whenReady().then(() => {
-  const { scaleFactor } = screen.getPrimaryDisplay();
-  const win = new BrowserWindow({
-    webPreferences: { zoomFactor: scaleFactor },
-    minWidth: 1024 * scaleFactor,
-    minHeight: 768 * scaleFactor,
-  });
-  loadURL(win);  // 加载 out/index.html
-});
-
-screen.on('display-metrics-changed', () => {
-  // DPI 变化时调整 zoomFactor
-});
+const loadURL = require('electron-serve')({ directory: 'dist' });
+// 自动检测 scaleFactor，按比例缩放窗口与内容
+// electron-updater 检查 GitHub Release 上的 latest.yml 自动更新
 ```
 
-- **构建**：`npm run electron:build` → `electron-builder` 打包
-- **DPI**：自动检测 `scaleFactor`，按比例缩放窗口与内容
-- **自动更新**：electron-updater + GitHub Releases
+- `npm run electron:build` → `vite build && electron-builder` 打包
+- API Key 加密用 `safeStorage`
+- 自动更新：electron-updater + GitHub Releases
 
-### 7.5 构建命令速查
+### 7.4 构建命令速查
 
 | 目标 | 命令 | 产物路径 |
 |------|------|---------|
-| Web 静态 | `npm run build` | `out/` |
+| Web 静态 | `npm run build` | `dist/` |
+| 开发服务器 | `npm run dev` | http://localhost:5173 |
 | Android APK | `npm run android:build` → `cd android && ./gradlew assembleDebug` | `android/app/build/outputs/apk/debug/app-debug.apk` |
 | Electron 安装包 | `npm run electron:build` | `electron-dist/Polaris 北极星学习平台 Setup.exe` |
 
-## 8. 目录结构
-
-```
-ai-edu-platform/
-├── electron/                  # Electron 主进程
-│   └── main.js                # 入口（electron-serve + DPI 检测）
-├── android/                   # Capacitor Android 项目
-│   └── app/src/main/res/xml/
-│       └── network_security_config.xml  # 网络白名单
-├── public/                    # 静态资源
-│   ├── manifest.json          # PWA 配置
-│   └── icons/                 # 应用图标 + maskable 图标
-├── src/
-│   ├── app/                   # Next.js App Router 页面
-│   │   ├── (auth)/            # 认证页面（登录/注册）
-│   │   ├── (dashboard)/       # 主应用页面
-│   │   │   ├── home/
-│   │   │   ├── practice/
-│   │   │   ├── ai-teacher/
-│   │   │   ├── knowledge-graph/
-│   │   │   ├── error-notes/
-│   │   │   ├── analytics/
-│   │   │   ├── leaderboard/
-│   │   │   ├── courses/
-│   │   │   ├── settings/
-│   │   │   ├── profile/
-│   │   │   └── layout.tsx     # 仪表盘布局（含 MobileNav）
-│   │   ├── globals.css        # 全局样式 + design tokens
-│   │   └── layout.tsx         # 根布局（viewport + 字体）
-│   ├── components/
-│   │   ├── layout/
-│   │   │   ├── Header.tsx
-│   │   │   ├── Sidebar.tsx
-│   │   │   └── MobileNav.tsx   # 移动端底部导航
-│   │   ├── providers/
-│   │   │   ├── SessionProvider.tsx  # 本地会话上下文
-│   │   │   └── ServiceWorkerRegister.tsx
-│   │   └── ui/                 # shadcn/ui 组件
-│   ├── hooks/                  # 响应式 hooks
-│   │   ├── use-media-query.ts
-│   │   ├── use-is-mobile.ts
-│   │   └── use-device-pixel-ratio.ts
-│   ├── lib/
-│   │   ├── db/                 # IndexedDB 封装
-│   │   │   ├── schema.ts       # schema 定义
-│   │   │   └── indexeddb.ts    # openDB + 通用 CRUD
-│   │   ├── repositories/       # Repository 层（9 个）
-│   │   ├── services/           # Service 层
-│   │   │   ├── ai-service.ts   # 客户端 AI 直连
-│   │   │   └── auth-service.ts # PBKDF2 认证
-│   │   ├── motion.ts           # 动画预设（EASE_OUT_EXPO）
-│   │   ├── constants.ts        # 学科常量
-│   │   ├── learning-modes.ts   # 学习模式配置
-│   │   └── version.ts          # 静态版本信息
-│   └── stores/
-│       └── useUserStore.ts     # Zustand 用户状态
-├── capacitor.config.ts         # Capacitor 配置
-├── next.config.ts             # Next.js 配置（output: 'export'）
-└── package.json                # 版本 3.0.0
-```
-
-## 9. 迁移路径（从 v2.x 升级）
-
-如果你正在使用 v2.x（Prisma + NextAuth 架构），升级到 v3.0.0 时需要注意：
-
-1. **数据迁移**：v3.0.0 数据存储在浏览器 IndexedDB，与 v2.x 的服务端数据库**完全隔离**。已有用户数据需重新创建，或编写一次性迁移脚本将 SQLite 数据导出后通过种子脚本注入。
-2. **API Routes 全部移除**：原有 `/api/*` 路由不再存在，所有数据访问改为前端 repository 直读 IndexedDB。
-3. **认证系统重置**：用户需重新注册账号，原 NextAuth 会话失效。
-4. **环境变量**：`.env` 不再需要，可删除 `DATABASE_URL`、`AUTH_SECRET`、`NEXTAUTH_URL` 等配置。
-5. **部署方式**：从「Node.js 服务 + 数据库」改为「静态文件托管」。
-
-## 10. 相关文档
+## 8. 相关文档
 
 - [README.md](../README.md) - 项目概览与快速开始
 - [CHANGELOG.md](../CHANGELOG.md) - 完整变更记录
+- [RELEASE.md](./RELEASE.md) - 发布流程与 v5.0.0 发布说明
 - [DEPLOYMENT.md](./DEPLOYMENT.md) - 部署指南
 - [ANDROID_BUILD.md](./ANDROID_BUILD.md) - Android 构建指南
 - [SECURITY.md](./SECURITY.md) - 安全规范
-- [API_REFERENCE.md](./API_REFERENCE.md) - ⚠️ 已废弃（v3.0.0 移除服务端 API）
+- [AGENTS.md](../AGENTS.md) - AI 编程规范与已知陷阱

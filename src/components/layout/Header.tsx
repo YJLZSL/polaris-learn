@@ -1,8 +1,5 @@
-"use client";
-
-import { usePathname } from "next/navigation";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useSession, signOut } from "@/components/providers/SessionProvider";
-import Link from "next/link";
 import { Search, Bell, Menu, User, Settings, LogOut, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,7 +46,8 @@ interface HeaderProps {
 }
 
 export default function Header({ onMenuClick }: HeaderProps) {
-  const pathname = usePathname();
+  const { pathname } = useLocation();
+  const navigate = useNavigate();
   const { data: session } = useSession();
 
   const userName = session?.user?.name || "用户";
@@ -81,7 +79,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link href="/home">Polaris</Link>
+              <Link to="/home">Polaris</Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           {breadcrumbItems.map((item, index) => {
@@ -94,7 +92,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
                     <BreadcrumbPage>{item.label}</BreadcrumbPage>
                   ) : (
                     <BreadcrumbLink asChild>
-                      <Link href={item.href}>{item.label}</Link>
+                      <Link to={item.href}>{item.label}</Link>
                     </BreadcrumbLink>
                   )}
                 </BreadcrumbItem>
@@ -161,19 +159,19 @@ export default function Header({ onMenuClick }: HeaderProps) {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href="/profile" className="cursor-pointer">
+              <Link to="/profile" className="cursor-pointer">
                 <User className="mr-2 h-4 w-4" />
                 个人资料
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/settings" className="cursor-pointer">
+              <Link to="/settings" className="cursor-pointer">
                 <Settings className="mr-2 h-4 w-4" />
                 设置
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href="/help" className="cursor-pointer">
+              <Link to="/help" className="cursor-pointer">
                 <HelpCircle className="mr-2 h-4 w-4" />
                 帮助中心
               </Link>
@@ -183,7 +181,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
               className="cursor-pointer text-destructive focus:text-destructive"
               onClick={async () => {
                 await signOut();
-                window.location.href = "/login";
+                navigate("/login");
               }}
             >
               <LogOut className="mr-2 h-4 w-4" />

@@ -42,6 +42,64 @@ export const STREAK_MILESTONES = [
   { days: 365, name: "钻石徽章", icon: "💎", xpBonus: 10000 },
 ];
 
+/**
+ * Task 15.2: 双货币产出规则
+ *
+ * 设计原则（避免反模式）：
+ * - 星光（starlight）：锚定 mastery 进步的日常货币，每个动作产出固定，无随机倍率
+ * - 晶核（crystal）：仅里程碑/稀有成就产出，避免高频变动奖励与多巴胺赌博机效应
+ * - 不引入错误惩罚机制（无红心扣血）；消耗仅用于容错道具与个性化占位
+ *
+ * 产出场景对照 SubTask 15.1 中货币产出场景清单：
+ *  - dailyChallenge / questComplete：每日任务完成
+ *  - nodeMastered：知识节点掌握
+ *  - errorEliminated：错题消灭
+ *  - focusMinutes：专注时长达成（按 15 分钟一档结算，避免每分钟发奖）
+ */
+export const STARLIGHT_REWARDS = {
+  dailyChallenge: 30,
+  questComplete: 20,        // 单个每日任务完成
+  nodeMastered: 25,         // 知识节点掌握度跨档（60/80/100）
+  errorEliminated: 10,      // 消灭一道错题
+  focusMinutes: 15,         // 每完成 15 分钟专注
+  perfectScore: 40,         // 单次练习全对
+  streakDailyBonus: 10,     // 连胜每日额外奖励（与 XP 的 streakBonus 区分）
+};
+
+export const CRYSTAL_REWARDS = {
+  streak7: 1,               // 7 天里程碑
+  streak30: 3,              // 30 天里程碑
+  streak100: 10,            // 100 天里程碑
+  streak365: 30,            // 365 天里程碑
+  levelUpScholar: 2,        // 升入学霸段（Lv 11）
+  levelUpMaster: 5,         // 升入大师段（Lv 16）
+  rareBadgeUnlocked: 1,     // 解锁稀有及以上徽章
+  perfectWeek: 5,           // 一周全勤（7/7 日均达成日目标）
+};
+
+/**
+ * Task 15.2: 货币消耗规则（占位接口，商店具体实现见后续任务）
+ * - freezeCard: 购买冻结卡（断签容错），价低，鼓励持有
+ * - contentUnlock: 解锁特殊内容（扩展题包/讲解）
+ * - cosmetic: 个性化装扮（仅占位）
+ */
+export const CURRENCY_COSTS = {
+  freezeCard: 50,           // 星光购买冻结卡
+  contentUnlock: 5,         // 晶核解锁特殊内容
+  cosmetic: 20,             // 晶核装扮（占位）
+};
+
+/**
+ * Task 15.5: 连胜里程碑保护盾奖励
+ * 触发时机：currentStreak 命中 days 时发放 shieldCount 张保护盾。
+ * 保护盾用途：未来"专注心流护盾"（Task 14）兜底，避免偶发中断扣分。
+ */
+export const STREAK_SHIELD_MILESTONES = [
+  { days: 7, shields: 1, crystal: CRYSTAL_REWARDS.streak7 },
+  { days: 30, shields: 2, crystal: CRYSTAL_REWARDS.streak30 },
+  { days: 100, shields: 3, crystal: CRYSTAL_REWARDS.streak100 },
+];
+
 export function getLevelInfo(xp: number) {
   let currentLevel = LEVEL_THRESHOLDS[0];
   let nextLevel = LEVEL_THRESHOLDS[1];

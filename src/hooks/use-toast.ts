@@ -1,8 +1,8 @@
-"use client"
-
 import * as React from "react"
 
 import type { ToastActionElement, ToastProps } from "@/components/ui/toast"
+// Task 14.5: 专注心流护盾 —— 专注期间拦截 toast 调用
+import { useFocusShieldStore } from "@/stores/useFocusShieldStore"
 
 const TOAST_LIMIT = 1
 const TOAST_REMOVE_DELAY = 1000000
@@ -138,6 +138,18 @@ function dispatch(action: Action) {
 type Toast = Omit<ToasterToast, "id">
 
 function toast({ ...props }: Toast) {
+  // Task 14.5: 专注模式活跃时，将 toast 推入待显示队列而非直接弹出
+  const focusState = useFocusShieldStore.getState()
+  if (focusState.isActive) {
+    focusState.queueToast(props)
+    // 返回一个 no-op 句柄，保持接口兼容（dismiss/update 在 flush 重放后用新 id 生效）
+    return {
+      id: `queued-${genId()}`,
+      dismiss: () => {},
+      update: () => {},
+    }
+  }
+
   const id = genId()
 
   const update = (props: ToasterToast) =>

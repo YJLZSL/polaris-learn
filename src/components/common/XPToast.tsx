@@ -1,7 +1,5 @@
-"use client";
-
 import { useEffect, useState } from "react";
-import { HiOutlineBolt } from "react-icons/hi2";
+import PolarisMascot from "@/components/common/PolarisMascot";
 
 interface XPToastProps {
   xp: number;
@@ -23,8 +21,8 @@ export default function XPToast({ xp, onComplete }: XPToastProps) {
 
   return (
     <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 pointer-events-none">
-      <div className="animate-xpGain flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white px-4 py-2 rounded-full shadow-xl shadow-amber-500/30 text-sm font-bold">
-        <HiOutlineBolt className="w-4 h-4" />
+      <div className="animate-xpGain flex items-center gap-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white pl-1 pr-4 py-1 rounded-full shadow-xl shadow-amber-500/30 text-sm font-bold">
+        <PolarisMascot mood="cheering" size={28} animated={false} />
         <span>+{xp} XP</span>
       </div>
     </div>

@@ -49,16 +49,22 @@ function clamp(v, lo, hi) {
 }
 
 // ---------------------------------------------------------------------------
-// Polaris geometry (normalized 0-1 coordinates, centered at 0.5, 0.5)
+// Polaris geometry (normalized 0-1 coordinates)
+// Star sits slightly above center to leave room for the open book below.
 // ---------------------------------------------------------------------------
+const STAR_CENTER_X = 0.5;
+const STAR_CENTER_Y = 0.449;
+const STAR_OUTER = 0.234;
+const STAR_INNER = 0.094;
+const STAR_GLOW_RADIUS = STAR_OUTER * 1.75;
 
-// 4-pointed star: outer points at distance 0.4, inner radius 0.18.
+// 4-pointed star: outer points at distance STAR_OUTER, inner radius STAR_INNER.
 // Inner points sit at 45° between the cardinal outer points.
 const STAR_VERTICES = (() => {
-  const cx = 0.5;
-  const cy = 0.5;
-  const outer = 0.4;
-  const inner = 0.18;
+  const cx = STAR_CENTER_X;
+  const cy = STAR_CENTER_Y;
+  const outer = STAR_OUTER;
+  const inner = STAR_INNER;
   const diag = inner * Math.SQRT1_2; // inner * cos(45°)
   return [
     [cx, cy - outer], // top
@@ -72,11 +78,29 @@ const STAR_VERTICES = (() => {
   ];
 })();
 
-// Accent sparkle dots (warm white, low opacity)
-const ACCENTS = [
-  { x: 0.2, y: 0.2, r: 0.008, opacity: 0.7 },
-  { x: 0.82, y: 0.28, r: 0.006, opacity: 0.7 },
-  { x: 0.78, y: 0.82, r: 0.007, opacity: 0.7 },
+// Open book at the bottom (two pages opening upward from a center spine).
+const BOOK_LEFT = [
+  [0.5, 0.725], // spine top
+  [0.215, 0.754], // top-left corner
+  [0.195, 0.84], // bottom-left corner
+  [0.5, 0.82], // spine bottom
+];
+const BOOK_RIGHT = [
+  [0.5, 0.725], // spine top
+  [0.785, 0.754], // top-right corner
+  [0.805, 0.84], // bottom-right corner
+  [0.5, 0.82], // spine bottom
+];
+
+// Constellation sparkle dots (knowledge points scattered across the night sky)
+const CONSTELLATION = [
+  { x: 0.176, y: 0.234, r: 0.007, opacity: 0.85 },
+  { x: 0.293, y: 0.156, r: 0.0047, opacity: 0.6 },
+  { x: 0.5, y: 0.086, r: 0.005, opacity: 0.6 },
+  { x: 0.742, y: 0.176, r: 0.005, opacity: 0.6 },
+  { x: 0.82, y: 0.293, r: 0.006, opacity: 0.75 },
+  { x: 0.205, y: 0.586, r: 0.005, opacity: 0.6 },
+  { x: 0.84, y: 0.625, r: 0.006, opacity: 0.7 },
 ];
 
 /**
@@ -103,7 +127,9 @@ function pointInPolygon(px, py, poly) {
 
 /**
  * Returns the Polaris color at normalized coordinates (nx, ny) in [0, 1].
- * Layers (back to front): background gradient → star → center dot → accents.
+ * Layers (back to front):
+ *   background gradient → star glow halo → constellation → open book →
+ *   4-pointed star → bright center dot.
  * @param {number} nx  normalized x (0-1)
  * @param {number} ny  normalized y (0-1)
  * @returns {{r: number, g: number, b: number}}
@@ -113,38 +139,33 @@ function getPolarisColor(nx, ny) {
   // Interpolate based on (nx + ny) / 2.
   const t = (nx + ny) / 2;
   let r, g, b;
-  if (t < 0.5) {
-    const lt = t * 2; // #1e1b4b → #4338ca
+  if (t < 0.55) {
+    const lt = t / 0.55; // #1e1b4b → #4338ca
     r = lerp(0x1e, 0x43, lt);
     g = lerp(0x1b, 0x38, lt);
     b = lerp(0x4b, 0xca, lt);
   } else {
-    const lt = (t - 0.5) * 2; // #4338ca → #7c3aed
+    const lt = (t - 0.55) / 0.45; // #4338ca → #7c3aed
     r = lerp(0x43, 0x7c, lt);
     g = lerp(0x38, 0x3a, lt);
     b = lerp(0xca, 0xed, lt);
   }
 
-  // --- 4-pointed star: gold gradient #fef3c7 (top) → #fbbf24 (bottom) ---
-  if (pointInPolygon(nx, ny, STAR_VERTICES)) {
-    const starT = ny; // 0 at top, 1 at bottom
-    r = lerp(0xfe, 0xfb, starT);
-    g = lerp(0xf3, 0xbf, starT);
-    b = lerp(0xc7, 0x24, starT);
+  // --- Star glow halo: warm gold radial fade around the star center ---
+  const sdx = nx - STAR_CENTER_X;
+  const sdy = ny - STAR_CENTER_Y;
+  const sdist = Math.sqrt(sdx * sdx + sdy * sdy);
+  if (sdist < STAR_GLOW_RADIUS) {
+    const glowT = sdist / STAR_GLOW_RADIUS; // 0 center → 1 edge
+    const strength = Math.pow(1 - glowT, 2) * 0.5;
+    r = lerp(r, 0xfb, strength);
+    g = lerp(g, 0xbf, strength);
+    b = lerp(b, 0x24, strength * 0.7);
   }
 
-  // --- Center white dot: circle at (0.5, 0.5) radius 0.05, pure white ---
-  const dx = nx - 0.5;
-  const dy = ny - 0.5;
-  if (dx * dx + dy * dy <= 0.05 * 0.05) {
-    r = 255;
-    g = 255;
-    b = 255;
-  }
-
-  // --- Accent sparkle dots (warm white #fef3c7, blended with opacity) ---
-  for (let i = 0; i < ACCENTS.length; i++) {
-    const a = ACCENTS[i];
+  // --- Constellation sparkle dots (warm white #fef3c7) ---
+  for (let i = 0; i < CONSTELLATION.length; i++) {
+    const a = CONSTELLATION[i];
     const adx = nx - a.x;
     const ady = ny - a.y;
     if (adx * adx + ady * ady <= a.r * a.r) {
@@ -152,6 +173,38 @@ function getPolarisColor(nx, ny) {
       g = lerp(g, 0xf3, a.opacity);
       b = lerp(b, 0xc7, a.opacity);
     }
+  }
+
+  // --- Open book at bottom: light indigo gradient #e0e7ff → #a5b4fc ---
+  if (pointInPolygon(nx, ny, BOOK_LEFT) || pointInPolygon(nx, ny, BOOK_RIGHT)) {
+    const bookT = clamp((ny - 0.725) / 0.115, 0, 1); // 0 top → 1 bottom
+    const br = lerp(0xe0, 0xa5, bookT);
+    const bg2 = lerp(0xe7, 0xb4, bookT);
+    const bb = lerp(0xff, 0xfc, bookT);
+    r = lerp(r, br, 0.92);
+    g = lerp(g, bg2, 0.92);
+    b = lerp(b, bb, 0.92);
+  }
+
+  // --- 4-pointed star: gold gradient #fef3c7 (top) → #fbbf24 (bottom) ---
+  if (pointInPolygon(nx, ny, STAR_VERTICES)) {
+    const starT = clamp(
+      (ny - (STAR_CENTER_Y - STAR_OUTER)) / (STAR_OUTER * 2),
+      0,
+      1,
+    );
+    r = lerp(0xfe, 0xfb, starT);
+    g = lerp(0xf3, 0xbf, starT);
+    b = lerp(0xc7, 0x24, starT);
+  }
+
+  // --- Bright white center dot: circle at star center, radius 0.035 ---
+  const cdx = nx - STAR_CENTER_X;
+  const cdy = ny - STAR_CENTER_Y;
+  if (cdx * cdx + cdy * cdy <= 0.035 * 0.035) {
+    r = 255;
+    g = 255;
+    b = 255;
   }
 
   return {
@@ -164,17 +217,32 @@ function getPolarisColor(nx, ny) {
 /**
  * Returns the Polaris pixel color for a given pixel coordinate.
  * Computes normalized coordinates nx = x/size, ny = y/size and samples the
- * design. Alpha is always 255 (fully opaque background).
+ * design. When `round` is true, a circular mask is applied: pixels outside
+ * the inscribed circle (center 0.5,0.5, radius 0.5) become transparent, with
+ * a thin anti-aliased edge — used for Android ic_launcher_round.
  * @param {number} x     pixel x (may be fractional for supersampling)
  * @param {number} y     pixel y (may be fractional for supersampling)
  * @param {number} size  canvas size
+ * @param {boolean} round  apply circular mask
  * @returns {{r: number, g: number, b: number, a: number}}
  */
-function getPolarisPixel(x, y, size) {
+function getPolarisPixel(x, y, size, round) {
   const nx = x / size;
   const ny = y / size;
   const c = getPolarisColor(nx, ny);
-  return { r: c.r, g: c.g, b: c.b, a: 255 };
+  let a = 255;
+  if (round) {
+    const dx = nx - 0.5;
+    const dy = ny - 0.5;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist >= 0.5) {
+      a = 0;
+    } else if (dist > 0.495) {
+      // 1.5px (at normalized scale) anti-aliased edge
+      a = Math.round(((0.5 - dist) / 0.005) * 255);
+    }
+  }
+  return { r: c.r, g: c.g, b: c.b, a };
 }
 
 // ---------------------------------------------------------------------------
@@ -190,14 +258,14 @@ function makeChunk(type, data) {
 }
 
 /**
- * Create a Polaris icon PNG at the given size.
+ * Shared PNG renderer for the Polaris icon.
  * Uses 2x2 supersampling for anti-aliased edges and color type 6 (RGBA).
- * Alpha is always 255 (fully opaque) but the RGBA channel is retained so the
- * PNGs satisfy the ICO bitCount=32 requirement and stay above size thresholds.
+ * When `round` is true a circular alpha mask is applied (for ic_launcher_round).
  * @param {number} size
+ * @param {boolean} round
  * @returns {Buffer}
  */
-function createPolarisPNG(size) {
+function renderPolarisPNG(size, round) {
   // PNG signature
   const sig = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
@@ -223,19 +291,21 @@ function createPolarisPNG(size) {
       let r = 0;
       let g = 0;
       let b = 0;
+      let a = 0;
       for (let si = 0; si < 4; si++) {
         const ox = subOffsets[si & 1];
         const oy = subOffsets[(si >> 1) & 1];
-        const c = getPolarisPixel(x + ox, y + oy, size);
+        const c = getPolarisPixel(x + ox, y + oy, size, round);
         r += c.r;
         g += c.g;
         b += c.b;
+        a += c.a;
       }
       const p = off + 1 + x * 4;
       raw[p] = Math.round(r / 4);
       raw[p + 1] = Math.round(g / 4);
       raw[p + 2] = Math.round(b / 4);
-      raw[p + 3] = 255; // alpha: fully opaque
+      raw[p + 3] = Math.round(a / 4);
     }
   }
 
@@ -249,6 +319,26 @@ function createPolarisPNG(size) {
     makeChunk("IDAT", compressed),
     makeChunk("IEND", Buffer.alloc(0)),
   ]);
+}
+
+/**
+ * Create a square Polaris icon PNG at the given size (fully opaque).
+ * RGBA channel retained so PNGs satisfy the ICO bitCount=32 requirement.
+ * @param {number} size
+ * @returns {Buffer}
+ */
+function createPolarisPNG(size) {
+  return renderPolarisPNG(size, false);
+}
+
+/**
+ * Create a round Polaris icon PNG at the given size with a circular alpha
+ * mask (transparent corners) — used for Android ic_launcher_round.
+ * @param {number} size
+ * @returns {Buffer}
+ */
+function createPolarisPNGRound(size) {
+  return renderPolarisPNG(size, true);
 }
 
 // ---------------------------------------------------------------------------
@@ -324,6 +414,40 @@ fs.writeFileSync(path.join(PUBLIC, "icon.ico"), icoBuffer);
 
 // favicon.ico — same content as icon.ico (simplest approach per spec)
 fs.writeFileSync(path.join(PUBLIC, "favicon.ico"), icoBuffer);
+
+// ---------------------------------------------------------------------------
+// Android mipmap launcher icons
+// ---------------------------------------------------------------------------
+const ANDROID_RES = path.join(
+  __dirname,
+  "..",
+  "android",
+  "app",
+  "src",
+  "main",
+  "res",
+);
+// density → pixel size mapping per Android launcher spec
+const MIPMAP_DENSITIES = [
+  { name: "mdpi", size: 48 },
+  { name: "hdpi", size: 72 },
+  { name: "xhdpi", size: 96 },
+  { name: "xxhdpi", size: 144 },
+  { name: "xxxhdpi", size: 192 },
+];
+
+console.log("\n--- Generating Android mipmap launcher icons ---");
+for (const { name, size } of MIPMAP_DENSITIES) {
+  const dir = path.join(ANDROID_RES, `mipmap-${name}`);
+  fs.mkdirSync(dir, { recursive: true });
+  const squarePng = createPolarisPNG(size);
+  const roundPng = createPolarisPNGRound(size);
+  fs.writeFileSync(path.join(dir, "ic_launcher.png"), squarePng);
+  fs.writeFileSync(path.join(dir, "ic_launcher_round.png"), roundPng);
+  console.log(
+    `[mipmap-${name}] ${size}x${size} → ic_launcher.png (${squarePng.length} bytes), ic_launcher_round.png (${roundPng.length} bytes)`,
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Summary

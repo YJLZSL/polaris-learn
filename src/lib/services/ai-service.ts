@@ -1,4 +1,8 @@
 import { getLearningModeConfig, type LearningModeId } from '@/lib/learning-modes';
+import {
+  obscureValue,
+  deobscureValue,
+} from '@/lib/services/secure-storage';
 
 export type LLMProvider = 'deepseek' | 'qwen' | 'openai' | 'ollama' | 'custom';
 
@@ -27,7 +31,7 @@ const PROVIDER_ENDPOINTS: Record<LLMProvider, string> = {
   custom: 'https://api.openai.com/v1/chat/completions',
 };
 
-const PROVIDER_DEFAULT_MODELS: Record<LLMProvider, string> = {
+export const PROVIDER_DEFAULT_MODELS: Record<LLMProvider, string> = {
   deepseek: 'deepseek-chat',
   qwen: 'qwen-turbo',
   openai: 'gpt-4o-mini',
@@ -35,29 +39,276 @@ const PROVIDER_DEFAULT_MODELS: Record<LLMProvider, string> = {
   custom: 'gpt-3.5-turbo',
 };
 
-export function loadAIServiceConfig(): AIServiceConfig {
-  if (typeof window === 'undefined') {
-    return {
-      provider: 'deepseek',
-      apiKey: '',
-      baseUrl: '',
-      model: '',
-      temperature: 0.3,
-      maxTokens: 800,
-      topP: 0.85,
-    };
-  }
-  const provider = (localStorage.getItem(`${LLM_STORAGE_PREFIX}provider`) || 'deepseek') as LLMProvider;
+/* ============================================================
+ * Task 9: 模型配置 UX 重构 —— 多配置存储 + 加密 + 连接测试
+ * 仅修改配置存储相关函数；chat() / buildSocraticSystemPrompt 不变。
+ * ============================================================ */
+
+const PROFILES_KEY = 'llm_config_profiles';
+const ACTIVE_ID_KEY = 'llm_config_active_id';
+
+export interface LLMConfigProfile {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+}
+
+interface StoredProfile {
+  id: string;
+  name: string;
+  provider: LLMProvider;
+  apiKey: string;
+  baseUrl: string;
+  model: string;
+  temperature?: number;
+  maxTokens?: number;
+  topP?: number;
+}
+
+function defaultConfig(): AIServiceConfig {
+  return {
+    provider: 'deepseek',
+    apiKey: '',
+    baseUrl: '',
+    model: PROVIDER_DEFAULT_MODELS.deepseek,
+    temperature: 0.3,
+    maxTokens: 800,
+    topP: 0.85,
+  };
+}
+
+function profileToConfig(profile: LLMConfigProfile): AIServiceConfig {
+  return {
+    provider: profile.provider,
+    apiKey: profile.apiKey,
+    baseUrl: profile.baseUrl || '',
+    model: profile.model || PROVIDER_DEFAULT_MODELS[profile.provider],
+    temperature: profile.temperature ?? 0.3,
+    maxTokens: profile.maxTokens ?? 800,
+    topP: profile.topP ?? 0.85,
+  };
+}
+
+function generateProfileId(): string {
+  return `profile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** 从旧的 llm_config_* 单配置迁移为 profiles 数组（仅迁移一次） */
+function migrateLegacyConfig(): LLMConfigProfile[] {
+  if (typeof window === 'undefined') return [];
+  const legacyProvider = localStorage.getItem(`${LLM_STORAGE_PREFIX}provider`);
+  if (!legacyProvider) return [];
+  const provider = (legacyProvider || 'deepseek') as LLMProvider;
   const apiKey = localStorage.getItem(`${LLM_STORAGE_PREFIX}apiKey`) || '';
   const baseUrl = localStorage.getItem(`${LLM_STORAGE_PREFIX}baseUrl`) || '';
   const model = localStorage.getItem(`${LLM_STORAGE_PREFIX}model`) || PROVIDER_DEFAULT_MODELS[provider];
   const temperature = parseFloat(localStorage.getItem(`${LLM_STORAGE_PREFIX}temperature`) || '0.3');
   const maxTokens = parseInt(localStorage.getItem(`${LLM_STORAGE_PREFIX}maxTokens`) || '800', 10);
   const topP = parseFloat(localStorage.getItem(`${LLM_STORAGE_PREFIX}topP`) || '0.85');
-  return { provider, apiKey, baseUrl, model, temperature, maxTokens, topP };
+  const profile: LLMConfigProfile = {
+    id: 'default',
+    name: '默认配置',
+    provider,
+    apiKey,
+    baseUrl,
+    model,
+    temperature,
+    maxTokens,
+    topP,
+  };
+  persistProfiles([profile]);
+  localStorage.setItem(ACTIVE_ID_KEY, profile.id);
+  return [profile];
 }
 
-function resolveEndpoint(config: AIServiceConfig): string {
+function persistProfiles(profiles: LLMConfigProfile[]): void {
+  if (typeof window === 'undefined') return;
+  const stored: StoredProfile[] = profiles.map((p) => ({
+    ...p,
+    apiKey: p.apiKey ? obscureValue(p.apiKey) : '',
+  }));
+  localStorage.setItem(PROFILES_KEY, JSON.stringify(stored));
+}
+
+/** Task 9.7: 列出全部配置（解密 apiKey） */
+export function listProfiles(): LLMConfigProfile[] {
+  if (typeof window === 'undefined') return [];
+  const raw = localStorage.getItem(PROFILES_KEY);
+  if (!raw) {
+    return migrateLegacyConfig();
+  }
+  try {
+    const stored = JSON.parse(raw) as StoredProfile[];
+    return stored.map((p) => ({
+      id: p.id,
+      name: p.name,
+      provider: p.provider,
+      apiKey: p.apiKey ? deobscureValue(p.apiKey) : '',
+      baseUrl: p.baseUrl || '',
+      model: p.model || '',
+      temperature: p.temperature,
+      maxTokens: p.maxTokens,
+      topP: p.topP,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Task 9.7: 新建/更新一个配置（apiKey 加密存储） */
+export function saveProfile(profile: LLMConfigProfile): LLMConfigProfile {
+  const profiles = listProfiles();
+  const idx = profiles.findIndex((p) => p.id === profile.id);
+  const normalized: LLMConfigProfile = {
+    ...profile,
+    id: profile.id || generateProfileId(),
+    model: profile.model || PROVIDER_DEFAULT_MODELS[profile.provider],
+  };
+  if (idx >= 0) {
+    profiles[idx] = normalized;
+  } else {
+    profiles.push(normalized);
+  }
+  persistProfiles(profiles);
+  const activeId = localStorage.getItem(ACTIVE_ID_KEY);
+  if (!activeId || !profiles.some((p) => p.id === activeId)) {
+    localStorage.setItem(ACTIVE_ID_KEY, normalized.id);
+  }
+  return normalized;
+}
+
+/** Task 9.7: 删除一个配置 */
+export function deleteProfile(id: string): void {
+  if (typeof window === 'undefined') return;
+  const profiles = listProfiles().filter((p) => p.id !== id);
+  persistProfiles(profiles);
+  const activeId = localStorage.getItem(ACTIVE_ID_KEY);
+  if (activeId === id) {
+    localStorage.setItem(ACTIVE_ID_KEY, profiles[0]?.id ?? '');
+  }
+}
+
+/** Task 9.7: 切换激活配置 */
+export function setActiveProfile(id: string): void {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem(ACTIVE_ID_KEY, id);
+}
+
+/** 获取当前激活的配置 */
+export function getActiveProfile(): LLMConfigProfile | null {
+  const profiles = listProfiles();
+  if (profiles.length === 0) return null;
+  const activeId = localStorage.getItem(ACTIVE_ID_KEY);
+  return profiles.find((p) => p.id === activeId) ?? profiles[0];
+}
+
+/**
+ * Task 9.5/9.7: 读取激活配置（保持同步签名，向后兼容 chat() 调用链）。
+ * 内部用同步 btoa/atob 解密 apiKey。
+ */
+export function loadAIServiceConfig(): AIServiceConfig {
+  if (typeof window === 'undefined') {
+    return defaultConfig();
+  }
+  const active = getActiveProfile();
+  if (active) {
+    return profileToConfig(active);
+  }
+  return defaultConfig();
+}
+
+/**
+ * Task 9.5: 保存当前激活配置（apiKey 加密存储）。
+ * 若未提供 id，则作为新的默认配置保存。
+ */
+export function saveAIServiceConfig(config: AIServiceConfig, name?: string): LLMConfigProfile {
+  const active = getActiveProfile();
+  const profile: LLMConfigProfile = {
+    id: active?.id ?? '',
+    name: name ?? active?.name ?? '默认配置',
+    provider: config.provider,
+    apiKey: config.apiKey,
+    baseUrl: config.baseUrl,
+    model: config.model || PROVIDER_DEFAULT_MODELS[config.provider],
+    temperature: config.temperature,
+    maxTokens: config.maxTokens,
+    topP: config.topP,
+  };
+  return saveProfile(profile);
+}
+
+/**
+ * Task 9.4: Ollama 自动探测 —— 调用 http://localhost:11434/api/tags 获取已装模型列表。
+ */
+export async function fetchOllamaModels(baseUrl?: string): Promise<string[]> {
+  try {
+    const tagsEndpoint = baseUrl
+      ? `${baseUrl.replace(/\/$/, '').replace(/\/v1\/?$/, '')}/api/tags`
+      : 'http://localhost:11434/api/tags';
+    const res = await fetch(tagsEndpoint, {
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.models?.map((m: { name: string }) => m.name) || [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Task 9.6: 测试连接 —— 发送最小请求（"ping", max_tokens:5），返回延迟与模型名。
+ * 不走 chat()，独立 fetch 以避免触发降级逻辑。
+ */
+export async function testConnection(
+  config: AIServiceConfig
+): Promise<{ success: boolean; message: string; latency?: number }> {
+  const startTime = Date.now();
+  try {
+    const endpoint = resolveEndpoint(config);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(config.provider !== 'ollama' && { Authorization: `Bearer ${config.apiKey}` }),
+      },
+      body: JSON.stringify({
+        model: config.model || PROVIDER_DEFAULT_MODELS[config.provider],
+        messages: [{ role: 'user', content: 'ping' }],
+        max_tokens: 5,
+        stream: false,
+      }),
+      signal: AbortSignal.timeout(10000),
+    });
+    const latency = Date.now() - startTime;
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      const errMsg = (errData as { error?: { message?: string } })?.error?.message || response.statusText;
+      return { success: false, message: `HTTP ${response.status}: ${errMsg}` };
+    }
+    const data = await response.json();
+    const modelName = (data as { model?: string }).model || config.model;
+    return {
+      success: true,
+      message: `连接成功（model: ${modelName}, 延迟 ${latency}ms）`,
+      latency,
+    };
+  } catch (error) {
+    const err = error as { name?: string; message?: string };
+    if (err?.name === 'AbortError') {
+      return { success: false, message: '连接超时（10s），请检查网络或 baseUrl' };
+    }
+    return { success: false, message: err?.message || '连接失败' };
+  }
+}
+
+export function resolveEndpoint(config: AIServiceConfig): string {
   if (config.baseUrl) {
     // 用户自定义 baseUrl，需拼接 /chat/completions（若未包含）
     const trimmed = config.baseUrl.replace(/\/$/, '');
@@ -85,31 +336,40 @@ export async function chat(
   learningMode: string,
   apiKey?: string,
   provider?: LLMProvider,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  weakPoints?: string[],
+  onChunk?: (chunk: string) => void
 ): Promise<ChatResult> {
   const config = loadAIServiceConfig();
   if (apiKey) config.apiKey = apiKey;
   if (provider) config.provider = provider;
 
-  // 缺失 API Key 直接降级
-  if (!hasAPIKey(config)) {
-    return {
-      content: applyModeToneToResponse(
-        getFallbackResponse(
-          inferSubject(messages),
-          'diagnostic',
-          lastUserMessage(messages),
-          learningMode
-        ),
+  // 降级响应构造器（复用）
+  const buildFallbackContent = () =>
+    applyModeToneToResponse(
+      getFallbackResponse(
+        inferSubject(messages),
+        'diagnostic',
+        lastUserMessage(messages),
         learningMode
       ),
+      learningMode
+    );
+
+  // 缺失 API Key 直接降级
+  if (!hasAPIKey(config)) {
+    const fallbackContent = buildFallbackContent();
+    if (onChunk) onChunk(fallbackContent);
+    return {
+      content: fallbackContent,
       fallback: true,
       provider: config.provider,
       model: config.model,
     };
   }
 
-  const systemPrompt = buildSocraticSystemPromptForMode(learningMode, messages);
+  // Task 6.2: 注入 weakPoints 到 system prompt
+  const systemPrompt = buildSocraticSystemPromptForMode(learningMode, messages, weakPoints);
   const payloadMessages: ChatMessage[] = [
     { role: 'system', content: systemPrompt },
     ...messages.filter(m => m.role !== 'system'),
@@ -124,6 +384,7 @@ export async function chat(
   }
 
   try {
+    // Task 7.1: stream: true 开启流式响应
     const response = await fetch(endpoint, {
       method: 'POST',
       headers,
@@ -133,7 +394,7 @@ export async function chat(
         temperature: config.temperature ?? 0.3,
         max_tokens: config.maxTokens ?? 800,
         top_p: config.topP ?? 0.85,
-        stream: false,
+        stream: true,
       }),
       signal,
     });
@@ -142,27 +403,69 @@ export async function chat(
       // 限流或其它错误：降级响应
       const errorText = await response.text().catch(() => '未知错误');
       console.error(`[ai-service] LLM 调用失败 (${response.status}):`, errorText);
+      const fallbackContent = buildFallbackContent();
+      if (onChunk) onChunk(fallbackContent);
       return {
-        content: applyModeToneToResponse(
-          getFallbackResponse(
-            inferSubject(messages),
-            'diagnostic',
-            lastUserMessage(messages),
-            learningMode
-          ),
-          learningMode
-        ),
+        content: fallbackContent,
         fallback: true,
         provider: config.provider,
         model: config.model,
       };
     }
 
-    const data = await response.json();
-    const rawContent: string = data.choices?.[0]?.message?.content || '';
-    const tuned = applyModeToneToResponse(rawContent, learningMode);
+    // Task 7.2: 解析 SSE 流（data: {...} 格式）
+    if (!response.body) {
+      const fallbackContent = buildFallbackContent();
+      if (onChunk) onChunk(fallbackContent);
+      return {
+        content: fallbackContent,
+        fallback: true,
+        provider: config.provider,
+        model: config.model,
+      };
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    let fullContent = '';
+    let streamDone = false;
+
+    try {
+      while (!streamDone) {
+        // Task 7.4: AbortController signal 已通过 fetch signal 传入
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6);
+          if (data === '[DONE]') {
+            streamDone = true;
+            break;
+          }
+          try {
+            const json = JSON.parse(data);
+            // Task 7.3: onChunk 回调逐块返回内容
+            const delta: string = json.choices?.[0]?.delta?.content || '';
+            if (delta) {
+              fullContent += delta;
+              if (onChunk) onChunk(delta);
+            }
+          } catch {
+            // skip malformed JSON chunks
+          }
+        }
+      }
+    } finally {
+      reader.releaseLock();
+    }
+
+    // 返回原始内容（含 <stage> 标签），由调用方解析与剥离
     return {
-      content: tuned,
+      content: fullContent,
       fallback: false,
       provider: config.provider,
       model: config.model,
@@ -173,16 +476,9 @@ export async function chat(
       throw err;
     }
     console.error('[ai-service] LLM 网络错误:', err);
+    const fallbackContent = buildFallbackContent();
     return {
-      content: applyModeToneToResponse(
-        getFallbackResponse(
-          inferSubject(messages),
-          'diagnostic',
-          lastUserMessage(messages),
-          learningMode
-        ),
-        learningMode
-      ),
+      content: fallbackContent,
       fallback: true,
       provider: config.provider,
       model: config.model,
@@ -190,7 +486,7 @@ export async function chat(
   }
 }
 
-function buildSocraticSystemPromptForMode(learningMode: string, messages: ChatMessage[]): string {
+function buildSocraticSystemPromptForMode(learningMode: string, messages: ChatMessage[], weakPoints?: string[]): string {
   const mode = (learningMode || 'PRIMARY') as LearningModeId;
   const modeConfig = getLearningModeConfig(mode);
   const subject = inferSubject(messages);
@@ -198,6 +494,7 @@ function buildSocraticSystemPromptForMode(learningMode: string, messages: ChatMe
     grade: modeConfig.defaultGrade,
     subject,
     learningMode: mode,
+    weakPoints,
   });
 }
 
@@ -279,7 +576,10 @@ ${modeStyleBlock}
 当前学科：${subject}
 ${question ? `当前题目：${question}` : ""}
 
-请开始苏格拉底式教学。如果学生还没有提供具体题目，请先询问学生想学习什么内容。`;
+请开始苏格拉底式教学。如果学生还没有提供具体题目，请先询问学生想学习什么内容。
+
+【阶段标注 - 必须遵守】
+请在回复最后以 \`<stage>diagnostic|clarification|hypothesis|reasoning|verification|reflection</stage>\` 标注当前所处的苏格拉底教学阶段。该标签不会展示给学生，仅用于系统追踪教学进度。`;
 }
 
 /**
@@ -298,7 +598,7 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 - 句式长度：用短句，避免复杂从句
 - 严禁出现：抽象公式、专业术语、过长解释`;
 
-    case "PRIMARY":
+    case "ELEMENTARY":
       return `- 学习者年龄：6-12 岁（小学 1-6 年级）
 - 词汇要求：使用简单词汇，必要时为新概念做生活化解释
 - 语气风格：亲切活泼，平等尊重，像哥哥姐姐
@@ -307,7 +607,8 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 - 反馈方式：以鼓励为主，答错时温和引导再尝试
 - 表达方式：用生活化例子解释抽象概念`;
 
-    case "MIDDLE_HIGH":
+    case "MIDDLE":
+    case "HIGH":
       return `- 学习者年龄：12-18 岁（初中 7-9 年级 / 高中 10-12 年级）
 - 词汇要求：使用专业术语，规范学科语言
 - 语气风格：学术严谨，平等讨论
@@ -315,16 +616,6 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 - 推导要求：能给出公式推导、定理证明的关键步骤（但仍需引导而非直接给答案）
 - 反馈方式：具体指出思路对错，分析错误根因
 - 表达方式：分步骤、逻辑链清晰，可用编号列出推导过程`;
-
-    case "COLLEGE":
-      return `- 学习者身份：大学生（本科 / 研究生）
-- 词汇要求：使用专业学术术语，可涉及前沿研究
-- 语气风格：研究式探讨，平等对话
-- 教学方式：开放式问题驱动，鼓励批判性思维
-- 写作辅助：可提供学术写作建议（结构、论证、引用规范）
-- 文献建议：可推荐相关经典论文或教材章节供深入阅读
-- 反馈方式：从理论框架、方法论角度点评
-- 表达方式：可引入跨学科视角，鼓励对比与质疑`;
 
     case "PROFESSIONAL":
       return `- 学习者身份：在职上班族，利用碎片时间学习
@@ -349,11 +640,10 @@ function buildLengthRule(mode: LearningModeId): string {
       return "每次回复不超过 3 句话";
     case "PROFESSIONAL":
       return "每次回复尽量控制在 120 字以内，简洁直接";
-    case "COLLEGE":
-      return "每次回复不超过 300 字，可适当展开论证";
-    case "MIDDLE_HIGH":
+    case "MIDDLE":
+    case "HIGH":
       return "每次回答不超过 200 字";
-    case "PRIMARY":
+    case "ELEMENTARY":
     default:
       return "每次回答不超过 150 字";
   }
@@ -408,12 +698,11 @@ function buildFallbackIntro(mode: LearningModeId): string {
   switch (mode) {
     case "KINDERGARTEN":
       return "🌟 哈喽小朋友！我是你的 AI 学习小伙伴！🎈 现在还没装好 AI 大脑，只能简单聊聊天哦～让爸爸/妈妈在设置页面帮我装好就可以陪我玩啦！✨";
-    case "PRIMARY":
+    case "ELEMENTARY":
       return "你好呀！我是你的 AI 学习助手！😀 由于当前未配置大模型 API Key，我只能提供基础引导。请在设置页面配置后体验完整 AI 辅导功能。";
-    case "MIDDLE_HIGH":
+    case "MIDDLE":
+    case "HIGH":
       return "你好。由于当前未配置大模型 API Key，本会话仅提供基础引导。请在设置页面配置后体验完整 AI 辅导功能。";
-    case "COLLEGE":
-      return "你好。当前服务未配置 LLM API Key，降级为基础引导模式。建议在设置页配置后获取完整学术辅导能力。";
     case "PROFESSIONAL":
       return "您好，未配置 API Key，当前为降级引导模式。请前往「设置」配置后解锁完整能力。";
     default:

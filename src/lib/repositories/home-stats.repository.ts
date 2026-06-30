@@ -62,7 +62,7 @@ export async function getHomeStats(
       level: 1,
       streak: 0,
       maxStreak: 0,
-      learningMode: "PRIMARY",
+      learningMode: "ELEMENTARY",
       todayDuration: 0,
       todayQuestions: 0,
       todayCorrect: 0,

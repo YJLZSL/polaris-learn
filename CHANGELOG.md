@@ -2,6 +2,102 @@
 
 本项目所有重要变更记录均会写入此文件。版本号遵循 [Semantic Versioning](https://semver.org/lang/zh-CN/)。
 
+## [5.0.0] - 2026-06-30
+
+v5.0.0 在 v4.0.0 纯 SPA 架构基础上完成体验重构，覆盖设计系统、AI 老师全链、游戏化、页面重构与跨功能数据流（对应 Task 1-19）。架构层仍是"无服务器 / 无数据库 / 客户端直连 LLM"，未引入服务端运行时。
+
+### Added
+
+- **学段自适应设计系统 2.0**（Task 1）：`--radius-scale` / `--text-scale` / `--game-strength` CSS variables，5 学段通过 `data-mode` 全局切换；学段 ID 重命名为 KINDERGARTEN / ELEMENTARY / MIDDLE / HIGH / PROFESSIONAL，旧值 PRIMARY/MIDDLE_HIGH/COLLEGE 自动迁移
+- **暗色模式默认 + 北极星主题**（Task 2）：`color-scheme: dark` 默认，`#0a0a0f`~`#111118` 渐变背景，收敛玻璃拟态（仅 Sheet/Popover/Header/Toaster），渐变流光 + 星点纹理，Inter Variable 字体
+- **动画系统增强**（Task 3）：`useSafeMotion` hook（`prefers-reduced-motion` 降级）、`staggerContainerCapped`（>6 项第 7 项起立即显示）、`whileInView` 滚动入场、Tabs `layoutId="active-tab"` 共享元素、`useCountUp` hook
+- **ProgressRing 组件**（Task 4）：SVG 环形进度 + `motion.circle` + `strokeDashoffset` 动画 + count-up + 渐变描边
+- **Polaris 吉祥物组件**（Task 5）：5 种表情（默认/开心/担心/欢呼/思考），表情切换过渡，呼吸动画
+- **苏格拉底 6 阶段语义化 + weakPoints 注入**（Task 6）：`<stage>` 标签标注阶段，前端正则解析驱动进度，缺失兜底，思考过程折叠区
+- **流式响应**（Task 7）：`stream: true` + ReadableStream + TextDecoder 解析 SSE，`onChunk` 逐块回调，"停止生成"按钮（AbortController）
+- **语音功能**（Task 8）：`voice-service.ts` + `useTTS` / `useSTT` hooks，Web Speech API 优先 + Capacitor TextToSpeech fallback，朗读按钮 + 录音按钮 + 语音设置
+- **模型配置 UX 重构**（Task 9）：`ModelConfigWizard` 3 步向导 + `ModelConfigAdvanced` 高级设置，Provider 卡片式选择，Ollama 自动探测，API Key 加密存储（`secure-storage.ts`），`testConnection()`，多配置切换
+- **知识星图重构**（Task 10）：自研轻量力导向图（未引入新依赖），亮星/星云/红光三态，缩放拖拽，裂纹衰减机制（`getDecayedNodes` + SVG filter）
+- **错题消灭战**（Task 11）：`ErrorEliminationBattle` 组件，60 秒心流倒计时，按薄弱度排序，红→绿点亮，结算页星光 count-up
+- **每日任务系统**（Task 12）：`quest.repository.ts`，每日生成 3 个任务，`DailyQuest` 组件，宝箱动画 + 徽章碎片
+- **学习伙伴养成**（Task 13）：`LearningCompanion` 组件，Polaris 小灵 4 形态（蛋/幼体/成体/觉醒），按 `totalStudyHours` 进化，情绪规则
+- **专注心流护盾**（Task 14）：`FocusShield` 组件 + `useFocusShieldStore`，25 分钟番茄钟，心流能量条，深色聚焦态，通知延后，XP × 1.5 加成
+- **双货币 + 连胜容错 + 排行榜去毒性化**（Task 15）：`currency.repository.ts`，星光（日常）+ 晶核（里程碑），冻结卡断签保护，里程碑保护盾，历史最高纪录，5-15 人小队列 + 个人进步榜
+- **HomePage Bento Grid 重构**（Task 16）：CSS Grid `grid-template-areas` 6-8 块卡片，stagger 入场 + spring hover
+- **AiTeacherPage 体验升级**（Task 17）：吉祥物集成，🔊 朗读 + 🎤 录音，流式逐字渲染，ProgressRing 阶段进度，思考过程折叠，停止生成，空状态吉祥物
+- **其他页面视觉升级**（Task 18）：PracticePage 闯关结构 + 专注入口，ErrorNotesPage 消灭战入口，ProfilePage ProgressRing mastery，SettingsPage 集成向导 + 语音，AnalyticsPage Tabs 共享元素，LeaderboardPage 小队列，CoursesPage 问 AI 入口
+- **跨功能数据流打通**（Task 19）：练习/错题 → AI 老师（router state 携带上下文），AI reflection 阶段 → 学科根节点 mastery +5，各模块 → 每日任务进度上报，知识节点满掌握 → 星光产出（幂等）
+- IndexedDB 升级到 `DB_VERSION=3`：新增 `currency_transactions`（v2）与 `daily_quests`（v3）store
+- 新增 repository：`currency.repository.ts`、`quest.repository.ts`
+- 新增 service：`voice-service.ts`、`secure-storage.ts`
+- 新增 hooks：`useTTS`、`useSTT`、`useCountUp`、`useSafeMotion`
+- 新增依赖：`@capacitor-community/text-to-speech`
+
+### Changed
+
+- 5 学段 ID 重命名：KINDERGARTEN / ELEMENTARY / MIDDLE / HIGH / PROFESSIONAL（`learning-modes.ts`），`promptStyle` 字段保留旧值兼容 `ai-service.ts`
+- `ai-service.ts` 的 `chat()` 默认 `stream: true`，新增 `weakPoints` 与 `onChunk` 参数
+- `buildSocraticSystemPrompt()` 末尾追加 `<stage>` 标注指令
+- API Key 存储从单配置迁移为多配置（`llm_config_profiles` 数组），旧 `llm_config_*` 自动迁移
+- 排行榜从全局榜改为 5-15 人小队列 + "超越昨日自己"个人进步榜，降级柔和化（连续两周不参与才降级）
+- `user.repository` 新增 `totalStudyHours` / `starlight` / `crystal` / `freezeCards` / `shieldCount` 字段
+- 暗色模式设为默认，新建用户首次进入即暗色
+- 首页从扁平卡片重构为 Bento Grid 布局
+- 知识图谱从扁平节点图改为自研力导向图
+- 版本号 4.0.0 → 5.0.0
+
+### Fixed
+
+- 修复苏格拉底阶段前端 4 阶段与后端 6 阶段不一致问题，改为 stage 标签语义化驱动
+- 修复 `STAGE_ORDER[(indexOf+1)%length]` 硬编码逻辑，改为解析结果驱动 `setCurrentStage`
+- 修复动画无障碍问题：`useSafeMotion` 在 `prefers-reduced-motion: reduce` 时返回空对象
+- 修复 stagger 列表过长时动画卡顿：`staggerContainerCapped` 子项 > 6 时第 7 项起立即显示
+- 修复知识节点重复发放星光：用 `masteryRewardClaimed` 幂等标志
+- 修复连胜断签无容错：冻结卡自动消耗，保留历史最高纪录
+
+---
+
+## [4.0.0] - 2026-06-30
+
+### Breaking Changes
+- 构建框架从 Next.js 16 迁移到 Vite 7 + React 19 纯 SPA
+- 路由从 Next.js App Router 迁移到 React Router 7（HashRouter）
+- 开发端口从 3000 改为 5173
+- Capacitor webDir 从 `out` 改为 `dist`
+- Electron 生产模式加载 `dist/` 而非 `out/`
+
+### 新增
+- 新增 `AGENTS.md` AI 编程规范文档
+- 新增 `vite.config.ts` Vite 构建配置
+- 新增 `src/routes/` 路由目录（index.tsx、ProtectedRoute、PublicOnlyRoute）
+- 新增 `src/pages/` 页面目录（14 个页面组件）
+- 全新设计的 Polaris 北极星主题应用图标
+- Android 自适应图标（mipmap 全密度）
+
+### 删除
+- 删除 Next.js 框架及所有依赖（next、eslint-config-next）
+- 删除 `src/middleware.ts`（NextAuth rate limiter，与静态导出不兼容）
+- 删除 `src/generated/prisma/`（孤立 Prisma 生成代码）
+- 删除 `src/hooks/useVersionCheck.ts`（调用已删除的 /api/version）
+- 删除 `next.config.ts`、`Dockerfile`、`docker-compose*.yml`
+- 删除 `out/` 目录（含错误页的旧构建产物）
+- 删除 `scripts/migrate-to-pg.ts`（废弃的 Prisma 迁移脚本）
+
+### 修复
+- 彻底解决 Android `ERR_CLEARTEXT_NOT_PERMITTED` 错误（纯本地加载，无 HTTP 请求）
+- 修复 Next.js 静态导出产出错误页（`__next_error__`）的问题
+- 清理 `.env.development` 和 `.env.production` 中的服务端环境变量
+
+### 迁移
+- 14 个页面从 Next.js App Router 迁移到 React Router
+- 全局布局从 `src/app/layout.tsx` 迁移到 `src/App.tsx`
+- Dashboard 布局迁移到 `src/routes/ProtectedRoute.tsx`
+- Auth 布局迁移到 `src/routes/PublicOnlyRoute.tsx`
+- 所有 `next/link` → `react-router-dom` 的 `<Link>`
+- 所有 `next/navigation` → `react-router-dom` 的 `useNavigate`/`useLocation`
+
+---
+
 ## [3.0.0] - 2026-06-30
 
 ### 重构亮点

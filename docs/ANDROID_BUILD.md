@@ -1,6 +1,6 @@
-# Polaris - Android APK 构建指南（v3.0.0 静态化）
+# Polaris - Android APK 构建指南（v4.0.0 Vite SPA）
 
-> v3.0.0 起 Polaris 改为纯前端静态化架构，所有数据存储在浏览器 IndexedDB，所有 LLM 调用由客户端直连。Android 端通过 Capacitor 将静态产物 `out/` 内嵌到原生 WebView 中运行，**无需后端服务器**。
+> v4.0.0 起 Polaris 改为纯前端 SPA 架构（Vite 7 + React 19 + React Router 7），所有数据存储在浏览器 IndexedDB，所有 LLM 调用由客户端直连。Android 端通过 Capacitor 8 将 Vite 构建产物 `dist/` 内嵌到原生 WebView 中运行，**无需后端服务器**。
 
 ## 前置条件
 
@@ -38,11 +38,11 @@
 ### 5. Node.js 和 npm
 - Node.js 18+ 已安装（项目已有）
 
-> **v3.0.0 重要变化**：无需配置任何环境变量（如 `DATABASE_URL`、`AUTH_SECRET`、`CAPACITOR_SERVER_URL`），无需运行 `prisma db push` 或 `prisma db seed`。应用本身是纯静态的，所有数据由 IndexedDB 在客户端持久化。
+> **v4.0.0 重要变化**：无需配置任何环境变量（如 `DATABASE_URL`、`AUTH_SECRET` 等），无需运行数据库迁移或种子脚本。应用本身是纯静态 SPA，所有数据由 IndexedDB 在客户端持久化。
 
 ---
 
-## Capacitor 配置说明（v3.0.0）
+## Capacitor 配置说明（v4.0.0）
 
 ### `capacitor.config.ts` 关键配置
 
@@ -52,29 +52,30 @@ import type { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.polaris.learn',
   appName: 'Polaris',
-  webDir: 'out',                  // ← 指向 Next.js 静态导出目录
+  webDir: 'dist',                  // ← 指向 Vite 构建产物目录
   server: {
-    androidScheme: 'https',      // ← 强制 HTTPS scheme
-    // 注意：v3.0.0 不再设置 server.url
-    // 让 WebView 直接加载本地 out/ 目录的静态文件
+    androidScheme: 'https',        // ← 强制 HTTPS scheme
+    // 注意：v4.0.0 不设置 server.url
+    // 让 WebView 直接加载本地 dist/ 目录的静态文件
   },
 };
 
 export default config;
 ```
 
-**与 v2.x 的差异**：
+### 配置要点
 
-| 配置项 | v2.x（已废弃） | v3.0.0 |
-|--------|----------------|--------|
-| `webDir` | `'www'` 或未设置 | `'out'`（Next.js 静态导出目录） |
-| `server.url` | 指向生产 Next.js 服务地址 | **不设置**（加载本地静态文件） |
-| `server.androidScheme` | 未设置 | `'https'` |
-| 后端服务依赖 | 必须有运行中的 Next.js 服务 | **无**（纯静态） |
+| 配置项 | v4.0.0 值 | 说明 |
+|--------|-----------|------|
+| `webDir` | `'dist'` | Vite 构建产物目录 |
+| `server.url` | **不设置** | 加载本地静态文件，不连接远程服务 |
+| `server.androidScheme` | `'https'` | 强制 HTTPS scheme |
+| `android.allowMixedContent` | **不设置** | 应用本身无 HTTP 请求，无需混合内容 |
+| 后端服务依赖 | **无** | 纯静态 SPA |
 
 ### `network_security_config.xml`
 
-为允许 Android WebView 连接本地 Ollama 服务（用于本地大模型推理），需要白名单 localhost 与局域网 IP。该文件位于：
+v4.0.0 应用本身在启动时不再发起任何 HTTP 请求（纯本地加载 `dist/`），但用户在使用 AI 老师功能时可能连接本地 Ollama 服务（用于本地大模型推理），因此仍需白名单 localhost 与局域网 IP。该文件位于：
 
 ```
 android/app/src/main/res/xml/network_security_config.xml
@@ -88,7 +89,7 @@ android/app/src/main/res/xml/network_security_config.xml
     android:networkSecurityConfig="@xml/network_security_config">
 ```
 
-> 此配置解决了 v2.x 中 Android 启动时的 `ERR_CLEARTEXT_NOT_PERMITTED` 错误。
+> 此配置用于允许 Android WebView 连接本地 Ollama 服务（`http://localhost:11434`）。应用启动本身的 `ERR_CLEARTEXT_NOT_PERMITTED` 问题已在 v4.0.0 通过纯本地加载彻底解决。
 
 ---
 
@@ -101,19 +102,19 @@ npm run android:init
 ```
 
 此命令会执行：
-- `npx cap init Polaris com.polaris.learn --web-dir=out`
+- `npx cap init Polaris com.polaris.learn --web-dir=dist`
 - `npx cap add android`
 
 > **注意**：此步骤仅需在首次构建或重新生成 Android 项目时执行。若 `android/` 目录已存在则可跳过。
 
-### 第二步：构建 Next.js 静态站点并同步
+### 第二步：构建 Vite 静态站点并同步
 
 ```bash
 npm run android:build
 ```
 
 此命令会：
-1. 运行 `next build`（启用 `output: 'export'`）生成静态站点到 `out/` 目录
+1. 运行 `vite build` 生成静态站点到 `dist/` 目录
 2. 执行 `cap sync android` 将 Web 资源同步到 Android 项目
 
 你也可以使用 PowerShell 脚本完成相同操作：
@@ -122,7 +123,7 @@ npm run android:build
 .\scripts\build-apk.ps1
 ```
 
-> v3.0.0 起无需运行 `prisma db push` 或 `prisma db seed`，所有数据初始化在应用首次启动时由前端自动完成（向 IndexedDB 注入种子数据）。
+> v4.0.0 起无需运行任何数据库迁移或种子脚本，所有数据初始化在应用首次启动时由前端自动完成（向 IndexedDB 注入种子数据）。
 
 ### 第三步：生成 APK
 
@@ -232,18 +233,18 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 ### Q: `capacitor.config.ts` 被 .gitignore 忽略了
 **A**: 是的，该文件包含本地开发配置。首次 clone 项目后请自行创建该文件，参考本文档「Capacitor 配置说明」章节中的配置模板。
 
-### Q: Next.js 构建报错
-**A**: 确保 `next.config.ts` 中 `output: 'export'` 已正确配置。检查是否有使用不支持静态导出的 Next.js 特性（如 middleware、ISR、server components、API Routes 等）。v3.0.0 已移除所有 API Routes，理论上不应有此问题。
+### Q: Vite 构建报错
+**A**: 检查 `vite.config.ts` 配置是否正确，确认 `@vitejs/plugin-react` 已安装。运行 `npm install` 同步依赖后重试。若 TypeScript 报错，可运行 `npx tsc --noEmit` 定位类型错误。
 
 ### Q: APK 启动后白屏 / 报错 `ERR_CLEARTEXT_NOT_PERMITTED`
-**A**: 检查 `AndroidManifest.xml` 是否同时配置了：
-1. `android:usesCleartextTraffic="true"`
-2. `android:networkSecurityConfig="@xml/network_security_config"`
+**A**: v4.0.0 已通过纯本地加载 `dist/` 静态文件彻底解决此问题——应用启动时不再发起任何 HTTP 请求。
 
-并确认 `android/app/src/main/res/xml/network_security_config.xml` 文件存在且包含 localhost 与 10.0.2.2 白名单。
+如仍遇到该错误，请检查：
+1. `capacitor.config.ts` 中 `webDir: 'dist'` 是否正确
+2. `npm run android:build` 是否成功执行（`dist/` 目录是否有 `index.html`）
+3. `cap sync android` 是否成功同步资源
 
-### Q: APK 中无法连接 Ollama 本地服务
-**A**: 这是 `network_security_config.xml` 没有正确白名单 localhost/127.0.0.1/10.0.2.2 所致。请确认配置中包含：
+若用户在使用 AI 老师功能时连接本地 Ollama 报此错，则需保留 `network_security_config.xml` 白名单 localhost：
 
 ```xml
 <domain-config cleartextTrafficPermitted="true">
@@ -254,6 +255,9 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 </domain-config>
 ```
 
+### Q: APK 中无法连接 Ollama 本地服务
+**A**: 这是 `network_security_config.xml` 没有正确白名单 localhost/127.0.0.1/10.0.2.2 所致。请确认配置中包含上述白名单条目。
+
 ---
 
 ## 快速参考
@@ -261,29 +265,16 @@ $env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
 | 命令 | 说明 |
 |------|------|
 | `npm run android:init` | 初始化 Capacitor Android 项目（首次执行） |
-| `npm run android:build` | 构建静态站点并同步到 Android |
+| `npm run android:build` | 构建 Vite 静态站点并同步到 Android（等价于 `vite build && cap sync android`） |
 | `npm run android:sync` | 仅同步 Web 资源到 Android（不重新构建） |
 | `npm run android:open` | 在 Android Studio 中打开项目 |
-| `npm run android:dev` | 开发模式（热更新 + Android 模拟器） |
+| `npm run android:dev` | 开发模式（Vite + Android 模拟器） |
 | `cd android && ./gradlew assembleDebug` | 构建 Debug APK |
 | `cd android && ./gradlew assembleRelease` | 构建 Release APK（需签名配置） |
 
-## v3.0.0 与 v2.x 构建流程对比
-
-| 步骤 | v2.x（已废弃） | v3.0.0 |
-|------|----------------|--------|
-| 1 | `npm install` | `npm install` |
-| 2 | `cp .env.example .env.local` | ❌ 不需要 |
-| 3 | `npx prisma db push` | ❌ 不需要 |
-| 4 | `npx prisma db seed` | ❌ 不需要（前端首次启动自动注入） |
-| 5 | `npm run android:build` | `npm run android:build` |
-| 6 | `cd android && ./gradlew assembleDebug` | `cd android && ./gradlew assembleDebug` |
-
-v3.0.0 把 4 个步骤简化为 2 个步骤，且无需任何环境变量配置。
-
 ## 相关文档
 
-- [架构说明](./ARCHITECTURE.md) - v3.0.0 静态化架构设计
+- [架构说明](./ARCHITECTURE.md) - v4.0.0 Vite SPA 架构设计
 - [部署指南](./DEPLOYMENT.md) - 各平台部署方案
 - [安全规范](./SECURITY.md) - 密钥与数据安全
 - [README](../README.md) - 项目概览

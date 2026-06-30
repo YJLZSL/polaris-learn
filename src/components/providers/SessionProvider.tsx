@@ -1,5 +1,3 @@
-"use client";
-
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
 import { getCurrentUser, login, logout } from "@/lib/services/auth-service";
 import { seedIfEmpty } from "@/lib/db/seed";

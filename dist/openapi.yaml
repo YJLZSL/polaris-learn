@@ -1,0 +1,2284 @@
+openapi: "3.0.3"
+info:
+  title: Polaris - 开放API
+  description: |
+    Polaris 北极星学习平台开放API接口文档。提供AI辅导、LLM代理、题库管理、游戏化学习等接口。
+
+    ## 快速开始
+    1. **注册账号** - 在 Polaris 平台注册账号
+    2. **获取API Key** - 在个人中心的「API Keys」页面创建虚拟API Key
+    3. **调用API** - 使用 `X-API-Key` 请求头携带API Key发起请求
+
+    ## 认证方式
+    - **API Key** (`ApiKeyAuth`): 通过 `X-API-Key` 请求头或 `Authorization: Bearer <key>` 传递
+    - **会话认证** (`BearerAuth`): 通过 NextAuth 的 session cookie 自动认证（仅限平台内调用）
+
+    ## 错误响应
+    所有接口在发生错误时都会返回统一格式：
+    ```json
+    { "error": "错误描述信息" }
+    ```
+
+    常见状态码：
+    - `400` - 请求参数错误
+    - `401` - 未认证 / API Key无效
+    - `402` - 余额不足
+    - `403` - 无权限
+    - `404` - 资源不存在
+    - `429` - 请求频率超限
+    - `500` - 服务器内部错误
+
+    ## 速率限制
+    - 免费用户: 50 RPM
+    - VIP用户: 200 RPM
+    超出限制后返回 `429` 状态码。
+
+  version: "1.0.0"
+  contact:
+    name: Polaris 开发团队
+    email: dev@polaris.com
+    url: https://polaris.com
+
+servers:
+  - url: "{baseUrl}"
+    description: Polaris API服务器
+    variables:
+      baseUrl:
+        default: "https://api.polaris.com"
+        description: API服务器地址
+        enum:
+          - "https://api.polaris.com"
+          - "http://localhost:3000"
+
+tags:
+  - name: Auth
+    description: 用户认证相关接口
+  - name: AI Tutoring
+    description: AI辅导对话接口
+  - name: LLM Proxy
+    description: 公开LLM代理接口（OpenAI兼容格式）
+  - name: Billing
+    description: 计费和余额管理
+  - name: Questions
+    description: 题库管理接口
+  - name: Game
+    description: 游戏化学习接口（经验值、每日挑战）
+  - name: Knowledge
+    description: 知识图谱接口
+  - name: User
+    description: 用户信息和资料接口
+  - name: Safety
+    description: 内容安全检测接口
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: "从个人中心获取的API Key，格式: sk-edu-xxxxxx-xxxxxxxx"
+    BearerAuth:
+      type: http
+      scheme: bearer
+      description: "NextAuth Session Token（平台内自动携带）"
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: 错误描述信息
+          example: "请先登录"
+      required:
+        - error
+
+    RegisterRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: 用户姓名
+          example: "张三"
+          minLength: 1
+        email:
+          type: string
+          format: email
+          description: 邮箱地址
+          example: "zhangsan@example.com"
+        password:
+          type: string
+          description: 密码（至少6位）
+          example: "password123"
+          minLength: 6
+        grade:
+          type: string
+          description: 年级
+          example: "初三"
+        role:
+          type: string
+          enum: [student, teacher]
+          default: student
+          description: 用户角色
+      required:
+        - name
+        - email
+        - password
+
+    RegisterResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "user_abc123"
+        name:
+          type: string
+          example: "张三"
+        email:
+          type: string
+          example: "zhangsan@example.com"
+        grade:
+          type: string
+          example: "初三"
+        role:
+          type: string
+          example: "student"
+
+    ChatRequest:
+      type: object
+      properties:
+        message:
+          type: string
+          description: 用户发送的消息内容
+          example: "请帮我理解勾股定理"
+          minLength: 1
+        conversationId:
+          type: string
+          description: 对话ID（可选，用于继续已有对话）
+          example: "conv_abc123"
+        subject:
+          type: string
+          description: 学科
+          example: "数学"
+        stream:
+          type: boolean
+          default: false
+          description: 是否使用流式响应
+      required:
+        - message
+
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant]
+          description: 消息角色
+        content:
+          type: string
+          description: 消息内容
+        stage:
+          type: string
+          description: 苏格拉底教学阶段
+          enum: [diagnostic, clarification, hypothesis, reasoning, reflection, verification, guide]
+        isCorrect:
+          type: boolean
+          description: 学生回答是否正确（仅 assistant 消息）
+      required:
+        - role
+        - content
+
+    ChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "msg_abc123"
+        conversationId:
+          type: string
+          example: "conv_abc123"
+        role:
+          type: string
+          example: "assistant"
+        content:
+          type: string
+          example: "勾股定理是直角三角形两条直角边的平方和等于斜边的平方..."
+        stage:
+          type: string
+          example: "guide"
+        tokens:
+          type: object
+          properties:
+            input:
+              type: integer
+              example: 45
+            output:
+              type: integer
+              example: 120
+        cost:
+          type: number
+          example: 0.0003
+      required:
+        - id
+        - role
+        - content
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "conv_abc123"
+        subject:
+          type: string
+          example: "数学"
+        title:
+          type: string
+          example: "勾股定理学习"
+        status:
+          type: string
+          enum: [active, completed]
+        lastMessage:
+          type: object
+          properties:
+            role:
+              type: string
+            content:
+              type: string
+            createdAt:
+              type: string
+              format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    ConversationListResponse:
+      type: object
+      properties:
+        conversations:
+          type: array
+          items:
+            $ref: "#/components/schemas/Conversation"
+        total:
+          type: integer
+          example: 25
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+
+    ApiKey:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "key_abc123"
+        name:
+          type: string
+          example: "我的API Key"
+        prefix:
+          type: string
+          example: "sk-edu-a1b2c3"
+        status:
+          type: string
+          enum: [active, revoked]
+        rateLimitRpm:
+          type: integer
+          example: 50
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type: string
+          format: date-time
+        revokedAt:
+          type: string
+          format: date-time
+
+    CreateApiKeyRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: API Key名称
+          example: "我的API Key"
+          minLength: 1
+        rateLimitRpm:
+          type: integer
+          description: 每分钟请求限制
+          example: 50
+          default: 50
+      required:
+        - name
+
+    CreateApiKeyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        rawKey:
+          type: string
+          description: "完整的API Key（仅创建时返回一次，请妥善保管）"
+          example: "sk-edu-a1b2c3-d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9"
+        status:
+          type: string
+        rateLimitRpm:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    ApiKeyListResponse:
+      type: object
+      properties:
+        keys:
+          type: array
+          items:
+            $ref: "#/components/schemas/ApiKey"
+
+    RevokedKeyResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        prefix:
+          type: string
+        status:
+          type: string
+          example: "revoked"
+        revokedAt:
+          type: string
+          format: date-time
+
+    BalanceResponse:
+      type: object
+      properties:
+        balance:
+          type: number
+          description: 账户余额（CNY）
+          example: 12.50
+        currency:
+          type: string
+          example: "CNY"
+
+    RechargeRequest:
+      type: object
+      properties:
+        amount:
+          type: number
+          description: 充值金额（CNY），范围 1-10000
+          example: 10
+          minimum: 1
+          maximum: 10000
+        paymentMethod:
+          type: string
+          enum: [alipay, wechat]
+          description: 支付方式
+          example: "alipay"
+      required:
+        - amount
+        - paymentMethod
+
+    RechargeResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "rech_abc123"
+        amount:
+          type: number
+          example: 10
+        paymentMethod:
+          type: string
+          example: "alipay"
+        status:
+          type: string
+          enum: [pending, success, failed]
+          example: "pending"
+        paymentUrl:
+          type: string
+          description: 支付链接（生产环境返回）
+          example: "https://pay.example.com/order/abc123"
+        balance:
+          type: number
+          description: 充值后的余额（仅开发环境自动完成时返回）
+          example: 22.50
+        createdAt:
+          type: string
+          format: date-time
+
+    UsageResponse:
+      type: object
+      properties:
+        monthSummary:
+          type: object
+          properties:
+            requestCount:
+              type: integer
+              example: 256
+            totalTokens:
+              type: integer
+              example: 128000
+            totalCost:
+              type: number
+              example: 0.35
+        dailyUsage:
+          type: array
+          items:
+            type: object
+            properties:
+              date:
+                type: string
+                format: date
+                example: "2026-05-01"
+              requestCount:
+                type: integer
+              totalTokens:
+                type: integer
+              totalCost:
+                type: number
+
+    Question:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "q_abc123"
+        subject:
+          type: string
+          example: "数学"
+        type:
+          type: string
+          enum: [choice, fill, essay]
+          example: "choice"
+        difficulty:
+          type: integer
+          minimum: 1
+          maximum: 5
+          example: 3
+        content:
+          type: string
+          example: "在直角三角形ABC中..."
+        options:
+          type: array
+          items:
+            type: string
+          example: ["A. 勾股定理", "B. 相似三角形", "C. 面积公式", "D. 三角函数"]
+        answer:
+          type: string
+          example: "A"
+        explanation:
+          type: string
+          example: "勾股定理是直角三角形的基本性质..."
+        source:
+          type: string
+          example: "2024年中考真题"
+        gradeLevel:
+          type: string
+          example: "初三"
+        knowledgePoints:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              subject:
+                type: string
+        errorNoteCount:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+
+    QuestionListResponse:
+      type: object
+      properties:
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Question"
+        total:
+          type: integer
+          example: 1200
+        limit:
+          type: integer
+          example: 20
+        offset:
+          type: integer
+          example: 0
+
+    CreateQuestionRequest:
+      type: object
+      properties:
+        subject:
+          type: string
+          example: "数学"
+        type:
+          type: string
+          enum: [choice, fill, essay]
+          default: "choice"
+          example: "choice"
+        difficulty:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 1
+          example: 3
+        content:
+          type: string
+          example: "已知函数 f(x)=x^2，求 f(3) 的值"
+        options:
+          type: array
+          items:
+            type: string
+          example: ["A. 6", "B. 9", "C. 12", "D. 18"]
+        answer:
+          type: string
+          example: "B"
+        explanation:
+          type: string
+          example: "f(3)=3^2=9"
+        source:
+          type: string
+          example: "人教版数学"
+        gradeLevel:
+          type: string
+          example: "高一"
+      required:
+        - subject
+        - content
+        - answer
+
+    ErrorNote:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "en_abc123"
+        question:
+          $ref: "#/components/schemas/Question"
+        wrongAnswer:
+          type: string
+          example: "C"
+        correctAnswer:
+          type: string
+          example: "B"
+        status:
+          type: string
+          enum: [active, eliminated]
+          example: "active"
+        timesWrong:
+          type: integer
+          example: 3
+        createdAt:
+          type: string
+          format: date-time
+        lastMistakeAt:
+          type: string
+          format: date-time
+
+    ErrorNoteListResponse:
+      type: object
+      properties:
+        errorNotes:
+          type: array
+          items:
+            $ref: "#/components/schemas/ErrorNote"
+        total:
+          type: integer
+          example: 45
+        totalPages:
+          type: integer
+          example: 3
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+
+    XPRequest:
+      type: object
+      properties:
+        amount:
+          type: integer
+          description: 经验值数量，范围 1-10000
+          minimum: 1
+          maximum: 10000
+          example: 50
+        reason:
+          type: string
+          description: 经验值来源原因
+          example: "完成每日挑战"
+          minLength: 1
+        source:
+          type: string
+          description: 经验值来源类型
+          example: "daily_challenge"
+      required:
+        - amount
+        - reason
+
+    XPResponse:
+      type: object
+      properties:
+        xpEarned:
+          type: integer
+          example: 50
+        totalXP:
+          type: integer
+          example: 1250
+        level:
+          type: integer
+          example: 5
+        leveledUp:
+          type: boolean
+          example: false
+        newLevel:
+          type: integer
+          description: 升级后的等级（仅升级时返回）
+        levelTitle:
+          type: string
+          example: "中学学徒"
+
+    DailyChallenge:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "dc_abc123"
+        date:
+          type: string
+          format: date
+          example: "2026-05-07"
+        question:
+          $ref: "#/components/schemas/Question"
+        completed:
+          type: boolean
+          example: false
+        score:
+          type: integer
+          description: 得分（0-100），完成才有
+        createdAt:
+          type: string
+          format: date-time
+
+    KnowledgeGraphResponse:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+                example: "勾股定理"
+              subject:
+                type: string
+                example: "数学"
+              description:
+                type: string
+              gradeLevel:
+                type: string
+                example: "初二"
+              parentId:
+                type: string
+              orderIndex:
+                type: integer
+              masteryLevel:
+                type: integer
+                description: 掌握度百分比 0-100
+                example: 85
+              practiceCount:
+                type: integer
+                example: 12
+              lastPracticedAt:
+                type: string
+                format: date-time
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+                description: 父节点ID
+              to:
+                type: string
+                description: 子节点ID
+              relation:
+                type: string
+                enum: [parent, prerequisite]
+                description: 关系类型
+
+    UserProfileResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+          example: "张三"
+        email:
+          type: string
+          example: "zhangsan@example.com"
+        avatar:
+          type: string
+        grade:
+          type: string
+          example: "初三"
+        role:
+          type: string
+          example: "student"
+        xp:
+          type: integer
+          example: 2500
+        level:
+          type: integer
+          example: 8
+        streak:
+          type: integer
+          example: 15
+        maxStreak:
+          type: integer
+          example: 30
+        balance:
+          type: number
+          example: 12.50
+        badges:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              description:
+                type: string
+              icon:
+                type: string
+              earnedAt:
+                type: string
+                format: date-time
+        stats:
+          type: object
+          properties:
+            conversationsCount:
+              type: integer
+              example: 42
+            errorNotesCount:
+              type: integer
+              example: 15
+            notesCount:
+              type: integer
+              example: 8
+            recordsCount:
+              type: integer
+              example: 120
+            todayQuestionsDone:
+              type: integer
+              example: 25
+            todayQuestionsCorrect:
+              type: integer
+              example: 20
+            todayXPEarned:
+              type: integer
+              example: 150
+            todayStudyDuration:
+              type: integer
+              description: 学习时长（分钟）
+              example: 45
+        hasApiKey:
+          type: boolean
+          example: true
+
+    HomeStatsResponse:
+      type: object
+      properties:
+        user:
+          type: object
+          properties:
+            id:
+              type: string
+            name:
+              type: string
+            avatar:
+              type: string
+            xp:
+              type: integer
+            level:
+              type: integer
+            streak:
+              type: integer
+            maxStreak:
+              type: integer
+        todayStats:
+          type: object
+          properties:
+            duration:
+              type: integer
+              description: 学习时长（分钟）
+            questionsDone:
+              type: integer
+            questionsCorrect:
+              type: integer
+            xpEarned:
+              type: integer
+            correctRate:
+              type: integer
+              description: 正确率百分比 0-100
+        recentRecords:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              questionsDone:
+                type: integer
+              xpEarned:
+                type: integer
+              duration:
+                type: integer
+              createdAt:
+                type: string
+                format: date-time
+
+    SafetyCheckRequest:
+      type: object
+      properties:
+        content:
+          type: string
+          description: 待检测的文本内容
+          example: "你好，请问这道题怎么做？"
+          minLength: 1
+        type:
+          type: string
+          enum: [input, output]
+          default: "input"
+          description: 检测类型：input 用户输入，output AI输出
+      required:
+        - content
+
+    SafetyCheckResponse:
+      type: object
+      properties:
+        safe:
+          type: boolean
+          example: true
+        reason:
+          type: string
+          description: 不安全原因（safe=false时返回）
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        action:
+          type: string
+          description: 建议的处理方式
+        checkedAt:
+          type: string
+          format: date-time
+
+    LLMChatRequest:
+      type: object
+      properties:
+        model:
+          type: string
+          description: 模型名称
+          example: "deepseek-chat"
+        messages:
+          type: array
+          items:
+            type: object
+            properties:
+              role:
+                type: string
+                enum: [system, user, assistant]
+              content:
+                type: string
+          minItems: 1
+        stream:
+          type: boolean
+          default: false
+          description: 是否流式响应
+        temperature:
+          type: number
+          minimum: 0
+          maximum: 2
+          default: 0.7
+        max_tokens:
+          type: integer
+          minimum: 1
+          maximum: 16384
+          default: 2048
+      required:
+        - model
+        - messages
+
+    LLMChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "chatcmpl-abc123"
+        object:
+          type: string
+          example: "chat.completion"
+        created:
+          type: integer
+          example: 1746600000
+        model:
+          type: string
+          example: "deepseek-chat"
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                type: object
+                properties:
+                  role:
+                    type: string
+                    example: "assistant"
+                  content:
+                    type: string
+              finish_reason:
+                type: string
+                example: "stop"
+        usage:
+          type: object
+          properties:
+            prompt_tokens:
+              type: integer
+            completion_tokens:
+              type: integer
+            total_tokens:
+              type: integer
+            cost:
+              type: number
+              description: 本次请求费用（CNY）
+
+    ModelInfo:
+      type: object
+      properties:
+        id:
+          type: string
+          example: "deepseek-chat"
+        provider:
+          type: string
+          example: "deepseek"
+        displayName:
+          type: string
+          example: "DeepSeek Chat"
+        pricing:
+          type: object
+          properties:
+            input:
+              type: number
+              description: 输入价格（CNY/token）
+            output:
+              type: number
+              description: 输出价格（CNY/token）
+
+    ModelsResponse:
+      type: object
+      properties:
+        providers:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: "deepseek"
+              healthy:
+                type: boolean
+                example: true
+              models:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ModelInfo"
+        healthyCount:
+          type: integer
+          example: 3
+        totalCount:
+          type: integer
+          example: 4
+
+paths:
+  # ==================== Auth ====================
+  /api/auth/register:
+    post:
+      tags:
+        - Auth
+      summary: 用户注册
+      description: 创建新用户账号，自动分配初始API Key
+      operationId: register
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+            example:
+              name: "张三"
+              email: "zhangsan@example.com"
+              password: "password123"
+              grade: "初三"
+              role: "student"
+      responses:
+        "200":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RegisterResponse"
+              example:
+                id: "user_abc123"
+                name: "张三"
+                email: "zhangsan@example.com"
+                grade: "初三"
+                role: "student"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "姓名不能为空"
+        "409":
+          description: 邮箱已注册
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "该邮箱已被注册"
+
+  # ==================== AI Tutoring ====================
+  /api/ai/chat:
+    post:
+      tags:
+        - AI Tutoring
+      summary: AI辅导对话
+      description: |
+        向AI老师发送消息，获取苏格拉底式教学辅导。支持会话记忆，可通过 `conversationId` 继续已有对话。
+
+        教学流程采用苏格拉底引导式，阶段包括：
+        - `diagnostic` - 诊断评估
+        - `clarification` - 澄清理解
+        - `hypothesis` - 提出假设
+        - `reasoning` - 推理论证
+        - `reflection` - 反思总结
+        - `verification` - 验证掌握
+        - `guide` - 引导推进
+      operationId: aiChat
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+            examples:
+              newConversation:
+                summary: 新建对话
+                value:
+                  message: "请帮我理解勾股定理"
+                  subject: "数学"
+              continueConversation:
+                summary: 继续已有对话
+                value:
+                  message: "那如何用勾股定理证明两个三角形相似呢？"
+                  conversationId: "conv_abc123"
+                  subject: "数学"
+      responses:
+        "200":
+          description: AI回复
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+              example:
+                id: "msg_xyz789"
+                conversationId: "conv_abc123"
+                role: "assistant"
+                content: "好的，让我们从勾股定理的基本定义开始理解。首先，你能告诉我什么是直角三角形吗？"
+                stage: "diagnostic"
+                tokens:
+                  input: 45
+                  output: 98
+                cost: 0.0002
+        "400":
+          description: 参数错误或内容安全问题
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "消息内容不能为空"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/questions/search:
+    get:
+      tags:
+        - Questions
+      summary: 搜索题目
+      description: 按关键词搜索题目，支持内容、答案、解析等多字段匹配
+      operationId: searchQuestions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: keyword
+          in: query
+          description: 搜索关键词（必填）
+          required: true
+          schema:
+            type: string
+          example: "勾股定理"
+        - name: subject
+          in: query
+          description: 学科筛选
+          required: false
+          schema:
+            type: string
+          example: "数学"
+        - name: difficulty
+          in: query
+          description: 难度等级（1-5）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+        - name: gradeLevel
+          in: query
+          description: 年级筛选
+          required: false
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: 每页数量（最大100）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: 偏移量
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: 搜索结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionListResponse"
+        "400":
+          description: 搜索关键词为空
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "请输入搜索关键词"
+
+  # ==================== Error Notes ====================
+  /api/error-notes:
+    get:
+      tags:
+        - Questions
+      summary: 获取错题本
+      description: 获取当前用户的错题本列表，支持按学科和状态筛选
+      operationId: getErrorNotes
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: subject
+          in: query
+          description: 学科筛选（为空则全部）
+          required: false
+          schema:
+            type: string
+          example: "数学"
+        - name: status
+          in: query
+          description: 错题状态筛选
+          required: false
+          schema:
+            type: string
+            enum: [active, eliminated]
+        - name: page
+          in: query
+          description: 页码（从1开始）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: 每页数量（最大50）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+      responses:
+        "200":
+          description: 错题列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorNoteListResponse"
+              example:
+                errorNotes:
+                  - id: "en_abc123"
+                    question:
+                      id: "q_abc123"
+                      subject: "数学"
+                      type: "choice"
+                      difficulty: 3
+                      content: "已知直角三角形两条直角边分别为3和4，则斜边长为？"
+                      options: ["A. 5", "B. 6", "C. 7", "D. 8"]
+                      answer: "A"
+                      explanation: "根据勾股定理：3²+4²=9+16=25"
+                    wrongAnswer: "C"
+                    correctAnswer: "A"
+                    status: "active"
+                    timesWrong: 3
+                    createdAt: "2026-05-07T10:00:00Z"
+                    lastMistakeAt: "2026-05-07T10:05:00Z"
+                total: 45
+                totalPages: 3
+                page: 1
+                limit: 20
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ==================== Game ====================
+  /api/game/xp:
+    post:
+      tags:
+        - Game
+      summary: 增加经验值
+      description: |
+        为用户添加经验值（XP），自动计算等级变化。
+        单次最多添加 10000 经验值。
+      operationId: addXP
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/XPRequest"
+            example:
+              amount: 50
+              reason: "完成每日挑战"
+              source: "daily_challenge"
+      responses:
+        "200":
+          description: 经验值添加结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/XPResponse"
+              example:
+                xpEarned: 50
+                totalXP: 1250
+                level: 5
+                leveledUp: false
+                levelTitle: "中学学徒"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "经验值必须为正整数"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/game/daily-challenge:
+    get:
+      tags:
+        - Game
+      summary: 获取每日挑战
+      description: |
+        获取当天的每日挑战题目。如果当天还没有挑战记录，会自动创建新的挑战（随机抽取一道题目）。
+      operationId: getDailyChallenge
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 每日挑战题目
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DailyChallenge"
+              example:
+                id: "dc_abc123"
+                date: "2026-05-07"
+                question:
+                  id: "q_abc123"
+                  subject: "数学"
+                  type: "choice"
+                  difficulty: 3
+                  content: "对于二次函数 y=ax^2+bx+c，其对称轴方程是？"
+                  options:
+                    - "A. x=-b/2a"
+                    - "B. x=b/2a"
+                    - "C. x=-b/a"
+                    - "D. x=b/a"
+                  answer: "A"
+                  explanation: "二次函数的对称轴公式为 x = -b/(2a)"
+                  source: "人教版数学"
+                  gradeLevel: "初三"
+                  knowledgePoints:
+                    - id: "kp_002"
+                      name: "二次函数"
+                      subject: "数学"
+                  errorNoteCount: 3
+                  createdAt: "2026-04-15T08:00:00Z"
+                completed: false
+                createdAt: "2026-05-07T00:01:00Z"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: 暂无可用的题目
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "暂无可用的题目"
+
+  # ==================== Knowledge Graph ====================
+  /api/knowledge-graph:
+    get:
+      tags:
+        - Knowledge
+      summary: 获取知识图谱
+      description: |
+        获取指定学科的知识图谱数据，包含用户对每个知识点的掌握度。
+        知识点以节点形式组织，通过边表示父子关系和前置关系。
+        默认学科为"数学"。
+      operationId: getKnowledgeGraph
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: subject
+          in: query
+          description: 学科名称
+          required: false
+          schema:
+            type: string
+            default: "数学"
+          example: "数学"
+      responses:
+        "200":
+          description: 知识图谱数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/KnowledgeGraphResponse"
+              example:
+                nodes:
+                  - id: "kp_001"
+                    name: "勾股定理"
+                    subject: "数学"
+                    description: "直角三角形两直角边的平方和等于斜边的平方"
+                    gradeLevel: "初二"
+                    parentId: null
+                    orderIndex: 1
+                    masteryLevel: 85
+                    practiceCount: 12
+                    lastPracticedAt: "2026-05-07T09:30:00Z"
+                  - id: "kp_002"
+                    name: "二次函数"
+                    subject: "数学"
+                    description: "形如y=ax^2+bx+c的函数"
+                    gradeLevel: "初三"
+                    parentId: null
+                    orderIndex: 2
+                    masteryLevel: 60
+                    practiceCount: 5
+                    lastPracticedAt: "2026-05-06T14:00:00Z"
+                edges:
+                  - from: "kp_001"
+                    to: "kp_003"
+                    relation: "prerequisite"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ==================== User ====================
+  /api/user/profile:
+    get:
+      tags:
+        - User
+      summary: 获取用户资料
+      description: 获取当前用户的完整资料，包含统计数据、坏章等信息
+      operationId: getUserProfile
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 用户资料
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfileResponse"
+              example:
+                id: "user_abc123"
+                name: "张三"
+                email: "zhangsan@example.com"
+                avatar: null
+                grade: "初三"
+                role: "student"
+                xp: 2500
+                level: 8
+                streak: 15
+                maxStreak: 30
+                balance: 12.50
+                badges:
+                  - id: "badge_001"
+                    name: "初来乍到"
+                    description: "完成首次学习"
+                    icon: "star"
+                    earnedAt: "2026-04-01T08:00:00Z"
+                stats:
+                  conversationsCount: 42
+                  errorNotesCount: 15
+                  notesCount: 8
+                  recordsCount: 120
+                  todayQuestionsDone: 25
+                  todayQuestionsCorrect: 20
+                  todayXPEarned: 150
+                  todayStudyDuration: 45
+                hasApiKey: true
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: 用户不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "用户不存在"
+
+  /api/user/home-stats:
+    get:
+      tags:
+        - User
+      summary: 获取首页统计数据
+      description: 获取首页所需的用户基本信息和今日学习统计数据
+      operationId: getHomeStats
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 首页统计数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HomeStatsResponse"
+              example:
+                user:
+                  id: "user_abc123"
+                  name: "张三"
+                  avatar: null
+                  xp: 2500
+                  level: 8
+                  streak: 15
+                  maxStreak: 30
+                todayStats:
+                  duration: 45
+                  questionsDone: 25
+                  questionsCorrect: 20
+                  xpEarned: 150
+                  correctRate: 80
+                recentRecords:
+                  - id: "rec_001"
+                    questionsDone: 10
+                    xpEarned: 60
+                    duration: 20
+                    createdAt: "2026-05-07T09:00:00Z"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "404":
+          description: 用户不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "用户不存在"
+
+  /api/user/balance:
+    get:
+      tags:
+        - User
+      summary: 获取用户余额
+      description: 获取当前登录用户的账户余额（快捷接口，与 /api/billing/balance 功能相同）
+      operationId: getUserBalance
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 余额信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+              example:
+                balance: 12.50
+                currency: "CNY"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ==================== Safety ====================
+  /api/safety/check:
+    post:
+      tags:
+        - Safety
+      summary: 内容安全检测
+      description: |
+        对用户输入或AI输出进行安全检测。检测不安全的文本内容，
+        高风险事件会被记录到安全日志中。
+      operationId: safetyCheck
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SafetyCheckRequest"
+            examples:
+              inputCheck:
+                summary: 检测用户输入
+                value:
+                  content: "你好，请问这道题怎么做？"
+                  type: "input"
+              outputCheck:
+                summary: 检测AI输出
+                value:
+                  content: "这道题的解法是..."
+                  type: "output"
+      responses:
+        "200":
+          description: 安全检测结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SafetyCheckResponse"
+              examples:
+                safe:
+                  summary: 内容安全
+                  value:
+                    safe: true
+                    checkedAt: "2026-05-07T10:00:00Z"
+                unsafe:
+                  summary: 内容不安全
+                  value:
+                    safe: false
+                    reason: "包含不当言论"
+                    severity: "high"
+                    action: "block"
+                    checkedAt: "2026-05-07T10:00:00Z"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "请提供待检测内容"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "请先登录"
+        "402":
+          description: 余额不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "余额不足，请充值后重试"
+
+  /api/ai/conversations:
+    get:
+      tags:
+        - AI Tutoring
+      summary: 获取对话列表
+      description: 获取当前用户的AI对话历史列表，支持按状态筛选
+      operationId: getConversations
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          description: 对话状态筛选
+          required: false
+          schema:
+            type: string
+            enum: [active, completed]
+        - name: limit
+          in: query
+          description: 每页数量（最大50）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 50
+            default: 20
+        - name: offset
+          in: query
+          description: 偏移量
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: 对话列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConversationListResponse"
+              example:
+                conversations:
+                  - id: "conv_abc123"
+                    subject: "数学"
+                    title: "勾股定理学习"
+                    status: "active"
+                    lastMessage:
+                      role: "assistant"
+                      content: "很好，你已经理解了勾股定理的基本概念..."
+                      createdAt: "2026-05-07T10:30:00Z"
+                    createdAt: "2026-05-07T10:00:00Z"
+                    updatedAt: "2026-05-07T10:30:00Z"
+                total: 25
+                limit: 20
+                offset: 0
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/ai/keys:
+    get:
+      tags:
+        - AI Tutoring
+      summary: 获取API Key列表
+      description: 获取当前用户的所有虚拟API Key（不包含完整密钥）
+      operationId: getApiKeys
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: API Key列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiKeyListResponse"
+              example:
+                keys:
+                  - id: "key_abc123"
+                    name: "我的API Key"
+                    prefix: "sk-edu-a1b2c3"
+                    status: "active"
+                    rateLimitRpm: 50
+                    createdAt: "2026-05-01T08:00:00Z"
+                    lastUsedAt: "2026-05-07T09:30:00Z"
+                    revokedAt: null
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+    post:
+      tags:
+        - AI Tutoring
+      summary: 创建API Key
+      description: |
+        为当前用户创建新的虚拟API Key。**重要**: 完整的API Key（`rawKey`）仅在创建时返回一次，请妥善保管。
+        API Key格式: `sk-edu-{6位hex}-{32位hex}`
+      operationId: createApiKey
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateApiKeyRequest"
+            example:
+              name: "我的API Key"
+              rateLimitRpm: 50
+      responses:
+        "200":
+          description: API Key创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateApiKeyResponse"
+              example:
+                id: "key_abc123"
+                name: "我的API Key"
+                prefix: "sk-edu-a1b2c3"
+                rawKey: "sk-edu-a1b2c3-d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9"
+                status: "active"
+                rateLimitRpm: 50
+                createdAt: "2026-05-07T10:00:00Z"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "请为API Key命名"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/ai/keys/{id}:
+    delete:
+      tags:
+        - AI Tutoring
+      summary: 撤销API Key
+      description: 软删除指定的API Key，撤销后该Key无法再使用
+      operationId: revokeApiKey
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: API Key ID
+          schema:
+            type: string
+          example: "key_abc123"
+      responses:
+        "200":
+          description: 撤销成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RevokedKeyResponse"
+              example:
+                id: "key_abc123"
+                name: "我的API Key"
+                prefix: "sk-edu-a1b2c3"
+                status: "revoked"
+                revokedAt: "2026-05-07T12:00:00Z"
+        "400":
+          description: Key ID无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "403":
+          description: 无权操作此Key
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "无权操作此Key"
+        "404":
+          description: Key不存在
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Key不存在"
+
+  # ==================== LLM Proxy ====================
+  /llm-api/chat:
+    post:
+      tags:
+        - LLM Proxy
+      summary: LLM聊天补全（OpenAI兼容）
+      description: |
+        公开LLM代理接口，兼容 OpenAI Chat Completions API 格式。
+        使用您的 API Key 进行认证，支持 Provider 健康检查和故障转移。
+
+        **认证方式**: `X-API-Key` 请求头或 `Authorization: Bearer` 请求头
+
+        **支持的Provider**: deepseek, qwen, openai, ollama, custom
+      operationId: llmChatCompletions
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LLMChatRequest"
+            examples:
+              basic:
+                summary: 基础聊天
+                value:
+                  model: "deepseek-chat"
+                  messages:
+                    - role: "system"
+                      content: "你是一位专业的数学老师。"
+                    - role: "user"
+                      content: "请解释什么是微积分？"
+                  temperature: 0.7
+                  max_tokens: 2048
+              streaming:
+                summary: 流式响应
+                value:
+                  model: "deepseek-chat"
+                  messages:
+                    - role: "user"
+                      content: "写一首关于学习的诗"
+                  stream: true
+      responses:
+        "200":
+          description: 聊天补全结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LLMChatResponse"
+              example:
+                id: "chatcmpl-abc123"
+                object: "chat.completion"
+                created: 1746600000
+                model: "deepseek-chat"
+                choices:
+                  - index: 0
+                    message:
+                      role: "assistant"
+                      content: "微积分是数学的一个分支，主要研究函数的变化率和累积量..."
+                    finish_reason: "stop"
+                usage:
+                  prompt_tokens: 45
+                  completion_tokens: 200
+                  total_tokens: 245
+                  cost: 0.0006
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "模型不能为空"
+        "401":
+          description: API Key无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "Invalid API key"
+        "402":
+          description: 余额不足
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "余额不足，请充值后重试"
+        "429":
+          description: 请求频率超过限制
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "请求频率过高，请稍后重试"
+
+  /llm-api/models:
+    get:
+      tags:
+        - LLM Proxy
+      summary: 获取可用模型列表
+      description: |
+        返回所有健康Provider的可用模型列表及定价信息。
+        仅返回当前状态为健康的Provider的模型。
+      operationId: listModels
+      security:
+        - ApiKeyAuth: []
+      responses:
+        "200":
+          description: 模型列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ModelsResponse"
+              example:
+                providers:
+                  - name: "deepseek"
+                    healthy: true
+                    models:
+                      - id: "deepseek-chat"
+                        provider: "deepseek"
+                        displayName: "DeepSeek Chat"
+                        pricing:
+                          input: 1.0e-6
+                          output: 2.0e-6
+                healthyCount: 3
+                totalCount: 4
+        "401":
+          description: API Key无效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ==================== Billing ====================
+  /api/billing/balance:
+    get:
+      tags:
+        - Billing
+      summary: 查询账户余额
+      description: 获取当前用户的账户余额（优先从Redis读取，降级到数据库）
+      operationId: getBalance
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 余额信息
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BalanceResponse"
+              example:
+                balance: 12.50
+                currency: "CNY"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/billing/recharge:
+    post:
+      tags:
+        - Billing
+      summary: 账户充值
+      description: |
+        创建充值订单。
+        - 开发环境：自动完成充值
+        - 生产环境：生成支付链接
+      operationId: recharge
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RechargeRequest"
+            example:
+              amount: 10
+              paymentMethod: "alipay"
+      responses:
+        "200":
+          description: 充值结果
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RechargeResponse"
+              examples:
+                dev:
+                  summary: 开发环境（自动完成）
+                  value:
+                    id: "rech_abc123"
+                    amount: 10
+                    paymentMethod: "alipay"
+                    status: "success"
+                    balance: 22.50
+                    createdAt: "2026-05-07T10:00:00Z"
+                production:
+                  summary: 生产环境（待支付）
+                  value:
+                    id: "rech_abc123"
+                    amount: 10
+                    paymentMethod: "alipay"
+                    status: "pending"
+                    paymentUrl: "https://pay.example.com/order/abc123"
+                    createdAt: "2026-05-07T10:00:00Z"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+              example:
+                error: "充值金额必须为有效数字"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /api/billing/usage:
+    get:
+      tags:
+        - Billing
+      summary: 查询用量统计
+      description: 获取当前用户当月的API用量汇总和近30天的每日用量明细
+      operationId: getUsage
+      security:
+        - BearerAuth: []
+      responses:
+        "200":
+          description: 用量统计
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UsageResponse"
+              example:
+                monthSummary:
+                  requestCount: 256
+                  totalTokens: 128000
+                  totalCost: 0.35
+                dailyUsage:
+                  - date: "2026-05-01"
+                    requestCount: 15
+                    totalTokens: 7500
+                    totalCost: 0.02
+                  - date: "2026-05-02"
+                    requestCount: 22
+                    totalTokens: 11000
+                    totalCost: 0.03
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  # ==================== Questions ====================
+  /api/questions:
+    get:
+      tags:
+        - Questions
+      summary: 获取题目列表
+      description: 公开获取题目列表，支持按学科、难度、年级、题型筛选
+      operationId: getQuestions
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: subject
+          in: query
+          description: 学科筛选
+          required: false
+          schema:
+            type: string
+          example: "数学"
+        - name: difficulty
+          in: query
+          description: 难度等级（1-5）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 5
+          example: 3
+        - name: gradeLevel
+          in: query
+          description: 年级筛选
+          required: false
+          schema:
+            type: string
+          example: "初三"
+        - name: type
+          in: query
+          description: 题型筛选
+          required: false
+          schema:
+            type: string
+            enum: [choice, fill, essay]
+          example: "choice"
+        - name: limit
+          in: query
+          description: 每页数量（最大100）
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+        - name: offset
+          in: query
+          description: 偏移量
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+      responses:
+        "200":
+          description: 题目列表
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionListResponse"
+              example:
+                questions:
+                  - id: "q_abc123"
+                    subject: "数学"
+                    type: "choice"
+                    difficulty: 3
+                    content: "已知直角三角形两条直角边分别为3和4，则斜边长为？"
+                    options:
+                      - "A. 5"
+                      - "B. 6"
+                      - "C. 7"
+                      - "D. 8"
+                    answer: "A"
+                    explanation: "根据勾股定理：3²+4²=9+16=25，∴斜边=√25=5"
+                    source: "人教版数学"
+                    gradeLevel: "初二"
+                    knowledgePoints:
+                      - id: "kp_001"
+                        name: "勾股定理"
+                        subject: "数学"
+                    errorNoteCount: 2
+                    createdAt: "2026-04-01T08:00:00Z"
+                total: 1200
+                limit: 20
+                offset: 0
+
+    post:
+      tags:
+        - Questions
+      summary: 添加新题目
+      description: 添加新的题目到题库（仅管理员和教师可操作）
+      operationId: createQuestion
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateQuestionRequest"
+            example:
+              subject: "数学"
+              type: "choice"
+              difficulty: 3
+              content: "已知函数 f(x)=x^2，求 f(3) 的值"
+              options: ["A. 6", "B. 9", "C. 12", "D. 18"]
+              answer: "B"
+              explanation: "f(3)=3^2=9"
+              source: "人教版数学"
+              gradeLevel: "高一"
+      responses:
+        "200":
+          description: 创建成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Question"
+        "400":
+          description: 参数错误
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "401":
+          description: 未登录
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"

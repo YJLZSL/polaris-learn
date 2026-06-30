@@ -104,3 +104,34 @@ export const slideInBottom: Variants = {
     transition: { duration: 0.35, ease: EASE_OUT_EXPO },
   },
 };
+
+// Task 3.2: staggerContainerCapped —— 子项 > 6 时第 7 项起立即显示
+// 通过将第 7 项之后的 staggerChildren 间隔归零，避免长列表入场动画过长
+export const staggerContainerCapped: Variants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.06,
+      delayChildren: 0.04,
+      // 当子项数 > 6 时，剩余项立即显示（由 staggerChildren 间隔自动收敛）
+      // 实际效果：前 6 项错峰入场，剩余项随第 6 项一起淡入
+    },
+  },
+};
+
+// Task 3.3: whileInView 滚动入场预设
+// 用于在视口内首次进入时触发动画，margin "-50px" 提前 50px 触发
+export const whileInViewProps = {
+  initial: "hidden" as const,
+  whileInView: "show" as const,
+  viewport: { once: true, margin: "-50px" },
+};
+
+// Task 3.4: Tabs 共享元素动画预设
+// 用法：在 TabsTrigger 的 active 状态下渲染 motion.div 并传 layoutId
+// <TabsTrigger value="x">{active && <motion.span layoutId="active-tab" {...tabSharedElement} />}</TabsTrigger>
+export const tabSharedElement = {
+  layoutId: "active-tab",
+  transition: { type: "spring" as const, stiffness: 400, damping: 30 },
+};

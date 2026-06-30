@@ -1,5 +1,3 @@
-"use client";
-
 import { getVersion, getReleaseNotes } from "@/lib/version";
 
 /**
