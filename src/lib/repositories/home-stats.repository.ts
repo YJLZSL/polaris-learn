@@ -3,7 +3,7 @@
  *
  * 原 /api/user/home-stats 路由的服务端聚合逻辑，v3.0.0 静态化后改为客户端聚合。
  * 从 practice / error-notes / knowledge repository 拉取数据并组装。
- * Polaris V2: gamification.repository 已移除，xp/level/streak 等字段返回默认值。
+ * Polaris V2: 已彻底移除 xp/level/streak/todayXP 等游戏化字段，仅保留学习时长与正确率。
  */
 
 import { getAll } from "@/lib/db/indexeddb";
@@ -22,22 +22,17 @@ export interface RecentRecord {
   type: string;
   questionsDone: number;
   questionsCorrect: number;
-  xpEarned: number;
   createdAt: string;
 }
 
 export interface HomeStats {
-  xp: number;
-  level: number;
-  streak: number;
-  maxStreak: number;
   learningMode?: string;
-  todayDuration: number;
+  todayStudyMinutes: number;
+  weekStudyMinutes: number;
+  totalStudyMinutes: number;
   todayQuestions: number;
   todayCorrect: number;
   correctRate: number;
-  todayXP: number;
-  totalXP: number;
   recentRecords: RecentRecord[];
   knowledgeProgress: {
     mastered: number;
@@ -56,6 +51,18 @@ function isSameDay(a: Date, b: Date): boolean {
 }
 
 /**
+ * 返回以周一为起点的本周零点（本地时区）。
+ */
+function startOfWeek(d: Date): Date {
+  const date = new Date(d);
+  const day = date.getDay(); // 0 = Sunday
+  const diff = (day === 0 ? -6 : 1) - day; // 回到本周一
+  date.setDate(date.getDate() + diff);
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+/**
  * 聚合首页所需的所有统计数据。
  * @param user 当前登录用户（来自 auth-service.getCurrentUser()）
  */
@@ -65,17 +72,13 @@ export async function getHomeStats(
   // 未登录：返回零值结构，避免页面崩溃
   if (!user) {
     return {
-      xp: 0,
-      level: 1,
-      streak: 0,
-      maxStreak: 0,
       learningMode: "YOUTH",
-      todayDuration: 0,
+      todayStudyMinutes: 0,
+      weekStudyMinutes: 0,
+      totalStudyMinutes: 0,
       todayQuestions: 0,
       todayCorrect: 0,
       correctRate: 0,
-      todayXP: 0,
-      totalXP: 0,
       recentRecords: [],
       knowledgeProgress: { mastered: 0, total: 0, percentage: 0 },
       errorNoteCount: 0,
@@ -103,12 +106,6 @@ export async function getHomeStats(
   };
   const errorNoteCount = errorNotes.length;
 
-  // Polaris V2: gamification.repository 已移除，以下字段返回默认值
-  const xp = 0;
-  const level = 1;
-  const streak = 0;
-  const maxStreak = 0;
-
   // 今日记录
   const now = new Date();
   const todayRecords = records.filter((r) =>
@@ -120,15 +117,27 @@ export async function getHomeStats(
     todayQuestions > 0
       ? Math.round((todayCorrect / todayQuestions) * 100)
       : 0;
-  // 简化：今日 XP 等于今日答对题数 * 10（粗略估计）
-  const todayXP = todayCorrect * 10;
 
-  // 今日学习时长（毫秒 → 分钟）
+  // 学习时长（毫秒 → 分钟）
   const todayDurationMs = todayRecords.reduce(
     (sum, r) => sum + (r.timeSpentMs || 0),
     0
   );
-  const todayDuration = Math.floor(todayDurationMs / 60000);
+  const todayStudyMinutes = Math.floor(todayDurationMs / 60000);
+
+  // 本周学习时长（本周一起算）
+  const weekStart = startOfWeek(now);
+  const weekDurationMs = records
+    .filter((r) => new Date(r.createdAt) >= weekStart)
+    .reduce((sum, r) => sum + (r.timeSpentMs || 0), 0);
+  const weekStudyMinutes = Math.floor(weekDurationMs / 60000);
+
+  // 累计学习时长（全部记录）
+  const totalDurationMs = records.reduce(
+    (sum, r) => sum + (r.timeSpentMs || 0),
+    0
+  );
+  const totalStudyMinutes = Math.floor(totalDurationMs / 60000);
 
   // 最近学习记录：按 createdAt 倒序取前 5 条，每条聚合为一次"练习记录"
   // （IndexedDB practice_records 是按题存储，简化为每条 record 一行）
@@ -145,22 +154,17 @@ export async function getHomeStats(
     type: r.difficulty ? `难度${r.difficulty}` : "练习",
     questionsDone: 1,
     questionsCorrect: r.isCorrect ? 1 : 0,
-    xpEarned: r.isCorrect ? 10 : 0,
     createdAt: r.createdAt,
   }));
 
   return {
-    xp,
-    level,
-    streak,
-    maxStreak,
     learningMode: user.learningMode,
-    todayDuration,
+    todayStudyMinutes,
+    weekStudyMinutes,
+    totalStudyMinutes,
     todayQuestions,
     todayCorrect,
     correctRate,
-    todayXP,
-    totalXP: xp,
     recentRecords,
     knowledgeProgress,
     errorNoteCount,

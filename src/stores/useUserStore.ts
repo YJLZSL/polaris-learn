@@ -9,9 +9,6 @@ interface UserState {
   grade: string | null;
   /** Task 1.4：learningMode 强类型为 5 学段联合，setUser 内部自动迁移旧值 */
   learningMode: LearningMode;
-  xp: number;
-  level: number;
-  streak: number;
   avatar: string | null;
   weakPoints: string[];
   // learningMode 接受 string 以兼容外部 string 入参，内部自动迁移为 LearningMode
@@ -26,9 +23,6 @@ export const useUserStore = create<UserState>((set, get) => ({
   email: null,
   grade: null,
   learningMode: "YOUTH",
-  xp: 0,
-  level: 1,
-  streak: 0,
   avatar: null,
   weakPoints: [],
   setUser: (user) =>
@@ -42,7 +36,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   clearUser: () =>
     set({
       id: null, name: null, email: null, grade: null, learningMode: "YOUTH",
-      xp: 0, level: 1, streak: 0, avatar: null, weakPoints: [],
+      avatar: null, weakPoints: [],
     }),
   /**
    * 从本地 auth-service 拉取当前用户并同步到 store。
@@ -54,7 +48,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const user = await getCurrentUser();
       if (!user) return;
-      // Polaris V2: gamification.repository 已移除，不再拉取 xp/level/streak
+      // Polaris V2: 仅同步基础资料，不再含任何游戏化字段
       set({
         id: user.id,
         name: user.name,

@@ -142,7 +142,7 @@ export default function HomePage() {
         setStats(s);
         // 取本地与 home-stats 两者较大值，避免任一来源遗漏
         const localMinutes = getStudyStats().todayMinutes;
-        setTodayMinutes(Math.max(s.todayDuration || 0, localMinutes));
+        setTodayMinutes(Math.max(s.todayStudyMinutes || 0, localMinutes));
       } catch {
         setError("加载首页数据失败，请稍后重试。");
       } finally {
@@ -153,7 +153,7 @@ export default function HomePage() {
   }, []);
 
   // 渲染用的今日学习时长：优先 stats，回退本地
-  const displayMinutes = Math.max(stats?.todayDuration ?? 0, todayMinutes);
+  const displayMinutes = Math.max(stats?.todayStudyMinutes ?? 0, todayMinutes);
 
   /* ----- 加载态：居中 Skeleton（非 bento-grid） ----- */
   if (loading) {
