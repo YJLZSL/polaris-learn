@@ -1,5 +1,6 @@
-﻿import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 import { useSession } from '@/components/providers/SessionProvider';
+import LoadingScreen from '@/components/shell/LoadingScreen';
 
 /* Task 18.6: starfield twinkle points (fixed positions/delays) */
 const STARS = [
@@ -18,8 +19,9 @@ const STARS = [
 export default function PublicOnlyRoute() {
   const { status } = useSession();
 
-  if (status === 'loading') return null;
-  if (status === 'authenticated') return <Navigate to="/home" replace />;
+  if (status === 'loading') return <LoadingScreen message="正在检查登录状态..." />;
+  // Authenticated and guest users already have access to the dashboard
+  if (status === 'authenticated' || status === 'guest') return <Navigate to="/home" replace />;
 
   return (
     <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-950 via-background to-primary/20 p-4 overflow-hidden">

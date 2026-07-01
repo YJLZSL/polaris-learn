@@ -1,101 +1,80 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen,
-  ChevronLeft,
-  ChevronRight,
-  Check,
-  CheckCircle,
-  X,
-  XCircle,
-  AlertTriangle,
-  RefreshCw,
-  Play,
-  Search,
-  FileQuestion,
-  RotateCw,
-  Lightbulb,
-  Swords,
   Bot,
+  ChevronDown,
+  ChevronRight,
+  Eye,
+  Lightbulb,
+  RotateCw,
+  CheckCircle2,
+  Calendar,
+  Sparkles,
+  Play,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { staggerContainerCapped, listItem, cardHover } from "@/lib/motion";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { fadeIn, fadeUp, useSafeMotion } from "@/lib/motion";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import { EmptyState } from "@/components/ui/empty-state";
 import { useUserStore } from "@/stores/useUserStore";
 import {
-  getErrorNotes as repoGetErrorNotes,
-  markReviewed as repoMarkReviewed,
+  getErrorNotes,
+  updateSM2State,
+  type ErrorNote,
 } from "@/lib/repositories/error-notes.repository";
 import { getQuestionById } from "@/lib/repositories/practice.repository";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Label } from "@/components/ui/label";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
-import { EmptyState } from "@/components/ui/empty-state";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { ErrorEliminationBattle } from "@/components/common/ErrorEliminationBattle";
+  calculateNextReview,
+  isDue,
+  type ReviewRating,
+  type SM2State,
+} from "@/lib/spaced-repetition";
 
 /* ====== Types ====== */
-interface QuestionInfo {
-  id: string;
-  content: string;
-  subject: string;
-  type: string;
-  difficulty: number;
-  options: string[];
-  answer: string;
-  explanation: string | null;
-}
-
 interface ErrorNoteItem {
-  id: string;
-  question: QuestionInfo;
-  wrongAnswer: string | null;
-  errorType: string | null;
-  status: string;
-  correctCount: number;
-  createdAt: string;
-  nextReviewAt: string | null;
+  note: ErrorNote;
+  questionContent: string;
+  explanation: string | null;
+  difficulty: number;
 }
 
-interface SubjectTab {
-  key: string;
-  label: string;
+/* ====== Helpers ====== */
+
+/** 从 ErrorNote 派生 SM-2 状态，缺失字段使用默认值 */
+function getSM2State(note: ErrorNote): SM2State {
+  return {
+    ease: note.ease ?? 2.5,
+    interval: note.interval ?? 0,
+    repetitions: note.repetitions ?? 0,
+    dueDate: note.dueDate ?? new Date(note.createdAt).getTime(),
+  };
 }
 
-/* ====== Configs ====== */
-const subjectTabs: SubjectTab[] = [
-  { key: "", label: "全部" },
-  { key: "数学", label: "数学" },
-  { key: "语文", label: "语文" },
-  { key: "英语", label: "英语" },
-  { key: "物理", label: "物理" },
-  { key: "化学", label: "化学" },
-];
+function formatTimestamp(ts: number): string {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
-const statusFilters = [
-  { key: "", label: "全部" },
-  { key: "active", label: "活跃" },
-  { key: "eliminated", label: "已消除" },
-];
+function formatDueLabel(state: SM2State): string {
+  if (isDue(state)) return "待复习";
+  const days = Math.ceil((state.dueDate - Date.now()) / (24 * 60 * 60 * 1000));
+  if (days <= 0) return "待复习";
+  if (days === 1) return "明天复习";
+  return `${days} 天后复习`;
+}
+
+function formatIntervalDays(interval: number): string {
+  if (interval <= 0) return "立即";
+  if (interval === 1) return "1 天后";
+  return `${interval} 天后`;
+}
 
 function getSubjectBadgeClass(subject: string): string {
   const colors: Record<string, string> = {
@@ -108,283 +87,307 @@ function getSubjectBadgeClass(subject: string): string {
   return colors[subject] || "bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600";
 }
 
-/* Task 18.4: 薄弱度颜色编码 badge —— >0.7 红 / >0.4 橙 / else 黄 */
-function getWeakness(note: ErrorNoteItem): { value: number; label: string; className: string } {
-  // 派生薄弱度：已消除=0.2；活跃且已答对过=0.5；活跃且未答对=0.8
-  const value =
-    note.status === "eliminated"
-      ? 0.2
-      : note.correctCount >= 1
-        ? 0.5
-        : 0.8;
-  if (value > 0.7) {
-    return {
-      value,
-      label: "高薄弱",
-      className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800",
-    };
-  }
-  if (value > 0.4) {
-    return {
-      value,
-      label: "中薄弱",
-      className: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300 border-orange-200 dark:border-orange-800",
-    };
-  }
-  return {
-    value,
-    label: "已巩固",
-    className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800",
-  };
-}
-
-function truncateText(text: string, maxLen: number): string {
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen) + "...";
-}
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/* ====== Loading Skeleton ====== */
-function LoadingSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 5 }).map((_, i) => (
-        <Card key={i} className="rounded-xl">
-          <CardContent className="p-4">
-            <div className="flex items-start gap-3">
-              <div className="flex-1 min-w-0 space-y-3">
-                <Skeleton className="h-4 w-full rounded-lg bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                <div className="flex flex-wrap gap-2">
-                  <Skeleton className="h-5 w-12 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                  <Skeleton className="h-5 w-16 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                  <Skeleton className="h-5 w-20 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <Skeleton className="h-5 w-10 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                  <Skeleton className="h-5 w-14 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                  <Skeleton className="h-5 w-24 rounded-md bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-                </div>
-              </div>
-              <Skeleton className="h-8 w-16 rounded-lg bg-gradient-to-r from-muted/60 via-muted/30 to-muted/60" />
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
-  );
+function truncate(text: string, max: number): string {
+  return text.length <= max ? text : text.slice(0, max) + "...";
 }
 
 /* ====== Component ====== */
 export default function ErrorNotesPage() {
   const userId = useUserStore((s) => s.id);
-  const initFromAuth = useUserStore((s) => s.initFromAuth);
-  // Task 19.2: 错题"问 AI"跳转携带错题上下文
+  const safeMotion = useSafeMotion();
   const navigate = useNavigate();
 
-  // Filters
-  const [activeSubject, setActiveSubject] = useState("");
-  const [activeStatus, setActiveStatus] = useState<string>("active");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-
-  // Data
-  const [errorNotes, setErrorNotes] = useState<ErrorNoteItem[]>([]);
-  const [total, setTotal] = useState(0);
-  const [totalPages, setTotalPages] = useState(0);
+  const [items, setItems] = useState<ErrorNoteItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Review dialog
-  const [reviewingNote, setReviewingNote] = useState<ErrorNoteItem | null>(null);
-  const [reviewAnswer, setReviewAnswer] = useState("");
-  const [reviewResult, setReviewResult] = useState<{
-    correct: boolean;
-    correctAnswer?: string;
-    explanation?: string;
-    eliminated?: boolean;
-    message?: string;
-  } | null>(null);
-  const [reviewing, setReviewing] = useState(false);
+  // 复习会话状态
+  const [reviewMode, setReviewMode] = useState(false);
+  const [reviewQueue, setReviewQueue] = useState<ErrorNoteItem[]>([]);
+  const [reviewIndex, setReviewIndex] = useState(0);
+  const [showAnswer, setShowAnswer] = useState(false);
+  const [reviewCompleted, setReviewCompleted] = useState(false);
+  const [ratedCount, setRatedCount] = useState(0);
 
-  // Task 11: 错题消灭战弹窗
-  const [battleOpen, setBattleOpen] = useState(false);
+  // 全部错题分组折叠状态
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
 
-  const limit = 20;
-
-  // 首次挂载时同步登录状态
-  useEffect(() => {
-    initFromAuth();
-  }, [initFromAuth]);
-
-  const fetchErrorNotes = useCallback(async () => {
+  const fetchItems = useCallback(async () => {
     if (!userId) {
-      setErrorNotes([]);
+      setItems([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     setError(null);
     try {
-      // 映射 UI 状态到 repository 状态：active -> new/reviewing, eliminated -> mastered
-      const statusFilter = activeStatus === "eliminated" ? "mastered" : activeStatus === "active" ? undefined : undefined;
-      const repoNotes = await repoGetErrorNotes(userId, { subject: activeSubject || undefined, status: statusFilter });
-      // 二次过滤：active 显示 new + reviewing；eliminated 显示 mastered
-      const filtered = activeStatus === "eliminated"
-        ? repoNotes.filter((n) => n.status === "mastered")
-        : activeStatus === "active"
-          ? repoNotes.filter((n) => n.status !== "mastered")
-          : repoNotes;
-
-      // 拉取关联题目（含 content/options/correctAnswer/explanation）
-      const items: ErrorNoteItem[] = await Promise.all(
-        filtered.map(async (n) => {
-          const q = await getQuestionById(n.questionId);
+      const notes = await getErrorNotes(userId);
+      const enriched: ErrorNoteItem[] = await Promise.all(
+        notes.map(async (note) => {
+          const q = await getQuestionById(note.questionId);
           return {
-            id: n.id,
-            question: {
-              id: n.questionId,
-              content: q?.content ?? "",
-              subject: n.subject,
-              type: "choice",
-              difficulty: q?.difficulty ?? 1,
-              options: q?.options ?? [],
-              answer: n.correctAnswer,
-              explanation: q?.explanation ?? null,
-            },
-            wrongAnswer: n.userAnswer,
-            errorType: null,
-            status: n.status === "mastered" ? "eliminated" : "active",
-            correctCount: n.reviewCount,
-            createdAt: n.createdAt,
-            nextReviewAt: null,
+            note,
+            questionContent: q?.content ?? "(题目已删除)",
+            explanation: q?.explanation ?? null,
+            difficulty: q?.difficulty ?? 1,
           };
         })
       );
-
-      setTotal(items.length);
-      setTotalPages(Math.max(1, Math.ceil(items.length / limit)));
-      const start = (currentPage - 1) * limit;
-      setErrorNotes(items.slice(start, start + limit));
+      setItems(enriched);
     } catch (err) {
       setError(err instanceof Error ? err.message : "加载错题列表失败");
-      setErrorNotes([]);
+      setItems([]);
     } finally {
       setLoading(false);
     }
-  }, [userId, activeSubject, activeStatus, currentPage]);
+  }, [userId]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchErrorNotes();
-  }, [fetchErrorNotes]);
+    fetchItems();
+  }, [fetchItems]);
 
-  // Reset page when filters change
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCurrentPage(1);
-  }, [activeSubject, activeStatus]);
+  // 待复习列表：dueDate <= now
+  const dueItems = useMemo(() => {
+    return items.filter((item) => isDue(getSM2State(item.note)));
+  }, [items]);
 
-  // Review handler
-  const handleStartReview = useCallback((note: ErrorNoteItem) => {
-    setReviewingNote(note);
-    setReviewAnswer("");
-    setReviewResult(null);
+  // 按 学科/知识点 分组
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, ErrorNoteItem[]> = {};
+    for (const item of items) {
+      const key = item.note.subject || "未分类";
+      if (!groups[key]) groups[key] = [];
+      groups[key].push(item);
+    }
+    return groups;
+  }, [items]);
+
+  const currentReviewItem = reviewQueue[reviewIndex];
+
+  const handleStartReview = useCallback(() => {
+    if (dueItems.length === 0) return;
+    setReviewQueue(dueItems);
+    setReviewIndex(0);
+    setShowAnswer(false);
+    setReviewCompleted(false);
+    setRatedCount(0);
+    setReviewMode(true);
+  }, [dueItems]);
+
+  const handleReviewSingle = useCallback((item: ErrorNoteItem) => {
+    setReviewQueue([item]);
+    setReviewIndex(0);
+    setShowAnswer(false);
+    setReviewCompleted(false);
+    setRatedCount(0);
+    setReviewMode(true);
   }, []);
 
-  // Task 19.2: 错题"问 AI"——跳转 AI 老师并携带错题上下文
+  const handleExitReview = useCallback(() => {
+    setReviewMode(false);
+    setReviewQueue([]);
+    setReviewIndex(0);
+    setShowAnswer(false);
+    setReviewCompleted(false);
+    setRatedCount(0);
+  }, []);
+
+  const handleRate = useCallback(
+    async (rating: ReviewRating) => {
+      if (!currentReviewItem) return;
+      const state = getSM2State(currentReviewItem.note);
+      const next = calculateNextReview(state, rating);
+      try {
+        await updateSM2State(currentReviewItem.note.id, next);
+      } catch {
+        // 静默失败，UI 仍可继续
+      }
+      setRatedCount((c) => c + 1);
+      if (reviewIndex + 1 < reviewQueue.length) {
+        setReviewIndex((i) => i + 1);
+        setShowAnswer(false);
+      } else {
+        setReviewCompleted(true);
+      }
+      // 后台刷新列表数据
+      fetchItems();
+    },
+    [currentReviewItem, reviewIndex, reviewQueue.length, fetchItems]
+  );
+
+  // Task 19.2: 问 AI 详解——跳转 AI 老师并携带错题上下文
   const handleAskAI = useCallback(
-    (note: ErrorNoteItem) => {
+    (item: ErrorNoteItem) => {
       navigate("/ai-teacher", {
         state: {
-          errorNoteId: note.id,
-          question: note.question.content,
-          userAnswer: note.wrongAnswer ?? "",
-          correctAnswer: note.question.answer,
-          subject: note.question.subject,
+          errorNoteId: item.note.id,
+          question: item.questionContent,
+          userAnswer: item.note.userAnswer ?? "",
+          correctAnswer: item.note.correctAnswer,
+          subject: item.note.subject,
         },
       });
     },
     [navigate]
   );
 
-  const handleSubmitReview = useCallback(async () => {
-    if (!reviewingNote || !reviewAnswer.trim()) return;
-
-    setReviewing(true);
-    try {
-      const userAnswer = reviewAnswer.trim();
-      const correctAnswer = reviewingNote.question.answer.trim();
-      const isCorrect = userAnswer === correctAnswer;
-      // 客户端检测：连续 2 次答对则消除
-      const newCorrectCount = (reviewingNote.correctCount || 0) + (isCorrect ? 1 : 0);
-      const eliminated = isCorrect && newCorrectCount >= 2;
-
-      await repoMarkReviewed(reviewingNote.id, eliminated);
-
-      setReviewResult({
-        correct: isCorrect,
-        correctAnswer: isCorrect ? undefined : correctAnswer,
-        explanation: reviewingNote.question.explanation ?? undefined,
-        eliminated,
-        message: isCorrect
-          ? eliminated
-            ? "回答正确！连续答对 2 次，错题已消除"
-            : "回答正确！再答对 1 次即可消除"
-          : "回答错误，请继续复习",
-      });
-
-      // Refresh the list after review
-      fetchErrorNotes();
-    } catch {
-      setReviewResult({
-        correct: false,
-        message: "提交失败，请重试",
-      });
-    } finally {
-      setReviewing(false);
-    }
-  }, [reviewingNote, reviewAnswer, fetchErrorNotes]);
-
-  const handleCloseReview = useCallback(() => {
-    setReviewingNote(null);
-    setReviewAnswer("");
-    setReviewResult(null);
+  const toggleGroup = useCallback((key: string) => {
+    setCollapsedGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
 
-  // Filter notes by search query (client-side)
-  const filteredNotes = searchQuery.trim()
-    ? errorNotes.filter((note) =>
-        note.question.content.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : errorNotes;
+  /* ====== 复习卡片视图 ====== */
+  if (reviewMode) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8 space-y-4 animate-fadeIn">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={handleExitReview}>
+            <RotateCw className="w-4 h-4 mr-1" />
+            退出
+          </Button>
+          <div className="ml-auto text-sm text-muted-foreground">
+            {reviewCompleted
+              ? `已完成 ${ratedCount} 题`
+              : `${reviewIndex + 1} / ${reviewQueue.length}`}
+          </div>
+        </div>
 
-  const filtersActive =
-    searchQuery.trim() || activeSubject || activeStatus !== "active";
+        {reviewCompleted ? (
+          <motion.div {...safeMotion(fadeUp)}>
+            <Card>
+              <CardContent className="p-8 text-center space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle2 className="w-8 h-8 text-green-600 dark:text-green-400" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">今日复习完成</h2>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    共复习 {ratedCount} 道错题，继续保持节奏！
+                  </p>
+                </div>
+                <Button onClick={handleExitReview}>返回错题本</Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+        ) : currentReviewItem ? (
+          <motion.div key={currentReviewItem.note.id} {...safeMotion(fadeIn)}>
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                {/* 标签 */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge
+                    variant="outline"
+                    className={cn("text-[10px]", getSubjectBadgeClass(currentReviewItem.note.subject))}
+                  >
+                    {currentReviewItem.note.subject}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[10px]">
+                    难度 {currentReviewItem.difficulty}
+                  </Badge>
+                  <Badge variant="outline" className="text-[10px]">
+                    第 {(getSM2State(currentReviewItem.note).repetitions || 0) + 1} 次复习
+                  </Badge>
+                </div>
 
-  const emptyTitle = searchQuery.trim()
-    ? "未找到匹配的错题"
-    : activeStatus === "active"
-      ? "暂无活跃错题，继续保持！"
-      : activeStatus === "eliminated"
-        ? "暂无已消除的错题"
-        : "暂无错题记录";
+                {/* 题目 */}
+                <div className="text-base font-medium leading-relaxed whitespace-pre-wrap">
+                  {currentReviewItem.questionContent}
+                </div>
 
-  const emptyDescription = searchQuery.trim()
-    ? "尝试其他关键词搜索"
-    : activeStatus === "active" || !activeStatus
-      ? "做错的题目会自动收集到这里"
-      : activeStatus === "eliminated"
-        ? "连续答对2次的错题会自动消除"
-        : "做错的题目会自动收集到这里";
+                {/* 显示答案按钮 / 答案内容 */}
+                {!showAnswer ? (
+                  <Button
+                    className="w-full"
+                    variant="outline"
+                    onClick={() => setShowAnswer(true)}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    显示答案
+                  </Button>
+                ) : (
+                  <motion.div {...safeMotion(fadeIn)} className="space-y-3">
+                    {/* 我的错误答案 */}
+                    <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 [&>svg]:text-red-500">
+                      <RotateCw className="h-4 w-4" />
+                      <AlertTitle>我的错误答案</AlertTitle>
+                      <AlertDescription className="font-mono whitespace-pre-wrap">
+                        {currentReviewItem.note.userAnswer || "(空)"}
+                      </AlertDescription>
+                    </Alert>
 
-  /* ====== Render ====== */
+                    {/* 正确答案 */}
+                    <Alert className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 [&>svg]:text-green-500">
+                      <CheckCircle2 className="h-4 w-4" />
+                      <AlertTitle>正确答案</AlertTitle>
+                      <AlertDescription className="font-mono whitespace-pre-wrap">
+                        {currentReviewItem.note.correctAnswer}
+                      </AlertDescription>
+                    </Alert>
+
+                    {/* 解析 */}
+                    {currentReviewItem.explanation && (
+                      <Alert className="border-muted bg-muted/50 text-muted-foreground">
+                        <Lightbulb className="h-4 w-4" />
+                        <AlertTitle>解析</AlertTitle>
+                        <AlertDescription className="leading-relaxed whitespace-pre-wrap">
+                          {currentReviewItem.explanation}
+                        </AlertDescription>
+                      </Alert>
+                    )}
+
+                    {/* 问 AI 详解 */}
+                    <Button
+                      variant="outline"
+                      className="w-full border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+                      onClick={() => handleAskAI(currentReviewItem)}
+                    >
+                      <Bot className="w-4 h-4 mr-2" />
+                      问 AI 详解
+                    </Button>
+                  </motion.div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* 4 个评分按钮——仅在显示答案后出现 */}
+            {showAnswer && (
+              <motion.div {...safeMotion(fadeIn)} className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-4">
+                {(() => {
+                  const state = getSM2State(currentReviewItem.note);
+                  const ratings: { key: ReviewRating; label: string; className: string }[] = [
+                    { key: "again", label: "再来一次", className: "border-red-300 text-red-600 hover:bg-red-50 dark:border-red-700 dark:text-red-400 dark:hover:bg-red-900/20" },
+                    { key: "hard", label: "困难", className: "border-orange-300 text-orange-600 hover:bg-orange-50 dark:border-orange-700 dark:text-orange-400 dark:hover:bg-orange-900/20" },
+                    { key: "good", label: "良好", className: "border-blue-300 text-blue-600 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400 dark:hover:bg-blue-900/20" },
+                    { key: "easy", label: "简单", className: "border-green-300 text-green-600 hover:bg-green-50 dark:border-green-700 dark:text-green-400 dark:hover:bg-green-900/20" },
+                  ];
+                  return ratings.map((r) => {
+                    const next = calculateNextReview(state, r.key);
+                    return (
+                      <Button
+                        key={r.key}
+                        variant="outline"
+                        className={cn("flex flex-col h-auto py-2", r.className)}
+                        onClick={() => handleRate(r.key)}
+                      >
+                        <span className="text-sm font-medium">{r.label}</span>
+                        <span className="text-[10px] opacity-70 mt-0.5">
+                          {formatIntervalDays(next.interval)}
+                        </span>
+                      </Button>
+                    );
+                  });
+                })()}
+              </motion.div>
+            )}
+          </motion.div>
+        ) : null}
+      </div>
+    );
+  }
+
+  /* ====== 主页面 ====== */
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 lg:py-8 space-y-6 animate-fadeIn">
-      {/* ====== Header ====== */}
+      {/* Header */}
       <div className="flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-sm">
           <BookOpen className="w-5 h-5 text-white" />
@@ -392,479 +395,168 @@ export default function ErrorNotesPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">错题本</h1>
           <p className="text-xs text-muted-foreground mt-0.5">
-            复习错题，强化薄弱知识点
+            Anki 式间隔重复，无压力复习
           </p>
         </div>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setBattleOpen(true)}
-            className="text-red-600 dark:text-red-400 border-red-200 dark:border-red-800 hover:bg-red-50 dark:hover:bg-red-900/20"
-          >
-            <Swords className="w-4 h-4 mr-1" />
-            错题消灭战
-          </Button>
-          {total > 0 && (
-            <Badge variant="secondary">
-              共 {total} 题
-            </Badge>
-          )}
-        </div>
+        {items.length > 0 && (
+          <Badge variant="secondary" className="ml-auto">
+            共 {items.length} 题
+          </Badge>
+        )}
       </div>
 
-      {/* ====== Filters ====== */}
-      <Card>
-        <CardContent className="p-4 space-y-4">
-          {/* Subject tabs */}
-          <Tabs
-            value={activeSubject}
-            onValueChange={setActiveSubject}
-            className="w-full"
-          >
-            <TabsList className="w-full justify-start overflow-x-auto">
-              {subjectTabs.map((tab) => (
-                <TabsTrigger key={tab.key} value={tab.key || "all"} className="text-xs">
-                  {tab.label}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </Tabs>
+      {/* 加载中 */}
+      {loading && (
+        <div className="space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-4 space-y-2">
+                <Skeleton className="h-4 w-3/4 rounded-md" />
+                <Skeleton className="h-3 w-1/2 rounded-md" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-          {/* Status filter + Search */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            {/* Status badges */}
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground shrink-0">状态:</span>
-              {statusFilters.map((filter) => (
-                <Badge
-                  key={filter.key}
-                  variant={activeStatus === filter.key ? "default" : "outline"}
-                  className="cursor-pointer select-none transition-colors"
-                  onClick={() => setActiveStatus(filter.key)}
-                >
-                  {filter.label}
-                </Badge>
-              ))}
-            </div>
-
-            {/* Search */}
-            <div className="sm:ml-auto relative w-full sm:w-64">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索错题..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-sm"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* ====== Loading State ====== */}
-      {loading && <LoadingSkeleton />}
-
-      {/* ====== Error State ====== */}
+      {/* 错误提示 */}
       {!loading && error && (
         <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
           <AlertTitle>加载失败</AlertTitle>
           <AlertDescription className="flex flex-col gap-3">
             <p>{error}</p>
-            <Button variant="outline" size="sm" onClick={fetchErrorNotes}>
-              <RotateCw className="h-4 w-4" />
+            <Button variant="outline" size="sm" onClick={fetchItems} className="w-fit">
+              <RotateCw className="h-4 w-4 mr-1" />
               重新加载
             </Button>
           </AlertDescription>
         </Alert>
       )}
 
-      {/* ====== Empty State ====== */}
-      {!loading && !error && filteredNotes.length === 0 && (
+      {/* 空状态 */}
+      {!loading && !error && items.length === 0 && (
         <EmptyState
-          icon={FileQuestion}
-          title={emptyTitle}
-          description={emptyDescription}
-          actionLabel={
-            searchQuery.trim() ? "清除搜索" : filtersActive ? "重置筛选" : undefined
-          }
-          onAction={() => {
-            setSearchQuery("");
-            setActiveSubject("");
-            setActiveStatus("active");
-            setCurrentPage(1);
-          }}
+          icon={BookOpen}
+          title="暂无错题记录"
+          description="做错的题目会自动收集到这里，使用 Anki 式复习巩固"
         />
       )}
 
-      {/* ====== Error Notes List（Task 18.4: stagger + cardHover + 微发光） ====== */}
-      {!loading && !error && filteredNotes.length > 0 && (
-        <motion.div
-          variants={staggerContainerCapped}
-          initial="hidden"
-          animate="show"
-          className="space-y-3"
-        >
-          {filteredNotes.map((note) => {
-            const isQuestionType =
-              note.question.type === "choice" ||
-              !note.question.type;
-            const weakness = getWeakness(note);
-            return (
-              <motion.div key={note.id} variants={listItem} {...cardHover}>
-              <Card
-                className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)] hover:border-primary/30 transition-colors"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start gap-3">
-                    {/* Content area */}
-                    <div className="flex-1 min-w-0">
-                      {/* Question content */}
-                      <p className="text-sm font-medium leading-relaxed mb-2">
-                        {truncateText(note.question.content, 120)}
-                      </p>
-
-                      {/* Options (for choice questions) */}
-                      {isQuestionType &&
-                        note.question.options &&
-                        note.question.options.length > 0 && (
-                          <div className="flex flex-wrap gap-2 mb-2">
-                            {note.question.options.map(
-                              (opt: string, idx: number) => {
-                                const label = String.fromCharCode(65 + idx);
-                                const isWrong =
-                                  note.wrongAnswer?.trim() === label;
-                                const isCorrectAns =
-                                  note.question.answer.trim() === label;
-                                return (
-                                  <span
-                                    key={idx}
-                                    className={cn(
-                                      "text-xs px-2 py-0.5 rounded-md font-mono border",
-                                      isWrong
-                                        ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700 text-red-600 dark:text-red-400"
-                                        : isCorrectAns
-                                          ? "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700 text-green-600 dark:text-green-400"
-                                          : "bg-muted/50 border-border text-muted-foreground"
-                                    )}
-                                  >
-                                    {label}. {opt}
-                                  </span>
-                                );
-                              }
-                            )}
-                          </div>
-                        )}
-
-                      {/* Meta row */}
-                      <div className="flex flex-wrap items-center gap-2 text-xs">
-                        {/* Subject badge */}
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[10px] px-1.5 py-0", getSubjectBadgeClass(note.question.subject))}
-                        >
-                          {note.question.subject}
-                        </Badge>
-
-                        {/* Error type badge */}
-                        {note.errorType && (
-                          <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                            {note.errorType}
-                          </Badge>
-                        )}
-
-                        {/* Task 18.4: 薄弱度颜色编码 badge */}
-                        <Badge
-                          variant="outline"
-                          className={cn("text-[10px] px-1.5 py-0", weakness.className)}
-                        >
-                          {weakness.label}
-                        </Badge>
-
-                        {/* Wrong answer */}
-                        {note.wrongAnswer && (
-                          <span className="text-red-500 dark:text-red-400">
-                            错答: {note.wrongAnswer}
-                          </span>
-                        )}
-
-                        {/* Date */}
-                        <span className="text-muted-foreground ml-auto">
-                          {formatDate(note.createdAt)}
-                        </span>
-
-                        {/* Status badge */}
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "text-[10px] px-1.5 py-0",
-                            note.status === "eliminated"
-                              ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
-                              : "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800"
-                          )}
-                        >
-                          {note.status === "eliminated" ? "已消除" : "活跃"}
-                        </Badge>
-
-                        {/* Correct count */}
-                        {note.status === "active" && note.correctCount > 0 && (
-                          <span className="text-green-500 dark:text-green-400">
-                            已连续答对 {note.correctCount}/2 次
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Action buttons */}
-                    <div className="flex flex-col gap-1.5 shrink-0">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleStartReview(note)}
-                      >
-                        <Play className="w-3.5 h-3.5 mr-1" />
-                        复习
-                      </Button>
-                      {/* Task 19.2: 问 AI 老师，携带错题上下文 */}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleAskAI(note)}
-                        className="border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
-                      >
-                        <Bot className="w-3.5 h-3.5 mr-1" />
-                        问 AI
-                      </Button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-              </motion.div>
-            );
-          })}
+      {/* 待复习卡片 */}
+      {!loading && !error && items.length > 0 && (
+        <motion.div {...safeMotion(fadeUp)}>
+          <Card className="border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+            <CardContent className="p-5 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                <Sparkles className="w-6 h-6 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold">{dueItems.length}</span>
+                  <span className="text-sm text-muted-foreground">题待复习</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {dueItems.length > 0
+                    ? "点击开始 Anki 式复习，按记忆节奏巩固"
+                    : "当前没有到期复习，稍后再来"}
+                </p>
+              </div>
+              <Button onClick={handleStartReview} disabled={dueItems.length === 0}>
+                <Play className="w-4 h-4 mr-1" />
+                开始复习
+              </Button>
+            </CardContent>
+          </Card>
         </motion.div>
       )}
 
-      {/* ====== Pagination ====== */}
-      {!loading && !error && totalPages > 1 && (
-        <div className="flex items-center justify-center gap-2 pt-2">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage <= 1}
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </Button>
-          <span className="text-xs text-muted-foreground px-2">
-            {currentPage} / {totalPages}
-          </span>
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-            disabled={currentPage >= totalPages}
-          >
-            <ChevronRight className="w-4 h-4" />
-          </Button>
-        </div>
-      )}
-
-      {/* ====== Review Dialog ====== */}
-      <Dialog open={!!reviewingNote} onOpenChange={(open) => !open && handleCloseReview()}>
-        <DialogContent className="max-w-lg max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>复习错题</DialogTitle>
-            <DialogDescription>重新作答以检验掌握程度</DialogDescription>
-          </DialogHeader>
-
-          <ScrollArea className="max-h-[55vh] pr-1">
-            <div className="space-y-4 pb-2">
-              {/* Question card */}
-              <Card className="bg-muted/30 border-muted">
-                <CardContent className="p-4">
-                  <Badge
-                    variant="outline"
-                    className={cn(getSubjectBadgeClass(reviewingNote?.question.subject || ""))}
+      {/* 全部错题（按学科分组，可折叠） */}
+      {!loading && !error && items.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-sm font-semibold text-muted-foreground px-1">
+            全部错题（按学科分组）
+          </h2>
+          {Object.entries(groupedItems).map(([subject, groupItems]) => {
+            const collapsed = collapsedGroups[subject] ?? false;
+            const dueInGroup = groupItems.filter((i) => isDue(getSM2State(i.note))).length;
+            return (
+              <Card key={subject}>
+                <CardContent className="p-0">
+                  {/* 分组头 */}
+                  <button
+                    type="button"
+                    onClick={() => toggleGroup(subject)}
+                    className="w-full flex items-center gap-3 p-4 text-left hover:bg-accent/50 transition-colors"
                   >
-                    {reviewingNote?.question.subject}
-                  </Badge>
-                  <p className="text-base font-medium leading-relaxed mt-2">
-                    {reviewingNote?.question.content}
-                  </p>
+                    {collapsed ? (
+                      <ChevronRight className="w-4 h-4 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                    )}
+                    <Badge
+                      variant="outline"
+                      className={cn("text-xs", getSubjectBadgeClass(subject))}
+                    >
+                      {subject}
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {groupItems.length} 题
+                    </span>
+                    {dueInGroup > 0 && (
+                      <Badge variant="secondary" className="text-[10px]">
+                        {dueInGroup} 待复习
+                      </Badge>
+                    )}
+                  </button>
+                  {/* 分组列表 */}
+                  {!collapsed && (
+                    <motion.div {...safeMotion(fadeIn)} className="divide-y divide-border">
+                      {groupItems.map((item) => {
+                        const state = getSM2State(item.note);
+                        return (
+                          <div
+                            key={item.note.id}
+                            className="flex items-start gap-3 p-4 hover:bg-accent/30 transition-colors"
+                          >
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <p className="text-sm font-medium leading-relaxed">
+                                {truncate(item.questionContent, 100)}
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  添加 {formatTimestamp(new Date(item.note.createdAt).getTime())}
+                                </span>
+                                <span>·</span>
+                                <span>{formatDueLabel(state)}</span>
+                                {item.note.repetitions && item.note.repetitions > 0 ? (
+                                  <>
+                                    <span>·</span>
+                                    <span>已复习 {item.note.repetitions} 次</span>
+                                  </>
+                                ) : null}
+                              </div>
+                            </div>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleReviewSingle(item)}
+                              disabled={!isDue(state)}
+                            >
+                              <Play className="w-3.5 h-3.5 mr-1" />
+                              复习
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </motion.div>
+                  )}
                 </CardContent>
               </Card>
-
-              {/* Original wrong answer */}
-              {reviewingNote?.wrongAnswer && (
-                <Alert className="border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 [&>svg]:text-red-500">
-                  <X className="h-4 w-4" />
-                  <AlertTitle>原始错答</AlertTitle>
-                  <AlertDescription className="font-mono">
-                    {reviewingNote.wrongAnswer}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {/* Correct answer (shown after review) */}
-              {reviewResult?.correctAnswer && (
-                <Alert className="border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 [&>svg]:text-green-500">
-                  <Check className="h-4 w-4" />
-                  <AlertTitle>正确答案</AlertTitle>
-                  <AlertDescription className="font-mono">
-                    {reviewResult.correctAnswer}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              <Separator />
-
-              {/* Re-answer section */}
-              <div className="space-y-3">
-                <p className="text-sm font-medium">重新作答</p>
-
-                {/* Options for choice questions */}
-                {(reviewingNote?.question.type === "choice" ||
-                  !reviewingNote?.question.type) &&
-                  reviewingNote?.question.options &&
-                  reviewingNote.question.options.length > 0 && (
-                    <RadioGroup
-                      value={reviewAnswer}
-                      onValueChange={setReviewAnswer}
-                      disabled={reviewing || !!reviewResult}
-                      className="space-y-2"
-                    >
-                      {reviewingNote.question.options.map(
-                        (opt: string, idx: number) => {
-                          const label = String.fromCharCode(65 + idx);
-                          const isCorrectAns =
-                            reviewingNote.question.answer.trim() === label;
-                          const isUserWrong =
-                            reviewingNote.wrongAnswer?.trim() === label;
-
-                          return (
-                            <label
-                              key={idx}
-                              className={cn(
-                                "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
-                                reviewResult
-                                  ? isCorrectAns
-                                    ? "bg-green-50 dark:bg-green-900/20 border-green-300 dark:border-green-700"
-                                    : isUserWrong
-                                      ? "bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700"
-                                      : "border-border"
-                                  : reviewAnswer === label
-                                    ? "bg-primary/5 border-primary/30"
-                                    : "border-border hover:border-primary/20"
-                              )}
-                            >
-                              <RadioGroupItem value={label} id={`option-${idx}`} />
-                              <Label
-                                htmlFor={`option-${idx}`}
-                                className="flex-1 cursor-pointer text-sm"
-                              >
-                                <span className="font-mono font-bold mr-1">{label}.</span>
-                                {opt}
-                              </Label>
-                            </label>
-                          );
-                        }
-                      )}
-                    </RadioGroup>
-                  )}
-
-                {/* Text input for non-choice questions */}
-                {reviewingNote?.question.type &&
-                  reviewingNote.question.type !== "choice" && (
-                    <div>
-                      <Label className="text-xs font-medium text-muted-foreground mb-1">
-                        输入你的答案
-                      </Label>
-                      <Input
-                        type="text"
-                        value={reviewAnswer}
-                        onChange={(e) => setReviewAnswer(e.target.value)}
-                        disabled={reviewing || !!reviewResult}
-                        placeholder="请输入答案..."
-                        className="mt-1"
-                      />
-                    </div>
-                  )}
-              </div>
-
-              {/* Result feedback */}
-              {reviewResult && (
-                <Alert
-                  className={cn(
-                    reviewResult.correct
-                      ? "border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 [&>svg]:text-green-500"
-                      : "border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 [&>svg]:text-red-500"
-                  )}
-                >
-                  {reviewResult.correct ? (
-                    <CheckCircle className="h-4 w-4" />
-                  ) : (
-                    <XCircle className="h-4 w-4" />
-                  )}
-                  <AlertTitle>{reviewResult.message}</AlertTitle>
-                  {reviewResult.eliminated && (
-                    <AlertDescription className="text-green-600 dark:text-green-400 font-medium">
-                      这道错题已从活跃列表中消除！
-                    </AlertDescription>
-                  )}
-                </Alert>
-              )}
-
-              {/* Explanation callout */}
-              {reviewResult?.explanation && (
-                <Alert className="border-muted bg-muted/50 text-muted-foreground">
-                  <Lightbulb className="h-4 w-4" />
-                  <AlertTitle>解析</AlertTitle>
-                  <AlertDescription className="leading-relaxed">
-                    {reviewResult.explanation}
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
-          </ScrollArea>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={handleCloseReview}>
-              {reviewResult ? "关闭" : "取消"}
-            </Button>
-
-            {!reviewResult && (
-              <Button
-                onClick={handleSubmitReview}
-                disabled={!reviewAnswer.trim() || reviewing}
-              >
-                {reviewing ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    提交中...
-                  </>
-                ) : (
-                  "提交答案"
-                )}
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* ====== Task 11: 错题消灭战弹窗 ====== */}
-      <ErrorEliminationBattle
-        open={battleOpen}
-        onClose={() => setBattleOpen(false)}
-        subject={activeSubject || undefined}
-        onEliminated={() => {
-          // 消灭战结束后刷新错题列表（可能有错题被标记为 mastered）
-          fetchErrorNotes();
-        }}
-      />
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

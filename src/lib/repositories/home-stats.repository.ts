@@ -2,17 +2,18 @@
  * 首页聚合统计 repository
  *
  * 原 /api/user/home-stats 路由的服务端聚合逻辑，v3.0.0 静态化后改为客户端聚合。
- * 从 gamification / practice / error-notes / knowledge repository 拉取数据并组装。
+ * 从 practice / error-notes / knowledge repository 拉取数据并组装。
+ * Polaris V2: gamification.repository 已移除，xp/level/streak 等字段返回默认值。
  */
 
-import { getUserStats } from "./gamification.repository";
+import { getAll } from "@/lib/db/indexeddb";
+import { STORES } from "@/lib/db/schema";
 import {
   getUserPracticeRecords,
   type PracticeRecord,
 } from "./practice.repository";
 import { getErrorNotes } from "./error-notes.repository";
-import { getUserBadges } from "./gamification.repository";
-import { getUserMastery } from "./knowledge.repository";
+import { getUserMastery, type KnowledgePoint } from "./knowledge.repository";
 import type { User } from "./user.repository";
 
 export interface RecentRecord {
@@ -38,6 +39,12 @@ export interface HomeStats {
   todayXP: number;
   totalXP: number;
   recentRecords: RecentRecord[];
+  knowledgeProgress: {
+    mastered: number;
+    total: number;
+    percentage: number;
+  };
+  errorNoteCount: number;
 }
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -62,7 +69,7 @@ export async function getHomeStats(
       level: 1,
       streak: 0,
       maxStreak: 0,
-      learningMode: "ELEMENTARY",
+      learningMode: "YOUTH",
       todayDuration: 0,
       todayQuestions: 0,
       todayCorrect: 0,
@@ -70,23 +77,37 @@ export async function getHomeStats(
       todayXP: 0,
       totalXP: 0,
       recentRecords: [],
+      knowledgeProgress: { mastered: 0, total: 0, percentage: 0 },
+      errorNoteCount: 0,
     };
   }
 
   const userId = user.id;
 
-  const [stats, records, errorNotes, badges, mastery] = await Promise.all([
-    getUserStats(userId),
-    getUserPracticeRecords(userId),
-    getErrorNotes(userId),
-    getUserBadges(userId),
-    getUserMastery(userId),
-  ]);
+  const [records, errorNotes, mastery, allKnowledgePoints] =
+    await Promise.all([
+      getUserPracticeRecords(userId),
+      getErrorNotes(userId),
+      getUserMastery(userId),
+      getAll<KnowledgePoint>(STORES.KNOWLEDGE_POINTS),
+    ]);
 
-  const xp = stats?.xp ?? 0;
-  const level = stats?.level ?? 1;
-  const streak = stats?.currentStreak ?? 0;
-  const maxStreak = stats?.longestStreak ?? 0;
+  const masteredCount = mastery.filter((m) => m.mastery >= 70).length;
+  const knowledgeProgress = {
+    mastered: masteredCount,
+    total: allKnowledgePoints.length,
+    percentage:
+      allKnowledgePoints.length > 0
+        ? Math.round((masteredCount / allKnowledgePoints.length) * 100)
+        : 0,
+  };
+  const errorNoteCount = errorNotes.length;
+
+  // Polaris V2: gamification.repository 已移除，以下字段返回默认值
+  const xp = 0;
+  const level = 1;
+  const streak = 0;
+  const maxStreak = 0;
 
   // 今日记录
   const now = new Date();
@@ -128,12 +149,6 @@ export async function getHomeStats(
     createdAt: r.createdAt,
   }));
 
-  // 引用 errorNotes/badges/mastery 仅用于触发潜在 side-effect（实际未消费）
-  // 避免被 tree-shake 后期变化破坏；当前 home 页只需要上述字段
-  void errorNotes;
-  void badges;
-  void mastery;
-
   return {
     xp,
     level,
@@ -147,6 +162,8 @@ export async function getHomeStats(
     todayXP,
     totalXP: xp,
     recentRecords,
+    knowledgeProgress,
+    errorNoteCount,
   };
 }
 

@@ -17,9 +17,8 @@ import {
   Save,
   Loader2,
   AlertCircle,
-  Gem,
 } from "lucide-react";
-import { staggerContainerCapped, listItem, cardHover, buttonTap } from "@/lib/motion";
+import { staggerContainer, listItem } from "@/lib/motion";
 import { useCountUp } from "@/hooks/useCountUp";
 import PolarisMascot from "@/components/common/PolarisMascot";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -44,11 +43,9 @@ import { Separator } from "@/components/ui/separator";
 import { useUserStore } from "@/stores/useUserStore";
 import { getCurrentUser } from "@/lib/services/auth-service";
 import { updateUser as repoUpdateUser } from "@/lib/repositories/user.repository";
-import { getUserStats, getUserBadges } from "@/lib/repositories/gamification.repository";
 import { getConversations } from "@/lib/repositories/conversation.repository";
 import { getErrorNotes } from "@/lib/repositories/error-notes.repository";
 import { getUserPracticeRecords } from "@/lib/repositories/practice.repository";
-import { getBalance, type CurrencyBalance } from "@/lib/repositories/currency.repository";
 
 /* ---------- helpers ---------- */
 function xpForLevel(lvl: number) {
@@ -125,8 +122,6 @@ export default function ProfilePage() {
   const [profileData, setProfileData] = useState<ProfileData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  /* ---------- Task 18.1: 双货币余额 ---------- */
-  const [balance, setBalance] = useState<CurrencyBalance>({ starlight: 0, crystal: 0 });
 
   // Edit form state
   const [formName, setFormName] = useState(name || "");
@@ -148,20 +143,17 @@ export default function ProfilePage() {
         throw new Error("未登录");
       }
 
-      const [stats, badges, convs, errorNotes, records, bal] = await Promise.all([
-        getUserStats(user.id),
-        getUserBadges(user.id),
+      const [convs, errorNotes, records] = await Promise.all([
         getConversations(user.id),
         getErrorNotes(user.id),
         getUserPracticeRecords(user.id),
-        getBalance(user.id),
       ]);
-      setBalance(bal);
 
-      const userXp = stats?.xp ?? 0;
-      const userLevel = stats?.level ?? 1;
-      const userStreak = stats?.currentStreak ?? 0;
-      const maxStreak = stats?.longestStreak ?? userStreak;
+      // Polaris V2: gamification.repository 已移除，使用 userStore 中的值
+      const userXp = xp;
+      const userLevel = level;
+      const userStreak = streak;
+      const maxStreak = streak;
 
       const today = new Date().toISOString().slice(0, 10);
       const todayRecords = records.filter((r) => r.createdAt.slice(0, 10) === today);
@@ -200,15 +192,7 @@ export default function ProfilePage() {
           xpEarned: todayXp,
           studyDuration: 0,
         },
-        badges: badges.map((b) => ({
-          id: b.badgeId,
-          name: b.badgeId,
-          description: "",
-          icon: "🏆",
-          category: "",
-          rarity: "common",
-          earnedAt: b.awardedAt,
-        })),
+        badges: [],
         stats: {
           totalConversations: convs.length,
           totalErrorNotes: errorNotes.length,
@@ -235,10 +219,9 @@ export default function ProfilePage() {
     } finally {
       setLoading(false);
     }
-  }, [setUser, initFromAuth]);
+  }, [setUser, initFromAuth, level, streak, xp]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchProfile();
   }, [fetchProfile]);
 
@@ -260,8 +243,6 @@ export default function ProfilePage() {
 
   /* ---------- Task 18.1: 数字 count-up ---------- */
   const displayXP = useCountUp(currentXP, 0.8);
-  const displayStarlight = useCountUp(balance.starlight, 0.8);
-  const displayCrystal = useCountUp(balance.crystal, 0.8);
   const displayCorrect = useCountUp(profileData?.todayStats?.questionsCorrect ?? 0, 0.8);
   const displayStreak = useCountUp(currentStreak, 0.8);
   const displayNotes = useCountUp(profileData?.stats?.totalNotes ?? 0, 0.8);
@@ -338,7 +319,7 @@ export default function ProfilePage() {
         <div className="absolute bottom-0 left-1/3 w-24 h-24 bg-white/5 rounded-full translate-y-1/2" />
         {/* Task 18.1: PolarisMascot 装饰 */}
         <div className="absolute top-3 right-3 z-20 opacity-90 hidden sm:block">
-          <PolarisMascot mood="happy" size={56} />
+          <PolarisMascot mood="default" size={56} />
         </div>
         <CardContent className="relative z-10 p-6 lg:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center gap-4">
@@ -401,50 +382,15 @@ export default function ProfilePage() {
         </CardContent>
       </Card>
 
-      {/* ====== Task 18.1: 双货币余额展示 ====== */}
-      <motion.div
-        variants={staggerContainerCapped}
-        initial="hidden"
-        animate="show"
-        className="grid grid-cols-2 gap-3"
-      >
-        <motion.div variants={listItem} {...cardHover}>
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)] overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-300 to-orange-500 flex items-center justify-center shrink-0">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold tabular-nums">{displayStarlight}</p>
-                <p className="text-[10px] text-muted-foreground">星光 Starlight</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-        <motion.div variants={listItem} {...cardHover}>
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)] overflow-hidden">
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-300 to-indigo-500 flex items-center justify-center shrink-0">
-                <Gem className="w-5 h-5 text-white" />
-              </div>
-              <div className="min-w-0">
-                <p className="text-lg font-bold tabular-nums">{displayCrystal}</p>
-                <p className="text-[10px] text-muted-foreground">晶核 Crystal</p>
-              </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </motion.div>
-
       {/* ====== Stats Grid ====== */}
       <motion.div
-        variants={staggerContainerCapped}
+        variants={staggerContainer}
         initial="hidden"
         animate="show"
         className="grid grid-cols-2 lg:grid-cols-4 gap-3"
       >
         {stats.map((s) => (
-          <motion.div key={s.label} variants={listItem} {...cardHover}>
+          <motion.div key={s.label} variants={listItem} className="transition-colors">
             <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
               <CardContent className="p-4 flex flex-col items-center text-center gap-1">
                 <s.icon className={`w-5 h-5 ${s.color}`} />
@@ -538,7 +484,7 @@ export default function ProfilePage() {
 
           <Separator />
 
-          <motion.div {...buttonTap} className="w-full sm:w-auto">
+          <motion.div whileTap={{ scale: 0.97 }} className="w-full sm:w-auto">
             <Button onClick={handleSave} disabled={saving} className="w-full sm:w-auto">
               {saving ? (
                 <>
@@ -571,7 +517,7 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent>
           <motion.div
-            variants={staggerContainerCapped}
+            variants={staggerContainer}
             initial="hidden"
             animate="show"
             className="grid grid-cols-4 gap-3"
@@ -580,8 +526,7 @@ export default function ProfilePage() {
               <motion.div
                 key={badge.name}
                 variants={listItem}
-                {...cardHover}
-                className={`flex flex-col items-center text-center gap-2 p-3 rounded-xl border transition-all ${
+              className={`flex flex-col items-center text-center gap-2 p-3 rounded-xl border transition-all ${
                   badge.earned
                     ? "bg-muted/50 border-border"
                     : "opacity-50 grayscale"

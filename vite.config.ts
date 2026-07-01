@@ -4,6 +4,7 @@ import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -12,6 +13,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
+    rollupOptions: {
+      external: [
+        '@capacitor/preferences',
+        '@capacitor/clipboard',
+        '@capacitor/safe-area',
+      ],
+    },
   },
   server: {
     port: 5173,

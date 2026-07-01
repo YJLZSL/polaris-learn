@@ -53,11 +53,16 @@ next-env.d.ts
 
 # electron
 /electron-dist/
+/electron-dist-v*/
 /out/
 
 # capacitor
-/android/
 /ios/
+/android/app/build/
+/android/.gradle/
+/android/build/
+/android/app/release/
+/android/local.properties
 
 # build artifacts (release outputs at repo root)
 /polaris-learn-*.apk

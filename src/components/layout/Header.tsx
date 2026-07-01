@@ -28,7 +28,6 @@ const PATH_LABELS: Record<string, string> = {
   "/ai-tutor": "AI老师",
   "/courses": "课程",
   "/progress": "学习报告",
-  "/leaderboard": "排行榜",
   "/knowledge-graph": "知识图谱",
   "/error-notes": "错题本",
   "/photo-search": "拍题",

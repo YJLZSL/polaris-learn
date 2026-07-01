@@ -1,234 +1,151 @@
 # Polaris 北极星学习平台
 
-> 纯前端个人 AI 学习平台 | AGPL-3.0 | v5.0.0
+> 安静、可信、可随身携带的自学伙伴 | AGPL-3.0 | **v2.0.0 自学本质回归**
 
-一个面向全学段学习者的纯前端个人 AI 学习平台。**v5.0.0 在 v4.0.0 纯 SPA 架构基础上完成体验重构：全新学段自适应设计系统、苏格拉底式 AI 老师（6 阶段语义化 + 流式响应 + 语音交互）、知识星图（力导向图 + 裂纹衰减）、错题消灭战、学习伙伴养成、双货币游戏化、每日任务、专注心流护盾、Bento Grid 首页，全部数据本地持久化（IndexedDB），LLM 调用由客户端直连，无任何服务端。**
+Polaris 是一款面向全学段学习者的纯前端个人 AI 自学平台。V2.0 抛弃商业平台范式（双货币、排行榜、每日任务、连胜、消灭战、学段自适应 token），回归"一个安静、可信、可随身携带的自学伙伴"本质。所有数据本地持久化（IndexedDB），LLM 由客户端直连，平台本身不托管任何用户数据与 API Key。
 
-## What's New in v5.0.0
+## V2.0 双平台定位
 
-- **学段自适应设计系统 2.0**：5 学段重命名（幼儿园 / 小学 / 初中 / 高中 / 上班族），通过 `data-mode` 切换圆角、字号、游戏化强度；暗色模式默认开启，北极星主题渐变流光 + 星点纹理
-- **AI 老师全链升级**：6 阶段苏格拉底语义化（diagnostic → clarification → hypothesis → reasoning → verification → reflection），SSE 流式逐字渲染，weakPoints 薄弱点注入，TTS 朗读 + STT 语音输入，模型配置向导 + 多配置切换 + 连接测试
-- **知识星图**：自研轻量力导向图替代扁平节点图，亮星/星云遮蔽/红光脉冲三态编码，缩放拖拽，裂纹衰减机制（超期未复习自动回退）
-- **错题消灭战**：60 秒心流倒计时，按薄弱度排序取题，连续答对点亮红→绿节点，结算页星光奖励 count-up
-- **学习伙伴养成**：Polaris 小灵 4 形态（蛋/幼体/成体/觉醒），按累计学习时长进化，情绪规则触发，首页右下角常驻
-- **双货币 + 连胜容错**：星光（日常）+ 晶核（里程碑），冻结卡断签保护，7/30/100 天里程碑保护盾，历史最高纪录保留
-- **每日任务系统**：每日首次打开生成 3 个任务，全部完成触发宝箱动画 + 徽章碎片掉落
-- **专注心流护盾**：25 分钟番茄钟 + 心流能量条，深色聚焦态，通知延后，结束集中结算（XP × 1.5 加成）
-- **Bento Grid 首页**：6-8 块大小不一卡片网格布局，stagger 入场 + spring hover 升起
-- **跨功能数据流打通**：练习/错题 → AI 老师、AI 老师 → 知识图谱掌握度、各模块 → 每日任务进度上报
+| 平台 | 形态 | 核心体验 |
+|------|------|---------|
+| **PC Windows** | Electron 安装包（NSIS x64） | 大屏安静桌面、键鼠高效操作、淡入转场 |
+| **Android** | Capacitor 8 原生 APK（API 28+） | 安全区适配、原生 TTS、离线首屏 |
+| **Web（降级预览）** | 静态 PWA | 仅用于开发与快速预览，不作为正式发行目标 |
 
-完整变更记录见 [CHANGELOG.md](CHANGELOG.md)。
+## 核心功能
 
-## 架构概览
-
-| 维度 | v5.0.0 Vite SPA 架构 |
+| 模块 | 说明 |
 |------|------|
-| **应用形态** | 纯前端 SPA（Vite 7 + React 19），无后端服务器 |
-| **路由** | React Router 7（HashRouter），客户端路由 |
-| **数据存储** | IndexedDB（浏览器原生，DB_VERSION=3，14 个 store），无数据库依赖 |
-| **AI 服务** | 客户端直连 LLM API（DeepSeek/Qwen/OpenAI/Ollama），SSE 流式，API Key 加密存 localStorage |
-| **认证** | Web Crypto API PBKDF2 本地认证 |
-| **跨平台** | PC（Electron）+ Android（Capacitor）+ Web（PWA），三端共用同一份 `dist/` 产物 |
-| **构建产物** | `dist/` 静态目录，纯静态文件 |
+| **安静桌面首页** | 问候语 + 今日学习时长 + 3 入口（继续学习 / 问 AI 老师 / 复习错题）+ 小灵形象 + 鼓励语，无 Dashboard 卡片堆砌 |
+| **AI 老师对话** | 苏格拉底式引导 system prompt、SSE 流式逐字、Markdown / LaTeX / 代码块渲染、朗读 / 复制 / 重新生成 / 清空，无阶段仪表盘 |
+| **知识地图** | 自绘 SVG 静态树/网图（≤80 节点、最多 2 层），3 态视觉（已掌握 / 学习中 / 薄弱），点击节点弹最近 5 道错题 + AI 入口 |
+| **Anki 错题复习** | 复习卡片正反面 + SM-2 间隔重复算法，操作：再来一次 / 困难（1 天）/ 良好（3 天）/ 简单（7 天），无时间压力 |
+| **按知识点练习** | 基于知识树选题，去闯关化、无积分奖励，专注答题与解析本身 |
+| **个人学习数据** | 本周学习时长趋势（折线）、本月知识点掌握增长（柱状）、错题复习完成率（环形），仅个人视角无竞争 |
+| **学习伙伴小灵** | 单一静态形态 + 3 态情绪（默认 / 专注 / 困意），仅出现在首页、AI 老师页、空状态 |
+| **极简专注计时器** | 25/5 倒计时 + 静默，无 XP 加成、无能量条、无通知屏蔽 |
+| **离线优先** | 首屏零外部网络依赖，字体与关键资源全部本地随包分发 |
 
-## 功能特性
+## 安装说明
 
-| 模块 | 功能 |
-|------|------|
-| 学段自适应 | 5 学段（幼儿园/小学/初中/高中/上班族），圆角/字号/游戏化强度随 `data-mode` 全局切换 |
-| AI 老师 | 苏格拉底式 6 阶段语义化辅导，SSE 流式逐字渲染，weakPoints 注入，语音朗读 + 语音输入，停止生成，思考过程折叠区，模型配置向导 |
-| 知识星图 | 自研力导向图可视化，亮星/星云/红光三态，缩放拖拽，裂纹衰减机制，点击亮星复习/红星进入消灭战 |
-| 错题消灭战 | 60 秒心流倒计时，按薄弱度排序，连续答对点亮节点，结算页星光奖励 |
-| 错题本 | 自动收录错题，消灭战入口，"问 AI 老师"一键跳转携带上下文 |
-| 练习题库 | 多学科题库，按学段过滤学科与难度（5 档），闯关结构（5-8 题/关 + 结算页），专注模式入口 |
-| 学习伙伴 | Polaris 小灵 4 形态养成，按累计学习时长进化，情绪规则，首页常驻 |
-| 双货币 | 星光（日常产出）+ 晶核（里程碑产出），冻结卡断签容错，保护盾里程碑奖励 |
-| 每日任务 | 每日生成 3 个任务，完成 count-up 动画，全完成触发宝箱 + 徽章碎片 |
-| 专注护盾 | 25 分钟番茄钟 + 心流能量条，深色聚焦态，通知延后，XP × 1.5 加成结算 |
-| 学习报告 | 30 天学习趋势、学科分布、知识点掌握度分析（幼儿园模式简化） |
-| 游戏化 | XP / 等级 / 徽章 / 连胜 / 排行榜（5-15 人小队列 + 个人进步榜，可隐藏） |
-| 首页 | Bento Grid 布局，stagger 入场 + spring hover |
-| 课程 | 课程内容浏览与学习（静态示例课程），"问 AI 老师"入口 |
-| 跨端 | PC（Electron）+ Android（Capacitor）+ Web（PWA）三端统一 |
+### Windows 安装包
 
-## 学段说明
+1. 从 [GitHub Releases](https://github.com/YJLZSL/polaris-learn/releases) 下载 `Polaris 北极星学习平台 Setup.exe`。
+2. 双击运行安装程序，按向导完成安装。
+3. 首次启动后注册账号，进入 **设置 → 模型配置** 填入你的 LLM API Key。
 
-平台内置 5 个学段，针对不同年龄段学习者的认知特点差异化适配。v5.0 学段 ID 重命名（旧值 PRIMARY/MIDDLE_HIGH/COLLEGE 自动迁移，历史用户无缝升级）：
+> Windows 7/8 不支持；推荐 Windows 10/11 64 位。
 
-| 学段 | ID | 适用人群 | UI 风格 | 游戏化强度 |
-|------|-----|---------|---------|-----------|
-| 幼儿园 | KINDERGARTEN | 学龄前儿童 | 大圆角、大字号、高插画密度 | 1.5（最强） |
-| 小学 | ELEMENTARY | 小学生 | 标准布局、亲切引导 | 1.0 |
-| 初中 | MIDDLE | 初中生 | 标准布局、学术严谨 | 0.8 |
-| 高中 | HIGH | 高中生 | 标准布局、备考提升 | 0.7 |
-| 上班族 | PROFESSIONAL | 职场人士 | 紧凑布局、碎片化微学习 | 0.5 |
+### Android APK
 
-学段可在注册流程选择，也可登录后通过首页 Banner 徽章或设置页随时切换，所有相关页面通过 `data-mode` 自动同步。
+1. 从 Releases 下载 `app-release.apk`（Release 签名版）或 CI 构建产物。
+2. 在 Android 设备上允许"安装未知来源应用"。
+3. 安装完成后首次打开，按引导完成学段选择与模型配置。
 
-## 自带 LLM API Key
-
-本平台**不提供**大模型服务，也**不代管** API Key。每位用户需在登录后前往 **设置** 页面填入自己的大模型 API Key（如 DeepSeek、通义千问、OpenAI、Ollama 等）。
-
-API Key 加密保存在浏览器 `localStorage`，**不会上传到任何服务器**（应用本身纯前端，没有服务器）。客户端直接通过 `fetch` 调用对应 LLM 供应商 API。
-
-- 推荐使用 DeepSeek，性价比高
-- 本地部署可使用 Ollama，零成本（向导支持自动探测已装模型）
-- 支持多配置切换：`llm_config_profiles` 数组 + `llm_config_active_id`
-- 支持 Provider：DeepSeek / Qwen / OpenAI / Ollama / Custom（兼容 OpenAI 协议）
-- API Key 加密：Electron 用 `safeStorage`，Capacitor 用 Preferences + AES，Web 用 `btoa` + 指纹混淆
+> 最低支持 Android 9（API 28），推荐 Android 12+（API 31+）。
 
 ## 技术栈
 
-| 层级 | 技术 |
-|------|------|
-| 构建框架 | Vite 7 |
-| 前端框架 | React 19 + TypeScript 5（严格模式，零类型错误） |
-| 路由 | React Router 7（HashRouter） |
-| 样式 | Tailwind CSS 4 + shadcn/ui（Radix UI） |
-| 动画 | Framer Motion 12（统一 EASE_OUT_EXPO，`useSafeMotion` 包裹无障碍降级） |
-| 状态管理 | Zustand + React Context（SessionProvider） |
-| 本地存储 | IndexedDB（通过 `idb` 库封装，DB_VERSION=3） |
-| AI 服务 | 客户端直连（DeepSeek / Qwen / OpenAI / Ollama，SSE 流式，用户自带 Key） |
-| 语音 | Web Speech API（TTS/STT）+ Capacitor TextToSpeech（移动端 fallback） |
-| 认证 | Web Crypto API（PBKDF2 哈希 + crypto.randomUUID 会话 token） |
-| 字体 | Inter Variable + 思源黑体 / PingFang SC（中文优先） |
-| 桌面端 | Electron 42 + electron-serve + electron-builder + electron-updater |
-| 移动端 | Capacitor 8（Android APK） |
-| PWA | manifest.json + Service Worker（Capacitor 原生环境跳过） |
+```
+Vite 7 · React 19 · TypeScript 5 · Tailwind CSS 4 · shadcn/ui · Radix UI
+Framer Motion 12（仅 ease-out，150ms/300ms 两档）· Zustand · React Context
+IndexedDB（via idb，schema V4）· Web Crypto API（PBKDF2 本地认证）
+Electron 42（safeStorage + asar 解压调试）· Capacitor 8（仅 Android）
+```
+
+- **平台抽象层**：`src/lib/platform/` 统一封装 `secureStorage`、`tts`、`clipboard`、`safeArea`、`update`、`haptic`，UI 层禁止直接调用 `window.electronAPI` 或 `window.Capacitor`。
+- **离线首屏**：`index.html` 移除所有外部 CDN；字体本地托管；Capacitor 原生环境不注册 Service Worker。
+- **安全存储**：Electron 用 `safeStorage`，Android 用 Keystore + AES-GCM，Web 预览用 `idb-keyval` + 内存混淆。
+- **本地数据架构**：IndexedDB 为核心存储（schema V4，已删除 5 个商业 store）；localStorage 仅保存会话 token、引导标记等轻量状态。
+- **启动兜底**：`SessionProvider` 5 秒超时降级为 Guest 模式；`ErrorBoundary` 全局捕获，提供"重启应用"与"清除缓存"。
 
 ## 快速开始
 
 ```bash
-git clone https://github.com/YJLZSL/polaris-learn.git
-cd polaris-learn
+# 1. 安装依赖
 npm install
+
+# 2. 启动 Vite 开发服务器（http://localhost:5173）
 npm run dev
+
+# 3. 类型检查（必须零错误）
+npx tsc --noEmit
 ```
 
-访问 http://localhost:5173 ，注册账号后前往 **设置** 页面配置你的 LLM API Key 即可开始使用。
+## 开发模式说明（三态）
 
-> 无需配置 `.env` 文件、无需运行数据库迁移、无需启动任何后端服务。首次访问时应用会自动向 IndexedDB 注入种子数据（12 徽章 + 39 知识点 + 60 道示例题目）。
+Polaris 通过 `POLARIS_DEV_MODE` 环境变量区分三种 Electron 运行态，并对 `userData` 路径分桶以避免数据污染：
 
-## 开发指南
+| 模式 | 环境变量 | 加载源 | userData 后缀 | 用途 |
+|------|---------|--------|--------------|------|
+| **vite** | `POLARIS_DEV_MODE=vite` | `http://localhost:5173` | `-dev` | 日常开发，热更新 |
+| **unpacked** | `POLARIS_DEV_MODE=unpacked` | `app/dist/index.html`（解压目录） | `-staging` | 调试生产产物，无需重新打包 asar |
+| **packaged** | `POLARIS_DEV_MODE=packaged`（默认） | `app.asar/dist/index.html` | 默认 | 正式发布态 |
 
-### 常用命令
+### app.asar 解压调试流程
+
+```bash
+# 1. 先构建一次 Electron 安装包
+npm run electron:build
+
+# 2. 解压 app.asar 为 app/ 目录（Electron 优先加载 app/）
+npm run electron:unpack
+
+# 3. 以 unpacked 模式启动，可直接修改 app/dist 与 app/electron/main.mjs 验证
+POLARIS_DEV_MODE=unpacked npm run electron:dev
+
+# 4. 发布前必须重新打包回 app.asar
+npm run electron:repack
+```
+
+> 详细流程见 [docs/DEVELOPER_GUIDE.md](./docs/DEVELOPER_GUIDE.md)。
+
+## 常用命令
 
 | 命令 | 说明 |
 |------|------|
-| `npm run dev` | 启动 Vite 开发服务器（http://localhost:5173） |
-| `npm run build` | 生产构建，产出 `dist/` 目录 |
-| `npm run preview` | 预览生产构建 |
-| `npm run lint` | ESLint 代码规范检查 |
+| `npm run dev` | 启动 Vite 开发服务器 |
+| `npm run build` | 生产构建，产出 `dist/` |
+| `npm run lint` | ESLint 检查 |
 | `npx tsc --noEmit` | TypeScript 类型检查（必须零错误） |
-| `npm run electron:dev` | Electron 开发模式（Vite + Electron 并行） |
-| `npm run electron:build` | 构建 Electron 安装包（`vite build && electron-builder`） |
-| `npm run android:build` | 构建 Web 资源并同步到 Android（`vite build && cap sync android`） |
-| `npm run android:open` | 在 Android Studio 中打开项目 |
-| `npm run version:check` | 查看当前版本号 |
+| `npm run electron:dev` | Electron 开发模式 |
+| `npm run electron:build` | 构建 Windows NSIS 安装包 |
+| `npm run electron:unpack` | 解压 `app.asar` 为 `app/` 用于调试 |
+| `npm run electron:repack` | 重新打包为 `app.asar`（发布前必跑） |
+| `npm run android:build` | 构建 Android APK |
 
-### Android 构建
-
-```bash
-# 1. 构建 Web 静态资源并同步到 Android 项目
-npm run android:build
-
-# 2. 进入 Android 目录构建 APK
-cd android
-./gradlew assembleDebug      # Debug APK
-./gradlew assembleRelease     # Release APK（需配置签名）
-
-# 3. 产物路径
-# android/app/build/outputs/apk/debug/app-debug.apk
-```
-
-详见 [docs/ANDROID_BUILD.md](docs/ANDROID_BUILD.md)。
-
-### Electron 构建
-
-```bash
-npm run electron:build
-# 产物：electron-dist/Polaris 北极星学习平台 Setup.exe（Windows）
-```
-
-Electron 通过 `electron-serve` 加载 `dist/` 静态文件，自动检测 DPI 缩放比例适配高 PPI 显示器。
-
-### 静态产物部署
-
-`npm run build` 产出的 `dist/` 是纯静态文件，可直接托管在 Vercel / Netlify / GitHub Pages / Nginx / 对象存储。因使用 HashRouter，无需配置 SPA fallback。
-
-## 项目结构概览
+## 项目结构
 
 ```
 ai-edu-platform/
-├── electron/                 # Electron 主进程（main.js, preload.js）
-├── public/                   # 静态资源（图标、manifest、favicon、sw.js）
-├── prompts/                  # 苏格拉底 prompt 设计参考（socratic.yaml，非运行时加载）
-├── scripts/                  # 构建脚本（generate-icons、build-apk）
+├── electron/          # Electron 主进程（main.mjs，三态加载 + userData 分桶）
+├── scripts/           # 构建脚本（unpack-asar.mjs、repack-asar.mjs、generate-icons.js）
 ├── src/
-│   ├── components/
-│   │   ├── common/           # 通用业务组件
-│   │   │   ├── DailyQuest.tsx              # 每日任务（首页 Bento）
-│   │   │   ├── ErrorEliminationBattle.tsx  # 错题消灭战
-│   │   │   ├── FloatingCompanion.tsx       # 浮动学习伙伴
-│   │   │   ├── FocusShield.tsx             # 专注心流护盾
-│   │   │   ├── LearningCompanion.tsx       # 学习伙伴养成
-│   │   │   ├── ModelConfigAdvanced.tsx     # 模型配置高级设置
-│   │   │   ├── ModelConfigWizard.tsx       # 模型配置向导
-│   │   │   ├── PolarisMascot.tsx           # 北极星吉祥物
-│   │   │   ├── ProgressRing.tsx            # 环形进度（SVG + count-up）
-│   │   │   └── XPToast.tsx                 # XP 提示
-│   │   ├── layout/           # 布局（Header、Sidebar、MobileNav）
-│   │   ├── providers/        # Provider（Session、Electron、SW、AndroidUpdate）
-│   │   └── ui/               # shadcn/ui 基础组件
-│   ├── hooks/                # 自定义 Hooks（useTTS、useSTT、useCountUp、useSafeMotion 等）
+│   ├── components/    # 通用组件 / 布局 / Provider / shadcn-ui
+│   ├── pages/         # HomePage / AiTeacherPage / KnowledgeGraphPage / ErrorNotesPage / AnalyticsPage / PracticePage / SettingsPage
 │   ├── lib/
-│   │   ├── db/               # IndexedDB（schema.ts、indexeddb.ts、seed.ts）
-│   │   ├── repositories/     # 数据访问层（12 个 repository）
-│   │   ├── services/         # 业务服务（ai-service、auth-service、voice-service、secure-storage）
-│   │   ├── constants.ts      # 学科常量
-│   │   ├── game.ts           # 游戏化逻辑（双货币、连胜、徽章）
-│   │   ├── learning-modes.ts # 5 学段配置
-│   │   ├── motion.ts         # 动画预设
-│   │   ├── safety.ts         # 安全护栏
-│   │   ├── utils.ts          # 工具函数
-│   │   └── version.ts        # 静态版本信息
-│   ├── pages/                # 14 个页面组件
-│   ├── routes/               # 路由（index、ProtectedRoute、PublicOnlyRoute）
-│   ├── stores/               # Zustand stores（useUserStore、useFocusShieldStore）
-│   ├── types/                # TypeScript 类型（electron.d.ts）
-│   ├── App.tsx               # 根组件（Router + Providers）
-│   ├── main.tsx              # 应用入口
-│   └── index.css             # 全局样式 + design tokens
-├── docs/                     # 文档（ARCHITECTURE、RELEASE、DEPLOYMENT 等）
-├── capacitor.config.ts       # Capacitor 配置
-├── vite.config.ts            # Vite 配置
-├── AGENTS.md                 # AI 编程协作规范
-├── CHANGELOG.md              # 变更记录
-└── package.json              # 版本 5.0.0
+│   │   ├── db/        # IndexedDB schema V4
+│   │   ├── repositories/  # 数据访问层（auth / conversation / knowledge / error-notes / practice / user / home-stats / review）
+│   │   ├── services/  # ai-service / auth-service / voice-service / secure-storage
+│   │   ├── spaced-repetition.ts  # SM-2 间隔重复算法
+│   │   ├── learning-modes.ts     # 3 学段（YOUTH / TEEN / ADULT，仅驱动 AI prompt）
+│   │   └── motion.ts  # 动效配置（150ms / 300ms + ease-out）
+│   ├── routes/        # React Router 7（HashRouter，已删除 /leaderboard）
+│   └── stores/        # Zustand stores
+├── AGENTS.md          # AI 编程代理规范（V2 重写，7 大新章节）
+└── docs/              # 架构 / 设计 / 动效 / 开发 / 发布文档
 ```
 
 ## 文档
 
-| 文档 | 说明 |
-|------|------|
-| [变更记录](CHANGELOG.md) | 版本变更历史 |
-| [架构说明](docs/ARCHITECTURE.md) | v5.0.0 架构设计、数据层、AI 链、游戏化、数据流 |
-| [发布说明](docs/RELEASE.md) | v5.0.0 发布说明与发布流程 checklist |
-| [项目概述](docs/README.md) | 功能特性、技术栈、项目结构 |
-| [部署指南](docs/DEPLOYMENT.md) | Electron + Android 部署方案 |
-| [开发指南](docs/DEVELOPER_GUIDE.md) | 架构说明、本地开发、贡献 |
-| [Android 构建](docs/ANDROID_BUILD.md) | Android APK 打包指南 |
-| [安全规范](docs/SECURITY.md) | 客户端架构下的密钥与数据安全 |
-| [AI 编程规范](AGENTS.md) | AI 协作流程、代码规范、已知陷阱 |
-| [设计文档](docs/design/) | 调研报告、安全方案、技术参考 |
-| [贡献指南](CONTRIBUTING.md) | 如何参与开源贡献 |
-
-## 参与贡献
-
-> ⚠️ 安全提醒：禁止提交任何密钥、证书、`.env` 真值文件。详见 [密钥与安全规范](docs/SECURITY.md)。
-
-欢迎社区贡献！请阅读 [CONTRIBUTING.md](CONTRIBUTING.md) 了解开发环境搭建、代码规范与提交 PR 的流程。
+- [架构说明](./docs/ARCHITECTURE.md) — 平台抽象层、asar 隔离机制、模块清单、SM-2 算法
+- [UI 设计系统](./docs/UI_DESIGN.md) — 安静单色设计（北极星靛蓝 #6366F1）
+- [动效规范](./docs/ANIMATION.md) — 两档时长 + 单缓动
+- [开发指南](./docs/DEVELOPER_GUIDE.md) — asar 解压调试、三态环境、Sub-Agent 协作
+- [发布流程](./docs/RELEASE.md) — V2 发布 checklist、NSIS / APK 构建
+- [变更记录](./CHANGELOG.md) — V2 BREAKING 变更与 v1.0 历史摘要
+- [AI 编程规范](./AGENTS.md) — 主上下文保护红线、并行执行、Spec 驱动纪律
 
 ## 许可证
 
-本项目采用 **AGPL-3.0** 协议开源。任何人可自由使用、修改、分发，但衍生作品必须同样以 AGPL-3.0 开源。使用者需自备大模型 API Key，平台本身完全免费。
+AGPL-3.0

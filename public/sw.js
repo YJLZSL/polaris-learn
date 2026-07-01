@@ -1,13 +1,13 @@
 // Service Worker for Polaris - 北极星学习平台
-// Cache strategy: Network first, fallback to cache
+// Cache strategy: CacheFirst for static assets; index.html fallback for navigation.
 
 const CACHE_NAME = "polaris-v1";
-const OFFLINE_URL = "/offline";
 
-// Core shell resources to pre-cache on install
+// Core shell resources to pre-cache on install.
+// Only actual files are listed here — no SPA route URLs like /home or /offline.
 const SHELL_RESOURCES = [
-  "/home",
-  OFFLINE_URL,
+  "/",
+  "/index.html",
   "/manifest.json",
   "/icon.svg",
 ];
@@ -46,9 +46,8 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-// ===== Fetch Event: Network First with Cache Fallback =====
+// ===== Fetch Event: Cache First =====
 self.addEventListener("fetch", (event) => {
-  // Only handle navigation and same-origin requests
   const { request } = event;
   const url = new URL(request.url);
 
@@ -61,42 +60,55 @@ self.addEventListener("fetch", (event) => {
   // Only cache same-origin resources (skip CDN, external APIs, etc.)
   if (url.origin !== self.location.origin) return;
 
-  event.respondWith(networkFirst(request));
+  // Navigation requests always fallback to index.html so the SPA can route.
+  if (request.mode === "navigate") {
+    event.respondWith(cacheFirstWithIndexFallback(request));
+    return;
+  }
+
+  event.respondWith(cacheFirst(request));
 });
 
-async function networkFirst(request) {
-  try {
-    // Try network first
-    const networkResponse = await fetch(request);
+async function cacheFirst(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
 
-    // Cache successful responses for future offline use
+  try {
+    const networkResponse = await fetch(request);
     if (networkResponse && networkResponse.ok) {
       const cache = await caches.open(CACHE_NAME);
-      // Clone before putting into cache (response body can only be read once)
       cache.put(request, networkResponse.clone());
     }
-
     return networkResponse;
-  } catch (_error) { // eslint-disable-line @typescript-eslint/no-unused-vars
-    // Network failed, try cache
-    console.log("[SW] Network failed, falling back to cache:", request.url);
-    const cachedResponse = await caches.match(request);
+  } catch (_error) {
+    console.log("[SW] Network failed and no cache available:", request.url);
+    throw _error;
+  }
+}
 
-    if (cachedResponse) {
-      return cachedResponse;
+async function cacheFirstWithIndexFallback(request) {
+  const cachedResponse = await caches.match(request);
+  if (cachedResponse) {
+    return cachedResponse;
+  }
+
+  const cachedIndex = await caches.match("/index.html");
+  if (cachedIndex) {
+    return cachedIndex;
+  }
+
+  try {
+    const networkResponse = await fetch(request);
+    if (networkResponse && networkResponse.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, networkResponse.clone());
     }
-
-    // If it's a navigation request, return the offline page
-    if (request.mode === "navigate") {
-      const offlinePage = await caches.match(OFFLINE_URL);
-      if (offlinePage) {
-        return offlinePage;
-      }
-    }
-
-    // Last resort: return a simple offline response
+    return networkResponse;
+  } catch (_error) {
     return new Response(
-      '<html lang="zh-CN"><head><meta charset="utf-8"><title>离线 - Polaris</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#f8fafc;color:#334155"><div style="text-align:center"><div style="font-size:64px;margin-bottom:16px">📡</div><h1 style="margin:0 0 8px;font-size:24px">当前处于离线状态</h1><p style="margin:0;color:#64748b">请检查网络连接后重试</p></div></body></html>',
+      '<html lang="zh-CN"><head><meta charset="utf-8"><title>离线 - Polaris</title></head><body style="font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;background:#0B0F19;color:#f8fafc"><div style="text-align:center"><div style="font-size:48px;margin-bottom:16px">🌟</div><h1 style="margin:0 0 8px;font-size:20px">Polaris 离线了</h1><p style="margin:0;color:#94a3b8">请检查网络连接后重试</p></div></body></html>',
       {
         status: 503,
         headers: { "Content-Type": "text/html; charset=utf-8" },
@@ -104,3 +116,10 @@ async function networkFirst(request) {
     );
   }
 }
+
+// Listen for SKIP_WAITING messages from the client to activate immediately.
+self.addEventListener("message", (event) => {
+  if (event.data?.type === "SKIP_WAITING") {
+    self.skipWaiting();
+  }
+});

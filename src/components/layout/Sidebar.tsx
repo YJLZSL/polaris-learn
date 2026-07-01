@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useSession } from "@/components/providers/SessionProvider";
 import { useUserStore } from "@/stores/useUserStore";
-import { getLevelInfo } from "@/lib/game";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
@@ -12,7 +11,6 @@ import {
   Network,
   FileQuestion,
   BarChart3,
-  Trophy,
   GraduationCap,
   Camera,
   Zap,
@@ -24,7 +22,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -48,7 +45,6 @@ const NAV_ITEMS: NavItemConfig[] = [
   { href: "/knowledge-graph", label: "知识图谱", icon: Network },
   { href: "/error-notes", label: "错题本", icon: FileQuestion },
   { href: "/analytics", label: "学习报告", icon: BarChart3 },
-  { href: "/leaderboard", label: "排行榜", icon: Trophy },
   { href: "/courses", label: "课程", icon: GraduationCap },
   { href: "/photo-search", label: "拍题", icon: Camera, disabled: true },
   { href: "/badges", label: "徽章", icon: Layers, disabled: true },
@@ -127,7 +123,7 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
   const userName = session?.user?.name || name || "用户";
   const userAvatar = session?.user?.image || avatar;
 
-  const levelInfo = getLevelInfo(xp);
+  // V2：等级系统已移除，不再计算 levelInfo
   const [collapsed, setCollapsed] = useState(false);
 
   const sidebarWidth = collapsed ? "w-16" : "w-64";
@@ -194,41 +190,22 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
             {!collapsed && (
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{userName}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                    Lv.{levelInfo.level}
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground">{levelInfo.title}</span>
-                </div>
               </div>
             )}
           </div>
 
           {!collapsed && (
-            <>
-              <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-foreground">{xp}</span>
-                  <span>XP</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Zap className="h-3 w-3 text-amber-500" />
-                  <span className="font-bold text-amber-500">{streak}</span>
-                  <span>天</span>
-                </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1">
+                <span className="font-bold text-foreground">{xp}</span>
+                <span>XP</span>
               </div>
-
-              {/* XP Progress Bar */}
-              <div className="w-full h-1.5 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary rounded-full transition-all duration-500"
-                  style={{ width: `${levelInfo.progress}%` }}
-                />
+              <div className="flex items-center gap-1">
+                <Zap className="h-3 w-3 text-amber-500" />
+                <span className="font-bold text-amber-500">{streak}</span>
+                <span>天</span>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                距下一级还需 {levelInfo.xpToNextLevel} XP
-              </p>
-            </>
+            </div>
           )}
         </div>
 
@@ -288,12 +265,6 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
               </Avatar>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-medium truncate">{userName}</p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <Badge variant="secondary" className="h-4 px-1.5 text-[10px]">
-                    Lv.{levelInfo.level}
-                  </Badge>
-                  <span className="text-[10px] text-muted-foreground">{levelInfo.title}</span>
-                </div>
               </div>
             </div>
           </div>

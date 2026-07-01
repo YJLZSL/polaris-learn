@@ -4,10 +4,10 @@
 # ============================================================
 $ErrorActionPreference = "Stop"
 
-Write-Host "=== 步骤 1/3: 构建 Next.js 静态文件 ===" -ForegroundColor Cyan
+Write-Host "=== 步骤 1/3: 构建 Vite 静态文件 ===" -ForegroundColor Cyan
 npm run build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Next.js 构建失败!" -ForegroundColor Red
+    Write-Host "Vite 构建失败!" -ForegroundColor Red
     exit 1
 }
 

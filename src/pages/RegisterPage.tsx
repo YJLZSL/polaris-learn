@@ -2,7 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2, BookOpen } from "lucide-react";
 
 import {
   Card,
@@ -16,9 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
+import { LEARNING_MODES, type LearningMode } from "@/lib/learning-modes";
 import { cn } from "@/lib/utils";
-import { buttonTap } from "@/lib/motion";
 import PolarisMascot from "@/components/common/PolarisMascot";
 import { register } from "@/lib/services/auth-service";
 
@@ -32,7 +31,7 @@ export default function RegisterPage() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [selectedMode, setSelectedMode] = useState<LearningModeId>("ELEMENTARY");
+  const [selectedMode, setSelectedMode] = useState<LearningMode>("YOUTH");
   const [role, setRole] = useState("student");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -68,7 +67,7 @@ export default function RegisterPage() {
       <CardHeader className="text-center space-y-3">
         {/* Task 18.6: PolarisMascot 欢迎装饰 */}
         <div className="flex justify-center">
-          <PolarisMascot mood="happy" size={64} />
+          <PolarisMascot mood="default" size={64} />
         </div>
         <div>
           <CardTitle className="text-2xl">创建账号</CardTitle>
@@ -135,7 +134,6 @@ export default function RegisterPage() {
             <Label>选择学习模式</Label>
             <div className="grid grid-cols-2 gap-3">
               {LEARNING_MODES.map((mode) => {
-                const Icon = mode.icon;
                 return (
                   <div
                     key={mode.id}
@@ -147,7 +145,8 @@ export default function RegisterPage() {
                         : "border-border hover:border-primary/50"
                     )}
                   >
-                    <Icon className="size-8" />
+                    {/* V2：学段统一视觉，不再使用差异化 icon */}
+                    <BookOpen className="size-8 text-primary" />
                     <span className="font-medium text-sm">{mode.label}</span>
                     <span className="text-xs text-muted-foreground text-center">
                       {mode.description}
@@ -176,7 +175,7 @@ export default function RegisterPage() {
             </RadioGroup>
           </div>
 
-          <motion.div {...buttonTap}>
+          <motion.div whileTap={{ scale: 0.97 }}>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "注册中..." : "创建账号"}

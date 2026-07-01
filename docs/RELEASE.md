@@ -1,244 +1,224 @@
-# Polaris 发布流程
+# Polaris V2.0 发布流程
 
-本指南规范 `polaris-learn` 的版本管理、Git 标签、原子提交以及 PC 端(Electron)和 Android 端(Capacitor)的发布流程。所有发布者请严格遵守,确保产物可追溯、更新链路可用、密钥不泄露。
+本文档规范 `polaris-learn` V2.0 大版本的版本管理、CI/CD 构建、asar repack 验证与 GitHub Release 发布。V2.0 是自学本质回归的 BREAKING 重构大版本，版本号从 v1.0.0 升级到 **v2.0.0**，并保留 v1.0.0 历史不删除。
 
-> 配套文档:[SECURITY.md](./SECURITY.md)(密钥与签名)、[DEPLOYMENT.md](./DEPLOYMENT.md)(部署)、[ANDROID_BUILD.md](./ANDROID_BUILD.md)(Android 构建)。
-
----
-
-## 0. v5.0.0 发布说明（面向用户）
-
-**Polaris 北极星学习平台 v5.0.0** 是一次体验重构大版本，在 v4.0.0 纯 SPA 架构上完成全面升级，未改变"无服务器 / 本地数据 / 自带 API Key"的核心定位。
-
-### 给用户的新功能
-
-- **学段自适应 2.0**：5 学段（幼儿园/小学/初中/高中/上班族）自动适配圆角、字号、游戏化强度，暗色模式默认开启，北极星主题渐变流光
-- **AI 老师全新体验**：苏格拉底 6 阶段语义化辅导，流式逐字渲染，语音朗读 + 语音输入，停止生成，思考过程折叠，模型配置向导（多配置切换 + 连接测试 + Ollama 自动探测）
-- **知识星图**：力导向图可视化，亮星/星云/红光三态，缩放拖拽，超期未复习自动裂纹衰减
-- **错题消灭战**：60 秒心流倒计时挑战，连续答对点亮红→绿节点，星光奖励
-- **学习伙伴养成**：Polaris 小灵 4 形态（蛋→幼体→成体→觉醒），按学习时长进化，首页常驻陪伴
-- **双货币 + 连胜容错**：星光（日常）+ 晶核（里程碑），冻结卡断签保护，里程碑保护盾，历史最高纪录保留
-- **每日任务**：每日 3 个任务，全完成触发宝箱 + 徽章碎片
-- **专注心流护盾**：25 分钟番茄钟，心流能量条，深色聚焦态，XP × 1.5 加成
-- **Bento Grid 首页**：6-8 块卡片网格布局，stagger 入场 + spring hover
-- **排行榜去毒性化**：5-15 人小队列 + "超越昨日自己"个人进步榜
-
-### 升级须知
-
-- **学段 ID 自动迁移**：旧值 PRIMARY/MIDDLE_HIGH/COLLEGE 自动迁移为 ELEMENTARY/MIDDLE/HIGH，历史用户无缝升级
-- **数据兼容**：IndexedDB 自动从 v1/v2 升级到 v3（新增 `daily_quests` store），老数据保留
-- **API Key 兼容**：旧的单配置自动迁移为多配置格式
-- **架构不变**：仍是无服务器纯前端 SPA，无需部署后端，无需迁移数据
-
-完整变更见 [CHANGELOG.md](../CHANGELOG.md) 的 v5.0.0 条目。
+> 配套文档：[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)（开发与 asar 解压调试）、[ARCHITECTURE.md](./ARCHITECTURE.md)（架构与模块清单）、[SECURITY.md](./SECURITY.md)（密钥与签名）。
 
 ---
 
-## 1. 版本号规范
+## 1. V2.0 版本说明（面向用户）
 
-本平台采用 [语义化版本控制(SemVer)](https://semver.org/lang/zh-CN/),格式为 `MAJOR.MINOR.PATCH`:
+**Polaris 北极星学习平台 V2.0.0** 是自学本质回归的 BREAKING 大版本，抛弃 v1.0 的商业平台范式，做功能减法、做工程规范。
 
-- **MAJOR**:破坏性变更(不兼容的 API/数据库结构调整)
-- **MINOR**:向下兼容的新功能
-- **PATCH**:向下兼容的 Bug 修复
+### 主要变更
 
-示例:
+- **删除商业平台特征**：双货币、排行榜、每日任务、专注护盾、连胜、消灭战、学段自适应 token 全部移除。
+- **首页去 Dashboard**：Bento Grid 改为安静桌面（问候语 + 3 入口 + 小灵 + 鼓励语）。
+- **AI 老师去阶段化**：删除苏格拉底 6 阶段环形进度，降级为安静对话窗口。
+- **知识地图去游戏化**：从 `@antv/g6` 力导向图迁移到自绘 SVG 静态树/网图。
+- **错题本去战斗化**：从消灭战改为 Anki 式 SM-2 间隔重复复习卡片。
+- **视觉语言 4.0**：单色（北极星靛蓝 #6366F1）+ 安静动效（150ms/300ms 两档 + ease-out）。
+- **学段简化**：5 档简化为 3 档（YOUTH/TEEN/ADULT），仅驱动 AI prompt。
+- **app.asar 解压调试模式**：`POLARIS_DEV_MODE` 三态 + userData 分桶。
 
-- `1.0.0` → `1.1.0`:新增「学习报告导出」功能
-- `1.1.0` → `1.1.1`:修复登录跳转 Bug
-- `1.1.1` → `2.0.0`:重构数据库 schema,需用户重新初始化
-
-版本号统一维护在根目录 `package.json` 的 `version` 字段,可用 `npm run version:check` 查看当前版本。**Electron、Android 客户端共用此版本号**,据此判断是否需要更新。
-
----
-
-## 2. Git tag 规范
-
-- 标签格式:`vX.Y.Z`(与 `package.json` version 对应),如 `v5.0.0`。
-- **仅在 `main`/`master` 分支打 tag**,发布前确保该分支构建通过、自查清单(见第 6 节)全部完成。
-- 使用带说明的 annotated tag:
-
-```bash
-git tag -a v5.0.0 -m "Release v5.0.0"
-git push origin v5.0.0
-```
-
-- 一个版本一个 tag,严禁复用、覆盖已发布 tag。如需修订,发布新 patch 版本并打新 tag。
+完整变更见 [CHANGELOG.md](../CHANGELOG.md) 的 v2.0.0 条目。
 
 ---
 
-## 3. 原子提交要求
+## 2. 版本号规范
 
-发布由若干提交累积而成,提交质量直接决定发布可追溯性。请遵守:
+采用 [语义化版本控制（SemVer）](https://semver.org/lang/zh-CN/)，格式为 `MAJOR.MINOR.PATCH`。
 
-### 3.1 一个逻辑变更一个 commit
+- **MAJOR**：破坏性变更（V2 删除大量商业特征，属 BREAKING）
+- **MINOR**：向下兼容的新功能
+- **PATCH**：向下兼容的 Bug 修复
 
-- 一个 commit 只做一件事:新增功能、修复 Bug、改文档、重构各自独立提交。
-- 禁止把多个不相关变更塞进同一 commit,也禁止把一个功能拆成零碎 commit 刷记录。
-- commit message 遵循约定式提交(Conventional Commits),如 `feat: 新增学习报告导出`、`fix: 修复登录跳转`、`docs: 补充发布流程`。
+版本号统一维护在根目录 `package.json` 的 `version` 字段，V2 目标版本为 **`2.0.0`**，`src/lib/version.ts` 同步。Electron 与 Android 客户端共用此版本号，Android `versionCode` 由 `package.json` 版本自动推导。
 
-### 3.2 禁止整工作区暂存
+### 2.1 版本号同步清单
 
-- **禁止 `git add -A` / `git add .`** 整目录暂存,这会把未审查的临时文件、产物、密钥一并提交。
-- 一律按具体文件路径暂存,如 `git add src/pages/HomePage.tsx docs/RELEASE.md`。
+发布前确认以下位置版本号一致为 `2.0.0`：
 
-### 3.3 禁止入库的内容
-
-以下内容严禁入库(规则同步写入 `.gitignore` 与 [SECURITY.md](./SECURITY.md)):
-
-- **构建产物**:`dist/`、`electron-dist/`、`android/`、`build/`
-- **依赖**:`node_modules/`
-- **密钥与证书**:`*.keystore`、`*.p12`/`*.pfx`、`*.cert`/`*.pem`、`key.properties`、`dev-app-update.yml`
-- **环境真值**:`.env`、`.env.local`、`.env.*.local`(模板 `.env.development` / `.env.production` 仅含占位,可入库)
-- **本地数据库**:`*.db`、`*.db-journal`
-
-### 3.4 提交前必做
-
-```bash
-npm run lint   # 必须无 lint 错误
-npm run build  # 必须构建成功（vite build）
-git status     # 复核暂存区,确认无密钥/产物
-```
-
-> 密钥与签名的完整管理规范见 [SECURITY.md](./SECURITY.md)。
+- `package.json` → `version`
+- `src/lib/version.ts` → 静态版本信息
+- Git Tag → `v2.0.0`
+- GitHub Release → `v2.0.0`
 
 ---
 
-## 4. PC 端(Electron)发布流程
+## 3. asar repack 验证（发布前必做）
 
-### 4.1 升级版本号
+V2 新增 app.asar 解压调试模式后，发布前**必须**验证最终安装包内只有 `app.asar`，不存在解压态 `app/` 目录。
 
-编辑 `package.json`,将 `version` 调整为目标版本(如 `4.0.0` → `5.0.0`)。提交该变更:
-
-```bash
-git add package.json
-git commit -m "chore: bump version to 5.0.0"
-```
-
-### 4.2 构建 Vite 产物与 Electron 安装包
+### 3.1 验证步骤
 
 ```bash
-npm run build          # 构建 Vite 静态产物到 dist/
-npm run electron:build # 调用 electron-builder,生成 electron-dist/ 下的安装包 + latest.yml
-```
+# 1. 确认已 repack（回到 packaged 态）
+npm run electron:repack
+# 若提示"无需 repack"则说明已是 packaged 态，正常
 
-`electron:build` 内部会执行 `vite build` 再调用 `electron-builder`。产物位于 `electron-dist/`:
-
-- Windows:`Polaris 北极星学习平台 Setup.exe`（NSIS 安装包）
-- macOS:`Polaris 北极星学习平台.dmg`
-- Linux:`Polaris 北极星学习平台.AppImage`
-- 自动更新元数据:`latest.yml`(供 `electron-updater` 比对版本)
-
-### 4.3 创建 GitHub Release 并上传资产
-
-1. 在 `main`/`master` 分支打 tag:`git tag -a v5.0.0 -m "Release v5.0.0"` 并推送。
-2. 在 GitHub 仓库 `YJLZSL/polaris-learn` 基于 tag 创建 Release,标题为 `Release vX.Y.Z`,正文填写更新说明。
-3. 上传 Release 资产:**仅上传安装包(`.exe` / `.dmg` / `.AppImage`)与 `latest.yml`**,不要上传源码工作区、`node_modules/` 或构建中间产物。
-
-> `package.json` 的 `build.publish` 已指向 GitHub(`owner: YJLZSL`、`repo: polaris-learn`)。若在 CI 中执行 `electron:build` 且注入了 `GH_TOKEN`,`electron-builder` 也可自动上传资产并生成 Release。
-
-### 4.4 用户端自动更新
-
-已安装的桌面应用启动时,`electron/main.js` 中的 `electron-updater` 会:
-
-1. 自动检查 GitHub Release 上的 `latest.yml` 比对版本;
-2. 后台下载新版本安装包(`autoDownload = true`);
-3. 下载完成后通过 IPC 通知渲染进程,提示用户重启;
-4. 用户确认后调用 `autoUpdater.quitAndInstall()` 安装并重启。
-
-开发模式(`!app.isPackaged`)下自动更新不启用,避免误报。
-
-### 4.5 代码签名(可选但推荐)
-
-未签名的安装包在 Windows/macOS 会触发系统安全警告。签名材料严禁入库,具体注入方式见 [SECURITY.md](./SECURITY.md#electron-代码签名):
-
-- **Windows**:使用 `.pfx` 证书,通过 `CSC_LINK`(证书 base64 或路径)与 `CSC_KEY_PASSWORD` 环境变量注入。
-- **macOS**:使用 Developer ID Application 证书,同样通过 `CSC_LINK` / `CSC_KEY_PASSWORD` 注入;如需公证,补充 `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID`。
-
-```bash
-# 本地签名构建示例(PowerShell)
-$env:CSC_LINK = "C:\path\to\cert.pfx"
-$env:CSC_KEY_PASSWORD = "your-password"
+# 2. 重新构建安装包
 npm run electron:build
+
+# 3. 验证 app.asar 存在、app/ 目录已删除
+ls electron-dist/win-unpacked/resources/
+# 应只看到 app.asar（与可能的 app.asar.unpacked），不应看到 app/ 目录
+
+# 4. 验证 app.asar.bak 不存在（备份已恢复）
+ls electron-dist/win-unpacked/resources/app.asar.bak 2>nul
+# 应提示文件不存在
 ```
 
----
+### 3.2 发布红线
 
-## 5. Android 端发布流程
-
-### 5.1 升级版本号
-
-与 PC 端共用 `package.json` 的 `version`。Android 应用的 `versionName` 来源于此;如需调整 `versionCode`,在 `android/app/build.gradle` 中维护。
-
-### 5.2 构建 Vite 静态产物并同步到 Android
-
-```bash
-npm run android:build  # 等价于 vite build && npx cap sync android
-```
-
-v4.0.0 起 Android 端通过 Capacitor 加载本地 `dist/` 静态文件,**不再连接任何远程服务**,无需配置 `CAPACITOR_SERVER_URL` 等环境变量。
-
-### 5.3 在 Android Studio 中签名打包
-
-签名密钥由维护者本地生成,严禁入库(规范见 [SECURITY.md](./SECURITY.md#android-keystore-管理)):
-
-1. 在 `android/` 目录下配置 `key.properties`(指向本地 keystore、口令等),该文件已被 `.gitignore` 忽略。
-2. 用 Android Studio 打开 `android/`(`npm run android:open`),选择 Build → Generate Signed Bundle / APK,选用 Release 构建变体生成 APK 或 AAB。
-
-```bash
-# 或通过命令行
-cd android && ./gradlew assembleRelease
-```
-
-### 5.4 上传 APK 并分发
-
-1. 将生成的 Release APK 上传到分发地址(自托管静态服务器或第三方网盘),确保该地址可被 Android 浏览器直接下载。
-2. 在 GitHub Release 中附上 APK 文件,或通过应用内提示引导用户下载。
-
-### 5.5 用户端更新提示
-
-> 注意:v4.0.0 已移除 `useVersionCheck` hook 与 `/api/version` 接口(因纯前端 SPA 无服务端)。
-
-Android 端的版本更新提示目前依赖以下方式之一:
-
-- **GitHub Release 通知**:用户关注仓库或通过 Release 页面获取新版本。
-- **应用内静态提示**:可在 `src/lib/version.ts` 中维护最新版本号,应用启动时与本地版本比对,提示用户前往下载地址。
-
-如需恢复动态版本检查,可自行接入第三方版本托管服务(如 Firebase Remote Config、自定义静态 JSON 托管等),但需注意 v4.0.0 架构本身不提供服务端接口。
+- ⚠️ 若 `electron-dist/win-unpacked/resources/` 下存在 `app/` 目录，**禁止发布**——这会导致用户安装的是解压态而非打包态。
+- ⚠️ 若 `app.asar.bak` 存在，说明 repack 未完成，必须重新执行 `npm run electron:repack`。
+- 启动安装包后访问 `polaris://__health`，应显示 `Mode: packaged`。
 
 ---
 
-## 6. 发布自查清单
+## 4. CI/CD 构建流程
 
-发布前逐项核对,任何一项未通过都不要打 tag、不要发 Release:
+仓库配置以下 GitHub Actions 工作流：
 
-- [ ] ① `package.json` `version` 已升级到目标版本(当前 v5.0.0),与计划 tag 一致
-- [ ] ② `npx tsc --noEmit` 零类型错误
-- [ ] ③ `npm run lint` 与 `npm run build`(`vite build`)均通过,无错误
-- [ ] ④ `git status` 无未提交的密钥、证书、构建产物(`dist/` / `electron-dist/` / `android/` / `node_modules/`)
-- [ ] ⑤ 已在 `main`/`master` 分支打 `v5.0.0` tag 并推送
-- [ ] ⑥ GitHub Release 资产已上传,**仅包含安装包与 `latest.yml`**(Electron)或 APK(Android),不含源码工作区、依赖或中间产物
-- [ ] ⑦ CHANGELOG.md / README.md / ARCHITECTURE.md / AGENTS.md / RELEASE.md 版本号已同步为 v5.0.0
+### 4.1 build-windows.yml（Windows NSIS 安装包）
+
+触发条件：`push` 到 `main`/`master` 分支，或手动 `workflow_dispatch`。
+
+执行步骤：
+
+1. Checkout 代码
+2. 设置 Node.js 22
+3. `npm ci`
+4. `npm run build`
+5. `npm run electron:build`
+6. 上传产物：`electron-dist/*.exe`、`electron-dist/latest.yml`
+
+产物：`Polaris 北极星学习平台 Setup.exe`（NSIS x64 安装包）。
+
+### 4.2 build-android.yml（Android APK）
+
+触发条件：`push` 到 `main`/`master` 分支，或手动 `workflow_dispatch`。
+
+执行步骤：
+
+1. Checkout 代码
+2. 设置 Node.js 22 + Java 17
+3. `npm ci`
+4. `npm run build`
+5. `npx cap sync android`
+6. Gradle 构建 release APK（`./gradlew assembleRelease`）
+7. 签名 APK（CI keystore）
+8. 上传产物：`android/app/build/outputs/apk/release/app-release.apk`
+
+产物：`app-release.apk`（Release 签名版）。V2 收尾 v1.0 遗留——验证 Android release APK 通过 CI 构建成功（v1.0 因网络问题本地未跑通）。
+
+### 4.3 build-unpacked.yml（V2 新增，staging 产物）
+
+触发条件：`push` 到 `main`。
+
+执行步骤：
+
+1. Checkout 代码
+2. 设置 Node.js 22
+3. `npm ci` → `npm run build` → `npm run electron:build`
+4. `npm run electron:unpack`（解压 asar）
+5. 上传解压态 `win-unpacked/resources/app/` 作为 staging 产物供测试
+
+> staging 产物仅用于测试解压调试态，不作为正式发行物。
 
 ---
 
-## 7. 开发与构建命令速查
+## 5. GitHub Release 流程
 
-| 场景 | 命令 | 说明 |
-|------|------|------|
-| 本地开发 | `npm run dev` | 启动 Vite 开发服务器,访问 http://localhost:5173 |
-| Electron 开发 | `npm run electron:dev` | 同时启动 Vite + Electron,支持热更新 |
-| Web 生产构建 | `npm run build` | `vite build`,产出 `dist/` |
-| Electron 打包 | `npm run electron:build` | `vite build && electron-builder`,产出 `electron-dist/` |
-| Android 构建 | `npm run android:build` | `vite build && cap sync android` |
-| 类型检查 | `npx tsc --noEmit` | 零类型错误校验 |
-| Lint 检查 | `npm run lint` | ESLint 代码规范检查 |
+### 5.1 历史保留原则
+
+- **v1.0.0 Release 保留不删除**：v1.0.0 已正式发布，作为历史参考保留。
+- v2.0.0 作为新版本追加发布。
+- v4.x / v5.0.0 历史状态由用户决定（V2 不主动清理）。
+
+### 5.2 v2.0.0 发布步骤
+
+1. **确认版本号**：`package.json` 与 `src/lib/version.ts` 均为 `2.0.0`。
+2. **asar repack 验证**：按第 3 节流程确认 `app.asar` 存在、`app/` 已删除。
+3. **本地构建验证**：
+   ```bash
+   npm run build
+   npx tsc --noEmit
+   npm run electron:build
+   npm run android:build
+   ```
+4. **创建 Git Tag**：
+   ```bash
+   git tag v2.0.0
+   git push origin v2.0.0
+   ```
+5. **等待 CI 构建**：push 到 `main` 触发 `build-windows.yml` 与 `build-android.yml`。
+6. **创建 GitHub Release**：
+   - Release 标题：`v2.0.0 - 自学本质回归`
+   - Release 说明：引用 [CHANGELOG.md](../CHANGELOG.md) 的 v2.0.0 条目。
+   - 上传产物：
+     - `Polaris 北极星学习平台 Setup.exe`（Windows NSIS）
+     - `app-release.apk`（Android）
+     - `latest.yml`（electron-updater 元数据）
+7. **验证安装**：在干净环境安装 Windows 安装包与 Android APK，确认 `polaris://__health` 显示 `Mode: packaged`。
+
+### 5.3 v1.0.0 历史处理
+
+- 若 v1.0.0 GitHub Release 已发布：保留不动，v2.0.0 作为新版本追加。
+- 若 v1.0.0 GitHub Release 未发布（因 v1.0 Android 本地构建未跑通）：直接跳过发布 v1.0.0，只发 v2.0.0。
 
 ---
 
-## 相关文档
+## 6. V2 发布 Checklist
 
-- [架构说明](./ARCHITECTURE.md) - v5.0.0 Vite SPA 架构设计
-- [部署指南](./DEPLOYMENT.md) - 各平台部署方案
-- [Android 构建](./ANDROID_BUILD.md) - Android APK 构建指南
-- [安全规范](./SECURITY.md) - 密钥与签名管理
+发布前逐项核验：
+
+### 代码与版本
+
+- [ ] `package.json` 版本为 `2.0.0`
+- [ ] `src/lib/version.ts` 版本为 `2.0.0`
+- [ ] `npx tsc --noEmit` 零错误
+- [ ] `npm run lint` 零错误
+- [ ] `npm run build` 成功
+
+### asar 验证
+
+- [ ] `npm run electron:repack` 已执行（或提示无需 repack）
+- [ ] `electron-dist/win-unpacked/resources/app.asar` 存在
+- [ ] `electron-dist/win-unpacked/resources/app/` 目录不存在
+- [ ] `electron-dist/win-unpacked/resources/app.asar.bak` 不存在
+- [ ] 安装后 `polaris://__health` 显示 `Mode: packaged`
+
+### 商业特征清除验证
+
+- [ ] 首页无 Bento Grid、无任务卡、无连胜、无 XP、无双货币
+- [ ] AI 老师页无 6 阶段环形进度
+- [ ] 知识地图为 SVG 静态图（无 `@antv/g6` 残留 import）
+- [ ] 错题本为 Anki 复习卡片（无消灭战 60 秒倒计时）
+- [ ] 路由无 `/leaderboard`
+- [ ] 全应用无 `#F59E0B` 作为奖励色
+
+### 构建产物
+
+- [ ] Windows NSIS 安装包构建成功（`npm run electron:build`）
+- [ ] Android release APK 构建成功（`npm run android:build` 或 CI）
+- [ ] 安装包文件名含 `2.0.0`
+
+### 发布
+
+- [ ] Git Tag `v2.0.0` 已推送
+- [ ] CI 构建成功（build-windows.yml + build-android.yml）
+- [ ] GitHub Release v2.0.0 已创建，产物已上传
+- [ ] v1.0.0 Release 保留未删除
+- [ ] 干净环境安装验证通过
+
+---
+
+## 7. 密钥与签名
+
+> 详细密钥管理见 [SECURITY.md](./SECURITY.md)。
+
+- **Windows**：NSIS 安装包使用 code signing certificate 签名（若有）；无证书则跳过签名，用户首次安装会有 SmartScreen 警告。
+- **Android**：CI 使用 GitHub Secrets 注入 keystore 与密码，签名 release APK。
+- **敏感文件不入库**：`.env`、`*.keystore`、`*.pfx`、`*.cer` 已在 `.gitignore` 排除。

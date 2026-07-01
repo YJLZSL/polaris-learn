@@ -1,7 +1,5 @@
 import { getAll, queryByIndex, put, getByKey } from '@/lib/db/indexeddb';
 import { STORES } from '@/lib/db/schema';
-import { addStarlight } from './currency.repository';
-import { updateQuestProgress } from './quest.repository';
 
 export interface KnowledgePoint {
   id: string;
@@ -68,43 +66,14 @@ export async function updateMastery(mastery: KnowledgeMastery): Promise<void> {
   mastery.updatedAt = new Date().toISOString();
   const storageKey = makeMasteryStorageKey(mastery.userId, mastery.knowledgePointId);
 
-  // Task 19.4/19.7: 读取旧记录以检测阈值跨越并保留幂等标志
+  // 读取旧记录以保留幂等标志（Polaris V2：商业奖励触发已移除）
   const existing = await getByKey<StoredMasteryRecord>(STORES.USER_STATS, storageKey);
-  const prevMastery = existing?.mastery ?? 0;
   const prevRewardClaimed = existing?.masteryRewardClaimed ?? false;
   const prevNodeReported = existing?.completeNodeReported ?? false;
 
   // 合并旧标志，避免调用方未传时丢失
   if (prevRewardClaimed) mastery.masteryRewardClaimed = true;
   if (prevNodeReported) mastery.completeNodeReported = true;
-
-  // Task 19.4: 首次达到掌握阈值(70) → 上报 complete_node 任务（幂等）
-  if (
-    prevMastery < MASTERY_THRESHOLD &&
-    mastery.mastery >= MASTERY_THRESHOLD &&
-    !mastery.completeNodeReported
-  ) {
-    mastery.completeNodeReported = true;
-    try {
-      await updateQuestProgress(mastery.userId, 'complete_node', 1);
-    } catch {
-      /* 静默失败：不阻塞掌握度写入 */
-    }
-  }
-
-  // Task 19.7: 首次达到满掌握(100) → 发放 10 星光（幂等）
-  if (
-    prevMastery < 100 &&
-    mastery.mastery >= 100 &&
-    !mastery.masteryRewardClaimed
-  ) {
-    mastery.masteryRewardClaimed = true;
-    try {
-      await addStarlight(mastery.userId, 10, '知识节点掌握');
-    } catch {
-      /* 静默失败：不阻塞掌握度写入 */
-    }
-  }
 
   const stored: StoredMasteryRecord = {
     ...mastery,

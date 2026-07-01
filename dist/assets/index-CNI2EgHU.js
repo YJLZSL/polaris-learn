@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["./web-CzZvUOUd.js","./index-BD5L8EwG.js","./index-O-htWb-3.css"])))=>i.map(i=>d[i]);
+import{r as a,_ as t}from"./index-BD5L8EwG.js";var r;(function(e){e.Light="light",e.Dark="dark"})(r||(r={}));const o=a("SafeArea",{web:()=>t(()=>import("./web-CzZvUOUd.js"),__vite__mapDeps([0,1,2]),import.meta.url).then(e=>new e.SafeAreaWeb)});export{o as SafeArea,r as StatusbarStyle};

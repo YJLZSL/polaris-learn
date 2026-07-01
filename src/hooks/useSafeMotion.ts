@@ -9,7 +9,7 @@ import { useReducedMotion } from "framer-motion";
  *
  * 用法：
  *   const safeMotion = useSafeMotion();
- *   <motion.div {...safeMotion(pageTransitionProps)} />
+ *   <motion.div {...safeMotion({ ...fadeUp, initial: "hidden", animate: "show" })} />
  *   <motion.div {...safeMotion({ variants: listItem })} />
  *
  * 注意：Framer Motion 的 useReducedMotion 内部已会让 spring/tween 动画跳过，

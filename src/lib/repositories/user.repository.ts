@@ -18,9 +18,8 @@ export interface User {
    */
   totalStudyHours?: number;
   /**
-   * Task 15.3: 双货币余额（星光 / 晶核）。
-   * 可选字段以兼容旧库记录；缺失视为 0，由 createUser 兜底。
-   * 余额维护在 currency.repository.ts，所有变更走该 repository 以保留流水。
+   * Polaris V2 已废弃：双货币余额（星光 / 晶核）。
+   * 字段保留以兼容旧 IndexedDB 记录，createUser 仍兜底为 0；不再有 repository 维护流水。
    */
   starlight?: number;
   crystal?: number;

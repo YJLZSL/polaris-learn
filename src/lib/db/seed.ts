@@ -1,83 +1,64 @@
 import { putMany, count } from './indexeddb';
 import { STORES } from './schema';
-import type { Badge } from '@/lib/repositories/gamification.repository';
 import type { KnowledgePoint } from '@/lib/repositories/knowledge.repository';
 import type { Question } from '@/lib/repositories/practice.repository';
 
 // ═══════════════════════════════════════════════════════════════
-//  1. 徽章数据（与 prisma/seed.ts 的 BADGES 同步，12 个）
-// ═══════════════════════════════════════════════════════════════
-const BADGES_SEED: Badge[] = [
-  { id: 'badge_math_star', name: '数学之星', description: '数学知识点掌握度达到80%', icon: '🔢', category: 'knowledge', requirement: 'math_mastery_80' },
-  { id: 'badge_chinese_talent', name: '语文才子', description: '语文知识点掌握度达到80%', icon: '📝', category: 'knowledge', requirement: 'chinese_mastery_80' },
-  { id: 'badge_english_master', name: '英语达人', description: '英语知识点掌握度达到80%', icon: '🌍', category: 'knowledge', requirement: 'english_mastery_80' },
-  { id: 'badge_first_step', name: '初出茅庐', description: '完成第一次AI对话学习', icon: '🌱', category: 'achievement', requirement: 'first_ai_chat' },
-  { id: 'badge_persistence', name: '坚持不懈', description: '连续学习7天', icon: '🔥', category: 'achievement', requirement: 'streak_7' },
-  { id: 'badge_study_master', name: '学习达人', description: '答对100道题', icon: '🎯', category: 'achievement', requirement: 'correct_100' },
-  { id: 'badge_helper', name: '乐于助人', description: '帮助10位同学', icon: '🤝', category: 'social', requirement: 'help_10' },
-  { id: 'badge_full_attendance', name: '全勤之星', description: '连续学习30天', icon: '⭐', category: 'achievement', requirement: 'streak_30' },
-  { id: 'badge_knowledge_hunter', name: '知识猎手', description: '消灭50道错题', icon: '🏹', category: 'achievement', requirement: 'eliminate_50' },
-  { id: 'badge_scholar', name: '学霸认证', description: '达到学霸等级', icon: '👑', category: 'rank', requirement: 'level_11' },
-  { id: 'badge_perfect_score', name: '满分选手', description: '单次练习全对', icon: '💯', category: 'achievement', requirement: 'perfect_score' },
-  { id: 'badge_early_bird', name: '早鸟先锋', description: '早上6点前开始学习', icon: '🌅', category: 'behavior', requirement: 'early_bird' },
-];
-
-// ═══════════════════════════════════════════════════════════════
-//  2. 知识点数据（与 prisma/seed.ts 的 KNOWLEDGE_POINTS 同步，39 个）
+//  1. 知识点数据（与 prisma/seed.ts 的 KNOWLEDGE_POINTS 同步，39 个）
 // ═══════════════════════════════════════════════════════════════
 const KNOWLEDGE_POINTS_SEED: KnowledgePoint[] = [
   // ─── 数学 - 小学 ───────────────────────────────
-  { id: 'kp_math_primary_1', subject: '数学', gradeLevel: '小学', title: '加减法', description: '20以内、100以内的加减法运算', order: 1 },
-  { id: 'kp_math_primary_2', subject: '数学', gradeLevel: '小学', title: '乘除法', description: '九九乘法表与基本除法运算', order: 2 },
-  { id: 'kp_math_primary_3', subject: '数学', gradeLevel: '小学', title: '分数', description: '分数的概念、比较与简单运算', order: 3 },
-  { id: 'kp_math_primary_4', subject: '数学', gradeLevel: '小学', title: '小数', description: '小数的意义、比较与四则运算', order: 4 },
-  { id: 'kp_math_primary_5', subject: '数学', gradeLevel: '小学', title: '几何图形', description: '三角形、四边形、圆等平面图形认识', order: 5 },
+  { id: 'kp_math_primary_1', subject: '数学', gradeLevel: '四年级', title: '加减法', description: '20以内、100以内的加减法运算', order: 1 },
+  { id: 'kp_math_primary_2', subject: '数学', gradeLevel: '四年级', title: '乘除法', description: '九九乘法表与基本除法运算', order: 2 },
+  { id: 'kp_math_primary_3', subject: '数学', gradeLevel: '四年级', title: '分数', description: '分数的概念、比较与简单运算', order: 3 },
+  { id: 'kp_math_primary_4', subject: '数学', gradeLevel: '四年级', title: '小数', description: '小数的意义、比较与四则运算', order: 4 },
+  { id: 'kp_math_primary_5', subject: '数学', gradeLevel: '四年级', title: '几何图形', description: '三角形、四边形、圆等平面图形认识', order: 5 },
   // ─── 数学 - 初中 ───────────────────────────────
-  { id: 'kp_math_middle_1', subject: '数学', gradeLevel: '初中', title: '方程', description: '一元一次方程、二元一次方程组', order: 1 },
-  { id: 'kp_math_middle_2', subject: '数学', gradeLevel: '初中', title: '函数', description: '一次函数、二次函数、反比例函数', order: 2 },
-  { id: 'kp_math_middle_3', subject: '数学', gradeLevel: '初中', title: '三角形', description: '三角形性质、全等与相似', order: 3 },
-  { id: 'kp_math_middle_4', subject: '数学', gradeLevel: '初中', title: '圆', description: '圆的性质、切线、与圆有关的计算', order: 4 },
-  { id: 'kp_math_middle_5', subject: '数学', gradeLevel: '初中', title: '概率', description: '概率初步、频率与可能性', order: 5 },
+  { id: 'kp_math_middle_1', subject: '数学', gradeLevel: '初二', title: '方程', description: '一元一次方程、二元一次方程组', order: 1 },
+  { id: 'kp_math_middle_2', subject: '数学', gradeLevel: '初二', title: '函数', description: '一次函数、二次函数、反比例函数', order: 2 },
+  { id: 'kp_math_middle_3', subject: '数学', gradeLevel: '初二', title: '三角形', description: '三角形性质、全等与相似', order: 3 },
+  { id: 'kp_math_middle_4', subject: '数学', gradeLevel: '初二', title: '圆', description: '圆的性质、切线、与圆有关的计算', order: 4 },
+  { id: 'kp_math_middle_5', subject: '数学', gradeLevel: '初二', title: '概率', description: '概率初步、频率与可能性', order: 5 },
   // ─── 语文 - 小学 ───────────────────────────────
-  { id: 'kp_chinese_primary_1', subject: '语文', gradeLevel: '小学', title: '拼音', description: '声母、韵母、整体认读音节', order: 1 },
-  { id: 'kp_chinese_primary_2', subject: '语文', gradeLevel: '小学', title: '汉字', description: '常用汉字的认读与书写', order: 2 },
-  { id: 'kp_chinese_primary_3', subject: '语文', gradeLevel: '小学', title: '词语', description: '常用词语的理解与运用', order: 3 },
-  { id: 'kp_chinese_primary_4', subject: '语文', gradeLevel: '小学', title: '句子', description: '简单句、修辞句、句式变换', order: 4 },
-  { id: 'kp_chinese_primary_5', subject: '语文', gradeLevel: '小学', title: '古诗', description: '小学必背古诗词赏析与背诵', order: 5 },
+  { id: 'kp_chinese_primary_1', subject: '语文', gradeLevel: '四年级', title: '拼音', description: '声母、韵母、整体认读音节', order: 1 },
+  { id: 'kp_chinese_primary_2', subject: '语文', gradeLevel: '四年级', title: '汉字', description: '常用汉字的认读与书写', order: 2 },
+  { id: 'kp_chinese_primary_3', subject: '语文', gradeLevel: '四年级', title: '词语', description: '常用词语的理解与运用', order: 3 },
+  { id: 'kp_chinese_primary_4', subject: '语文', gradeLevel: '四年级', title: '句子', description: '简单句、修辞句、句式变换', order: 4 },
+  { id: 'kp_chinese_primary_5', subject: '语文', gradeLevel: '四年级', title: '古诗', description: '小学必背古诗词赏析与背诵', order: 5 },
   // ─── 语文 - 初中 ───────────────────────────────
-  { id: 'kp_chinese_middle_1', subject: '语文', gradeLevel: '初中', title: '文言文', description: '文言文阅读与翻译技巧', order: 1 },
-  { id: 'kp_chinese_middle_2', subject: '语文', gradeLevel: '初中', title: '现代文阅读', description: '记叙文、说明文、议论文阅读理解', order: 2 },
-  { id: 'kp_chinese_middle_3', subject: '语文', gradeLevel: '初中', title: '作文', description: '记叙文、议论文写作方法', order: 3 },
-  { id: 'kp_chinese_middle_4', subject: '语文', gradeLevel: '初中', title: '修辞手法', description: '比喻、拟人、排比等修辞辨析', order: 4 },
+  { id: 'kp_chinese_middle_1', subject: '语文', gradeLevel: '初二', title: '文言文', description: '文言文阅读与翻译技巧', order: 1 },
+  { id: 'kp_chinese_middle_2', subject: '语文', gradeLevel: '初二', title: '现代文阅读', description: '记叙文、说明文、议论文阅读理解', order: 2 },
+  { id: 'kp_chinese_middle_3', subject: '语文', gradeLevel: '初二', title: '作文', description: '记叙文、议论文写作方法', order: 3 },
+  { id: 'kp_chinese_middle_4', subject: '语文', gradeLevel: '初二', title: '修辞手法', description: '比喻、拟人、排比等修辞辨析', order: 4 },
   // ─── 英语 - 小学 ───────────────────────────────
-  { id: 'kp_english_primary_1', subject: '英语', gradeLevel: '小学', title: '字母', description: '26 个英文字母的认读与书写', order: 1 },
-  { id: 'kp_english_primary_2', subject: '英语', gradeLevel: '小学', title: '单词', description: '基础词汇与常见名词、动词', order: 2 },
-  { id: 'kp_english_primary_3', subject: '英语', gradeLevel: '小学', title: '简单句型', description: 'This is... / I am... 等基础句型', order: 3 },
-  { id: 'kp_english_primary_4', subject: '英语', gradeLevel: '小学', title: '日常对话', description: '问候、介绍、购物等日常情境对话', order: 4 },
+  { id: 'kp_english_primary_1', subject: '英语', gradeLevel: '四年级', title: '字母', description: '26 个英文字母的认读与书写', order: 1 },
+  { id: 'kp_english_primary_2', subject: '英语', gradeLevel: '四年级', title: '单词', description: '基础词汇与常见名词、动词', order: 2 },
+  { id: 'kp_english_primary_3', subject: '英语', gradeLevel: '四年级', title: '简单句型', description: 'This is... / I am... 等基础句型', order: 3 },
+  { id: 'kp_english_primary_4', subject: '英语', gradeLevel: '四年级', title: '日常对话', description: '问候、介绍、购物等日常情境对话', order: 4 },
   // ─── 英语 - 初中 ───────────────────────────────
-  { id: 'kp_english_middle_1', subject: '英语', gradeLevel: '初中', title: '语法', description: '时态、语态、从句等语法知识', order: 1 },
-  { id: 'kp_english_middle_2', subject: '英语', gradeLevel: '初中', title: '阅读理解', description: '短文阅读与信息提取', order: 2 },
-  { id: 'kp_english_middle_3', subject: '英语', gradeLevel: '初中', title: '完形填空', description: '语篇理解与词汇运用', order: 3 },
-  { id: 'kp_english_middle_4', subject: '英语', gradeLevel: '初中', title: '写作', description: '应用文与短文写作', order: 4 },
+  { id: 'kp_english_middle_1', subject: '英语', gradeLevel: '初二', title: '语法', description: '时态、语态、从句等语法知识', order: 1 },
+  { id: 'kp_english_middle_2', subject: '英语', gradeLevel: '初二', title: '阅读理解', description: '短文阅读与信息提取', order: 2 },
+  { id: 'kp_english_middle_3', subject: '英语', gradeLevel: '初二', title: '完形填空', description: '语篇理解与词汇运用', order: 3 },
+  { id: 'kp_english_middle_4', subject: '英语', gradeLevel: '初二', title: '写作', description: '应用文与短文写作', order: 4 },
   // ─── 物理 - 初中 ───────────────────────────────
-  { id: 'kp_physics_middle_1', subject: '物理', gradeLevel: '初中', title: '力学', description: '力的概念、重力、摩擦力', order: 1 },
-  { id: 'kp_physics_middle_2', subject: '物理', gradeLevel: '初中', title: '运动学', description: '速度、加速度、匀速直线运动', order: 2 },
-  { id: 'kp_physics_middle_3', subject: '物理', gradeLevel: '初中', title: '电学', description: '电流、电压、电阻与欧姆定律', order: 3 },
-  { id: 'kp_physics_middle_4', subject: '物理', gradeLevel: '初中', title: '光学', description: '光的传播、反射与折射', order: 4 },
+  { id: 'kp_physics_middle_1', subject: '物理', gradeLevel: '初二', title: '力学', description: '力的概念、重力、摩擦力', order: 1 },
+  { id: 'kp_physics_middle_2', subject: '物理', gradeLevel: '初二', title: '运动学', description: '速度、加速度、匀速直线运动', order: 2 },
+  { id: 'kp_physics_middle_3', subject: '物理', gradeLevel: '初二', title: '电学', description: '电流、电压、电阻与欧姆定律', order: 3 },
+  { id: 'kp_physics_middle_4', subject: '物理', gradeLevel: '初二', title: '光学', description: '光的传播、反射与折射', order: 4 },
   // ─── 化学 - 初中 ───────────────────────────────
-  { id: 'kp_chemistry_middle_1', subject: '化学', gradeLevel: '初中', title: '元素', description: '常见元素符号与元素周期表初步', order: 1 },
-  { id: 'kp_chemistry_middle_2', subject: '化学', gradeLevel: '初中', title: '化合物', description: '常见化合物的性质与用途', order: 2 },
-  { id: 'kp_chemistry_middle_3', subject: '化学', gradeLevel: '初中', title: '化学反应', description: '化合、分解、置换、复分解反应', order: 3 },
-  { id: 'kp_chemistry_middle_4', subject: '化学', gradeLevel: '初中', title: '酸碱盐', description: '常见酸、碱、盐的性质与反应', order: 4 },
+  { id: 'kp_chemistry_middle_1', subject: '化学', gradeLevel: '初二', title: '元素', description: '常见元素符号与元素周期表初步', order: 1 },
+  { id: 'kp_chemistry_middle_2', subject: '化学', gradeLevel: '初二', title: '化合物', description: '常见化合物的性质与用途', order: 2 },
+  { id: 'kp_chemistry_middle_3', subject: '化学', gradeLevel: '初二', title: '化学反应', description: '化合、分解、置换、复分解反应', order: 3 },
+  { id: 'kp_chemistry_middle_4', subject: '化学', gradeLevel: '初二', title: '酸碱盐', description: '常见酸、碱、盐的性质与反应', order: 4 },
   // ─── 生物 - 初中 ───────────────────────────────
-  { id: 'kp_biology_middle_1', subject: '生物', gradeLevel: '初中', title: '细胞', description: '细胞结构与功能、细胞分裂', order: 1 },
-  { id: 'kp_biology_middle_2', subject: '生物', gradeLevel: '初中', title: '植物', description: '植物的分类、结构与生理', order: 2 },
-  { id: 'kp_biology_middle_3', subject: '生物', gradeLevel: '初中', title: '人体', description: '人体八大系统与生理功能', order: 3 },
-  { id: 'kp_biology_middle_4', subject: '生物', gradeLevel: '初中', title: '生态系统', description: '生态系统的组成与能量流动', order: 4 },
+  { id: 'kp_biology_middle_1', subject: '生物', gradeLevel: '初二', title: '细胞', description: '细胞结构与功能、细胞分裂', order: 1 },
+  { id: 'kp_biology_middle_2', subject: '生物', gradeLevel: '初二', title: '植物', description: '植物的分类、结构与生理', order: 2 },
+  { id: 'kp_biology_middle_3', subject: '生物', gradeLevel: '初二', title: '人体', description: '人体八大系统与生理功能', order: 3 },
+  { id: 'kp_biology_middle_4', subject: '生物', gradeLevel: '初二', title: '生态系统', description: '生态系统的组成与能量流动', order: 4 },
 ];
 
 // ═══════════════════════════════════════════════════════════════
-//  3. 题目数据（与 prisma/seed.ts 的 QUESTIONS 同步，60 道）
+//  2. 题目数据（与 prisma/seed.ts 的 QUESTIONS 同步，60 道）
 // ═══════════════════════════════════════════════════════════════
 const QUESTIONS_SEED: Question[] = [
   // ─── 幼儿园（10 题：数学 6 + 语文 4）────────────────────
@@ -152,13 +133,12 @@ const QUESTIONS_SEED: Question[] = [
 ];
 
 export async function isSeeded(): Promise<boolean> {
-  const badgesCount = await count(STORES.BADGES);
-  return badgesCount > 0;
+  const kpCount = await count(STORES.KNOWLEDGE_POINTS);
+  return kpCount > 0;
 }
 
 export async function seedIfEmpty(): Promise<void> {
   if (await isSeeded()) return;
-  await putMany(STORES.BADGES, BADGES_SEED);
   await putMany(STORES.KNOWLEDGE_POINTS, KNOWLEDGE_POINTS_SEED);
   await putMany(STORES.QUESTIONS, QUESTIONS_SEED);
 }

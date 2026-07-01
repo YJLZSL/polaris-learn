@@ -1,8 +1,5 @@
-import { getLearningModeConfig, type LearningModeId } from '@/lib/learning-modes';
-import {
-  obscureValue,
-  deobscureValue,
-} from '@/lib/services/secure-storage';
+import { getLearningModeConfig, type LearningMode } from '@/lib/learning-modes';
+import { secureStorage } from '@/lib/services/secure-storage';
 
 export type LLMProvider = 'deepseek' | 'qwen' | 'openai' | 'ollama' | 'custom';
 
@@ -22,6 +19,7 @@ export interface AIServiceConfig {
 }
 
 const LLM_STORAGE_PREFIX = 'llm_config_';
+const API_KEY_PREFIX = 'llm_apikey:';
 
 const PROVIDER_ENDPOINTS: Record<LLMProvider, string> = {
   deepseek: 'https://api.deepseek.com/v1/chat/completions',
@@ -40,8 +38,9 @@ export const PROVIDER_DEFAULT_MODELS: Record<LLMProvider, string> = {
 };
 
 /* ============================================================
- * Task 9: 模型配置 UX 重构 —— 多配置存储 + 加密 + 连接测试
- * 仅修改配置存储相关函数；chat() / buildSocraticSystemPrompt 不变。
+ * Task 9 / Task 5: 模型配置 UX 重构 —— 多配置存储 + 安全存储 + 连接测试
+ * API Key 单独写入 platform.secureStorage，其余元数据保留在 localStorage。
+ * chat() / buildSocraticSystemPrompt 不变。
  * ============================================================ */
 
 const PROFILES_KEY = 'llm_config_profiles';
@@ -63,12 +62,30 @@ interface StoredProfile {
   id: string;
   name: string;
   provider: LLMProvider;
-  apiKey: string;
   baseUrl: string;
   model: string;
   temperature?: number;
   maxTokens?: number;
   topP?: number;
+}
+
+function apiKeyStorageKey(profileId: string): string {
+  return `${API_KEY_PREFIX}${profileId}`;
+}
+
+async function loadProfileApiKey(profileId: string): Promise<string> {
+  if (typeof window === 'undefined') return '';
+  return (await secureStorage.get(apiKeyStorageKey(profileId))) ?? '';
+}
+
+async function persistProfileApiKey(profileId: string, apiKey: string): Promise<void> {
+  if (typeof window === 'undefined') return;
+  const key = apiKeyStorageKey(profileId);
+  if (apiKey) {
+    await secureStorage.set(key, apiKey);
+  } else {
+    await secureStorage.remove(key);
+  }
 }
 
 function defaultConfig(): AIServiceConfig {
@@ -100,7 +117,7 @@ function generateProfileId(): string {
 }
 
 /** 从旧的 llm_config_* 单配置迁移为 profiles 数组（仅迁移一次） */
-function migrateLegacyConfig(): LLMConfigProfile[] {
+async function migrateLegacyConfig(): Promise<LLMConfigProfile[]> {
   if (typeof window === 'undefined') return [];
   const legacyProvider = localStorage.getItem(`${LLM_STORAGE_PREFIX}provider`);
   if (!legacyProvider) return [];
@@ -122,22 +139,29 @@ function migrateLegacyConfig(): LLMConfigProfile[] {
     maxTokens,
     topP,
   };
-  persistProfiles([profile]);
+  await persistProfiles([profile]);
   localStorage.setItem(ACTIVE_ID_KEY, profile.id);
   return [profile];
 }
 
-function persistProfiles(profiles: LLMConfigProfile[]): void {
+async function persistProfiles(profiles: LLMConfigProfile[]): Promise<void> {
   if (typeof window === 'undefined') return;
   const stored: StoredProfile[] = profiles.map((p) => ({
-    ...p,
-    apiKey: p.apiKey ? obscureValue(p.apiKey) : '',
+    id: p.id,
+    name: p.name,
+    provider: p.provider,
+    baseUrl: p.baseUrl,
+    model: p.model,
+    temperature: p.temperature,
+    maxTokens: p.maxTokens,
+    topP: p.topP,
   }));
+  await Promise.all(profiles.map((p) => persistProfileApiKey(p.id, p.apiKey)));
   localStorage.setItem(PROFILES_KEY, JSON.stringify(stored));
 }
 
-/** Task 9.7: 列出全部配置（解密 apiKey） */
-export function listProfiles(): LLMConfigProfile[] {
+/** Task 9.7: 列出全部配置（从安全存储读取 apiKey） */
+export async function listProfiles(): Promise<LLMConfigProfile[]> {
   if (typeof window === 'undefined') return [];
   const raw = localStorage.getItem(PROFILES_KEY);
   if (!raw) {
@@ -145,25 +169,27 @@ export function listProfiles(): LLMConfigProfile[] {
   }
   try {
     const stored = JSON.parse(raw) as StoredProfile[];
-    return stored.map((p) => ({
-      id: p.id,
-      name: p.name,
-      provider: p.provider,
-      apiKey: p.apiKey ? deobscureValue(p.apiKey) : '',
-      baseUrl: p.baseUrl || '',
-      model: p.model || '',
-      temperature: p.temperature,
-      maxTokens: p.maxTokens,
-      topP: p.topP,
-    }));
+    return Promise.all(
+      stored.map(async (p) => ({
+        id: p.id,
+        name: p.name,
+        provider: p.provider,
+        apiKey: await loadProfileApiKey(p.id),
+        baseUrl: p.baseUrl || '',
+        model: p.model || '',
+        temperature: p.temperature,
+        maxTokens: p.maxTokens,
+        topP: p.topP,
+      }))
+    );
   } catch {
     return [];
   }
 }
 
-/** Task 9.7: 新建/更新一个配置（apiKey 加密存储） */
-export function saveProfile(profile: LLMConfigProfile): LLMConfigProfile {
-  const profiles = listProfiles();
+/** Task 9.7: 新建/更新一个配置（apiKey 写入安全存储） */
+export async function saveProfile(profile: LLMConfigProfile): Promise<LLMConfigProfile> {
+  const profiles = await listProfiles();
   const idx = profiles.findIndex((p) => p.id === profile.id);
   const normalized: LLMConfigProfile = {
     ...profile,
@@ -175,7 +201,7 @@ export function saveProfile(profile: LLMConfigProfile): LLMConfigProfile {
   } else {
     profiles.push(normalized);
   }
-  persistProfiles(profiles);
+  await persistProfiles(profiles);
   const activeId = localStorage.getItem(ACTIVE_ID_KEY);
   if (!activeId || !profiles.some((p) => p.id === activeId)) {
     localStorage.setItem(ACTIVE_ID_KEY, normalized.id);
@@ -184,10 +210,11 @@ export function saveProfile(profile: LLMConfigProfile): LLMConfigProfile {
 }
 
 /** Task 9.7: 删除一个配置 */
-export function deleteProfile(id: string): void {
+export async function deleteProfile(id: string): Promise<void> {
   if (typeof window === 'undefined') return;
-  const profiles = listProfiles().filter((p) => p.id !== id);
-  persistProfiles(profiles);
+  const profiles = (await listProfiles()).filter((p) => p.id !== id);
+  await persistProfiles(profiles);
+  await secureStorage.remove(apiKeyStorageKey(id));
   const activeId = localStorage.getItem(ACTIVE_ID_KEY);
   if (activeId === id) {
     localStorage.setItem(ACTIVE_ID_KEY, profiles[0]?.id ?? '');
@@ -201,22 +228,22 @@ export function setActiveProfile(id: string): void {
 }
 
 /** 获取当前激活的配置 */
-export function getActiveProfile(): LLMConfigProfile | null {
-  const profiles = listProfiles();
+export async function getActiveProfile(): Promise<LLMConfigProfile | null> {
+  const profiles = await listProfiles();
   if (profiles.length === 0) return null;
   const activeId = localStorage.getItem(ACTIVE_ID_KEY);
   return profiles.find((p) => p.id === activeId) ?? profiles[0];
 }
 
 /**
- * Task 9.5/9.7: 读取激活配置（保持同步签名，向后兼容 chat() 调用链）。
- * 内部用同步 btoa/atob 解密 apiKey。
+ * Task 9.5/9.7: 读取激活配置（异步签名，向后兼容 chat() 调用链）。
+ * API Key 从 platform.secureStorage 异步读取。
  */
-export function loadAIServiceConfig(): AIServiceConfig {
+export async function loadAIServiceConfig(): Promise<AIServiceConfig> {
   if (typeof window === 'undefined') {
     return defaultConfig();
   }
-  const active = getActiveProfile();
+  const active = await getActiveProfile();
   if (active) {
     return profileToConfig(active);
   }
@@ -224,11 +251,11 @@ export function loadAIServiceConfig(): AIServiceConfig {
 }
 
 /**
- * Task 9.5: 保存当前激活配置（apiKey 加密存储）。
+ * Task 9.5: 保存当前激活配置（apiKey 写入安全存储）。
  * 若未提供 id，则作为新的默认配置保存。
  */
-export function saveAIServiceConfig(config: AIServiceConfig, name?: string): LLMConfigProfile {
-  const active = getActiveProfile();
+export async function saveAIServiceConfig(config: AIServiceConfig, name?: string): Promise<LLMConfigProfile> {
+  const active = await getActiveProfile();
   const profile: LLMConfigProfile = {
     id: active?.id ?? '',
     name: name ?? active?.name ?? '默认配置',
@@ -340,7 +367,7 @@ export async function chat(
   weakPoints?: string[],
   onChunk?: (chunk: string) => void
 ): Promise<ChatResult> {
-  const config = loadAIServiceConfig();
+  const config = await loadAIServiceConfig();
   if (apiKey) config.apiKey = apiKey;
   if (provider) config.provider = provider;
 
@@ -463,7 +490,7 @@ export async function chat(
       reader.releaseLock();
     }
 
-    // 返回原始内容（含 <stage> 标签），由调用方解析与剥离
+    // 返回原始内容；模型不再被要求输出 <stage> 标签，但调用方仍会静默剥离遗留标签以兼容历史数据
     return {
       content: fullContent,
       fallback: false,
@@ -487,11 +514,10 @@ export async function chat(
 }
 
 function buildSocraticSystemPromptForMode(learningMode: string, messages: ChatMessage[], weakPoints?: string[]): string {
-  const mode = (learningMode || 'PRIMARY') as LearningModeId;
-  const modeConfig = getLearningModeConfig(mode);
+  const mode = (learningMode || 'TEEN') as LearningMode;
   const subject = inferSubject(messages);
   return buildSocraticSystemPrompt({
-    grade: modeConfig.defaultGrade,
+    grade: mode,
     subject,
     learningMode: mode,
     weakPoints,
@@ -531,12 +557,12 @@ export function buildSocraticSystemPrompt(params: {
   const weakPoints = params.weakPoints?.join("、") || "暂无";
   const subject = params.subject || "数学";
   const question = params.question || "";
-  const learningMode = params.learningMode || "PRIMARY";
+  const learningMode = params.learningMode || "TEEN";
 
   // 根据 learningMode 获取模式配置，并构造模式特定的"年龄适配 + 教学风格"指令块
   const modeConfig = getLearningModeConfig(learningMode);
-  const modeStyleBlock = buildModeStyleBlock(learningMode as LearningModeId);
-  const lengthRule = buildLengthRule(learningMode as LearningModeId);
+  const modeStyleBlock = buildModeStyleBlock(learningMode as LearningMode);
+  const lengthRule = buildLengthRule(learningMode as LearningMode);
 
   return `你是"Polaris老师"，一位专业的${modeConfig.label}教育辅导AI。
 
@@ -578,28 +604,19 @@ ${question ? `当前题目：${question}` : ""}
 
 请开始苏格拉底式教学。如果学生还没有提供具体题目，请先询问学生想学习什么内容。
 
-【阶段标注 - 必须遵守】
-请在回复最后以 \`<stage>diagnostic|clarification|hypothesis|reasoning|verification|reflection</stage>\` 标注当前所处的苏格拉底教学阶段。该标签不会展示给学生，仅用于系统追踪教学进度。`;
+【输出格式 - 必须遵守】
+直接输出对话内容即可，不要在回复中使用任何 XML/HTML 标签（如 <stage>、<topic> 等）或元数据标注，只返回给学生的自然语言文本。`;
 }
 
 /**
  * 根据 learningMode 构造模式特定的"年龄适配 + 教学风格"指令块。
  * 不同学习模式使用差异化的语言风格、术语密度与表达方式。
  */
-function buildModeStyleBlock(mode: LearningModeId): string {
+function buildModeStyleBlock(mode: LearningMode): string {
   switch (mode) {
-    case "KINDERGARTEN":
-      return `- 学习者年龄：3-6 岁（学前/幼儿园）
-- 词汇要求：使用超简单词汇（小学一二年级水平以下），避免任何专业术语
-- 语气风格：亲切活泼像大姐姐，温柔、可爱、有耐心
-- 表情符号：大量使用 🌟⭐🎈🎁🌈✨😀 等正向 emoji
-- 鼓励反馈：多用"太棒了！""你真聪明！""哇，你好厉害！"等鼓励性反馈
-- 表达方式：多用比喻、小故事、儿歌、动画角色来类比知识
-- 句式长度：用短句，避免复杂从句
-- 严禁出现：抽象公式、专业术语、过长解释`;
-
-    case "ELEMENTARY":
-      return `- 学习者年龄：6-12 岁（小学 1-6 年级）
+    case "YOUTH":
+      // V2：YOUTH 涵盖小学与初中阶段
+      return `- 学习者年龄：6-15 岁（小学与初中阶段）
 - 词汇要求：使用简单词汇，必要时为新概念做生活化解释
 - 语气风格：亲切活泼，平等尊重，像哥哥姐姐
 - 表情符号：适当使用 emoji（如 👍🎉💡😊）增加亲和力
@@ -607,9 +624,9 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 - 反馈方式：以鼓励为主，答错时温和引导再尝试
 - 表达方式：用生活化例子解释抽象概念`;
 
-    case "MIDDLE":
-    case "HIGH":
-      return `- 学习者年龄：12-18 岁（初中 7-9 年级 / 高中 10-12 年级）
+    case "TEEN":
+      // V2：TEEN 涵盖高中阶段
+      return `- 学习者年龄：15-18 岁（高中阶段）
 - 词汇要求：使用专业术语，规范学科语言
 - 语气风格：学术严谨，平等讨论
 - 教学方式：苏格拉底深化引导，分析解题思路
@@ -617,11 +634,12 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 - 反馈方式：具体指出思路对错，分析错误根因
 - 表达方式：分步骤、逻辑链清晰，可用编号列出推导过程`;
 
-    case "PROFESSIONAL":
-      return `- 学习者身份：在职上班族，利用碎片时间学习
+    case "ADULT":
+      // V2：ADULT 涵盖大学与职场
+      return `- 学习者身份：大学生或在职上班族，利用碎片时间学习
 - 词汇要求：简洁直接，避免冗长理论铺垫
 - 语气风格：实用导向，专业干练
-- 教学方式：关联职业场景与实际应用，强调"用得上"
+- 教学方式：关联实际场景与应用，强调"用得上"
 - 知识颗粒：以碎片化知识点为单位，一次解决一个小问题
 - 反馈方式：直接指出可落地的改进点
 - 表达方式：可类比工作场景（如报表、项目、汇报）`;
@@ -634,16 +652,14 @@ function buildModeStyleBlock(mode: LearningModeId): string {
 /**
  * 根据 learningMode 给出回复长度约束。
  */
-function buildLengthRule(mode: LearningModeId): string {
+function buildLengthRule(mode: LearningMode): string {
   switch (mode) {
-    case "KINDERGARTEN":
-      return "每次回复不超过 3 句话";
-    case "PROFESSIONAL":
-      return "每次回复尽量控制在 120 字以内，简洁直接";
-    case "MIDDLE":
-    case "HIGH":
+    case "YOUTH":
+      return "每次回答不超过 150 字";
+    case "TEEN":
       return "每次回答不超过 200 字";
-    case "ELEMENTARY":
+    case "ADULT":
+      return "每次回复尽量控制在 120 字以内，简洁直接";
     default:
       return "每次回答不超过 150 字";
   }
@@ -656,7 +672,7 @@ export function getFallbackResponse(
   learningMode?: string
 ): string {
   // 当 LLM API 不可用时的本地降级响应
-  const mode = (learningMode || "PRIMARY") as LearningModeId;
+  const mode = (learningMode || "TEEN") as LearningMode;
   const modeConfig = getLearningModeConfig(mode);
   const styleIntro = buildFallbackIntro(mode);
 
@@ -694,16 +710,13 @@ export function getFallbackResponse(
 /**
  * 构造降级响应的开场白（强调当前未配置 API Key 的提示），按模式调整语气。
  */
-function buildFallbackIntro(mode: LearningModeId): string {
+function buildFallbackIntro(mode: LearningMode): string {
   switch (mode) {
-    case "KINDERGARTEN":
-      return "🌟 哈喽小朋友！我是你的 AI 学习小伙伴！🎈 现在还没装好 AI 大脑，只能简单聊聊天哦～让爸爸/妈妈在设置页面帮我装好就可以陪我玩啦！✨";
-    case "ELEMENTARY":
+    case "YOUTH":
       return "你好呀！我是你的 AI 学习助手！😀 由于当前未配置大模型 API Key，我只能提供基础引导。请在设置页面配置后体验完整 AI 辅导功能。";
-    case "MIDDLE":
-    case "HIGH":
+    case "TEEN":
       return "你好。由于当前未配置大模型 API Key，本会话仅提供基础引导。请在设置页面配置后体验完整 AI 辅导功能。";
-    case "PROFESSIONAL":
+    case "ADULT":
       return "您好，未配置 API Key，当前为降级引导模式。请前往「设置」配置后解锁完整能力。";
     default:
       return "我是你的AI学习助手！由于当前未配置大模型API Key，我只能提供基础引导。请在设置页面配置API Key后体验完整AI辅导功能。";
@@ -713,13 +726,13 @@ function buildFallbackIntro(mode: LearningModeId): string {
 /**
  * 对降级响应内容做模式语气后处理（如幼儿园追加 emoji 与鼓励语）。
  */
-function applyModeTone(text: string, mode: LearningModeId, _modeLabel: string): string {
-  if (mode === "KINDERGARTEN") {
-    // 幼儿园：补上鼓励 emoji，保持简短
+function applyModeTone(text: string, mode: LearningMode, _modeLabel: string): string {
+  if (mode === "YOUTH") {
+    // 少年模式：补上鼓励 emoji，保持亲切
     return `${text} 🌟 加油哦，你可以的！🎁`;
   }
-  if (mode === "PROFESSIONAL") {
-    // 上班族模式：剥离常见装饰性 emoji，保持干练
+  if (mode === "ADULT") {
+    // 成人模式：剥离常见装饰性 emoji，保持干练
     return text.replace(/[🎉🌟🎈🎁✨👍💪😀😊]/gu, "").replace(/\s{2,}/g, " ").trim();
   }
   return text;
@@ -729,7 +742,7 @@ function applyModeTone(text: string, mode: LearningModeId, _modeLabel: string): 
  * 对 AI 回复（含 LLM 与降级响应）做模式语气后处理，导出供路由层调用。
  */
 export function applyModeToneToResponse(text: string, learningMode?: string): string {
-  const mode = (learningMode || "PRIMARY") as LearningModeId;
+  const mode = (learningMode || "TEEN") as LearningMode;
   const modeConfig = getLearningModeConfig(mode);
   return applyModeTone(text, mode, modeConfig.label);
 }

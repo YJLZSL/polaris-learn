@@ -1,6 +1,6 @@
 # ============================================================
 # Polaris - Android APK 构建脚本
-# 用途：一键构建 Next.js 静态站点并同步到 Capacitor Android 项目
+# 用途：一键构建 Vite 静态站点并同步到 Capacitor Android 项目
 # ============================================================
 
 $ErrorActionPreference = "Stop"
@@ -8,14 +8,14 @@ Write-Host "==========================" -ForegroundColor Cyan
 Write-Host "  Polaris APK 构建脚本" -ForegroundColor Cyan
 Write-Host "==========================" -ForegroundColor Cyan
 
-# Step 1: 构建 Next.js 静态站点
-Write-Host "`n[1/2] 构建 Next.js 静态站点..." -ForegroundColor Yellow
+# Step 1: 构建 Vite 静态站点
+Write-Host "`n[1/2] 构建 Vite 静态站点..." -ForegroundColor Yellow
 npm run build
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "错误：Next.js 构建失败！" -ForegroundColor Red
+    Write-Host "错误：Vite 构建失败！" -ForegroundColor Red
     exit 1
 }
-Write-Host "Next.js 构建完成，静态文件已输出到 out/ 目录。" -ForegroundColor Green
+Write-Host "Vite 构建完成，静态文件已输出到 dist/ 目录。" -ForegroundColor Green
 
 # Step 2: 同步静态文件到 Capacitor Android 项目
 Write-Host "`n[2/2] 同步 Capacitor Android 项目..." -ForegroundColor Yellow

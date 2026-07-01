@@ -1,6 +1,6 @@
 import { createUser, getUserByEmail, updateUser, getUserById, type User } from '@/lib/repositories/user.repository';
 import { createSession, getSession, deleteSession, deleteAllUserSessions } from '@/lib/repositories/auth.repository';
-import { getLearningModeConfig } from '@/lib/learning-modes';
+import { getLearningModeConfig, migrateLearningMode } from '@/lib/learning-modes';
 
 const SESSION_TOKEN_KEY = 'polaris_session_token';
 const PBKDF2_ITERATIONS = 100000;
@@ -55,7 +55,8 @@ export async function register(email: string, password: string, learningMode: st
     salt,
     name,
     learningMode,
-    grade: modeConfig.defaultGrade,
+    // V2: defaultGrade 已删除，用迁移后的学段作为默认 grade
+    grade: migrateLearningMode(learningMode),
     createdAt: now,
     updatedAt: now,
   };

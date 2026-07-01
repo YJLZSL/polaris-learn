@@ -15,7 +15,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { buttonTap } from "@/lib/motion";
 import PolarisMascot from "@/components/common/PolarisMascot";
 import { login } from "@/lib/services/auth-service";
 import { useUserStore } from "@/stores/useUserStore";
@@ -62,7 +61,7 @@ export default function LoginPage() {
       <CardHeader className="text-center space-y-3">
         {/* Task 18.6: PolarisMascot 欢迎装饰 */}
         <div className="flex justify-center">
-          <PolarisMascot mood="cheering" size={64} />
+          <PolarisMascot mood="default" size={64} />
         </div>
         <div>
           <CardTitle className="text-2xl">欢迎回来</CardTitle>
@@ -113,7 +112,7 @@ export default function LoginPage() {
             </div>
           </div>
 
-          <motion.div {...buttonTap}>
+          <motion.div whileTap={{ scale: 0.97 }}>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading && <Loader2 className="h-4 w-4 animate-spin" />}
               {loading ? "登录中..." : "登录"}

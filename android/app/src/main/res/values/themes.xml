@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
+    <item name="colorPrimary">@color/polarisBackground</item>
+    <item name="colorPrimaryDark">@color/polarisBackground</item>
+    <item name="colorAccent">@color/polarisAccent</item>
+    <item name="android:statusBarColor">@color/polarisBackground</item>
+    <item name="android:navigationBarColor">@color/polarisBackground</item>
+    <item name="android:windowBackground">@color/polarisBackground</item>
+    <item name="android:windowLightStatusBar">false</item>
+  </style>
+</resources>

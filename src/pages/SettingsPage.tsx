@@ -1,26 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
-import {
-  Bell,
-  Palette,
-  Shield,
-  Clock,
-  LogOut,
-  Eye,
-  EyeOff,
-  Loader2,
-  CheckCircle2,
-  AlertCircle,
-  Monitor,
-  Sun,
-  Moon,
-  Smartphone,
-  Globe,
-  GraduationCap,
-  Sparkles,
-  Cpu,
-  Volume2,
-} from "lucide-react";
 import toast from "react-hot-toast";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,1052 +14,570 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useUserStore } from "@/stores/useUserStore";
-import { LEARNING_MODES, type LearningModeId } from "@/lib/learning-modes";
-import { changePassword, getCurrentUser } from "@/lib/services/auth-service";
-import { updateUser as repoUpdateUser } from "@/lib/repositories/user.repository";
-import { loadAIServiceConfig, type AIServiceConfig } from "@/lib/services/ai-service";
 import {
-  loadVoiceSettings,
-  saveVoiceSettings,
-  testVoice,
-  isWebSpeechAvailable,
-  isCapacitorEnvironment,
-  type VoiceSettings,
-  type TtsEngine,
-} from "@/lib/services/voice-service";
-import ModelConfigWizard from "@/components/common/ModelConfigWizard";
-import ModelConfigAdvanced from "@/components/common/ModelConfigAdvanced";
+  LEARNING_MODES,
+  getLearningModeConfig,
+  type LearningMode,
+} from "@/lib/learning-modes";
+import { platform } from "@/lib/platform";
+import {
+  loadAIServiceConfig,
+  saveAIServiceConfig,
+  listProfiles,
+  setActiveProfile,
+  getActiveProfile,
+  testConnection,
+  PROVIDER_DEFAULT_MODELS,
+  type LLMProvider,
+  type AIServiceConfig,
+  type LLMConfigProfile,
+} from "@/lib/services/ai-service";
+import { useSafeMotion } from "@/hooks/useSafeMotion";
+import { fadeUp } from "@/lib/motion";
 
-const LEADERBOARD_VISIBLE_KEY = "polaris_leaderboard_visible";
-function loadLeaderboardVisible(): boolean {
-  if (typeof window === "undefined") return true;
-  return localStorage.getItem(LEADERBOARD_VISIBLE_KEY) !== "false";
-}
-function saveLeaderboardVisible(visible: boolean) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(LEADERBOARD_VISIBLE_KEY, String(visible));
-}
+/* ============================================================
+ * Task 12 (Polaris V2): SettingsPage 重写
+ * - AI 模型配置：单一表单（provider + baseUrl + apiKey + model + temperature + 连接测试）
+ * - 多配置切换：最近使用过的 3 个配置下拉
+ * - 极简专注计时器：25/5 倒计时，静默（无 XP / 能量条 / 通知屏蔽）
+ * - 学段选择：3 档（YOUTH / TEEN / ADULT）
+ * ============================================================ */
 
-const reminderTimeOptions = [
-  { label: "8:00", value: "08:00" },
-  { label: "9:00", value: "09:00" },
-  { label: "10:00", value: "10:00" },
-  { label: "20:00", value: "20:00" },
-  { label: "21:00", value: "21:00" },
+const PROVIDER_OPTIONS: { value: LLMProvider; label: string; baseUrl: string }[] = [
+  { value: "deepseek", label: "DeepSeek", baseUrl: "https://api.deepseek.com/v1" },
+  { value: "openai", label: "OpenAI", baseUrl: "https://api.openai.com/v1" },
+  { value: "ollama", label: "Ollama（本地）", baseUrl: "http://localhost:11434/v1" },
+  { value: "custom", label: "自定义", baseUrl: "" },
 ];
 
+const THEME_KEY = "polaris_theme";
+const FONT_SIZE_KEY = "polaris_font_size";
+
+const FOCUS_DURATION = 25 * 60;
+const BREAK_DURATION = 5 * 60;
+
+function formatTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+}
+
 export default function SettingsPage() {
-  const { name, grade, avatar, learningMode, setUser, clearUser, initFromAuth } = useUserStore();
+  const { name, learningMode, setUser } = useUserStore();
+  const safeMotion = useSafeMotion();
 
-  /* ---------- loading state ---------- */
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  /* ---------- 个人信息 ---------- */
+  const [displayName, setDisplayName] = useState<string>(name ?? "");
 
-  /* ---------- notification settings ---------- */
-  const [notifyLearningReminder, setNotifyLearningReminder] = useState(true);
-  const [notifyDailyReport, setNotifyDailyReport] = useState(false);
-  const [notifyAchievement, setNotifyAchievement] = useState(true);
-  const [reminderTime, setReminderTime] = useState("20:00");
-  const [notifySaving, setNotifySaving] = useState(false);
-  const [notifySaveSuccess, setNotifySaveSuccess] = useState(false);
-  const [notifySaveError, setNotifySaveError] = useState<string | null>(null);
+  /* ---------- AI 模型配置 ---------- */
+  const [provider, setProvider] = useState<LLMProvider>("deepseek");
+  const [baseUrl, setBaseUrl] = useState<string>("");
+  const [apiKey, setApiKey] = useState<string>("");
+  const [model, setModel] = useState<string>("");
+  const [temperature, setTemperature] = useState<number>(0.5);
+  const [showApiKey, setShowApiKey] = useState<boolean>(false);
+  const [testing, setTesting] = useState<boolean>(false);
+  const [saving, setSaving] = useState<boolean>(false);
+  const [activeProfileId, setActiveProfileId] = useState<string>("");
+  const [recentProfiles, setRecentProfiles] = useState<LLMConfigProfile[]>([]);
 
-  /* ---------- learning mode settings ---------- */
-  const [modeSaving, setModeSaving] = useState(false);
-  const [modeSaveSuccess, setModeSaveSuccess] = useState(false);
-  const [modeSaveError, setModeSaveError] = useState<string | null>(null);
+  /* ---------- 极简专注计时器 ---------- */
+  const [timerMode, setTimerMode] = useState<"focus" | "break">("focus");
+  const [secondsLeft, setSecondsLeft] = useState<number>(FOCUS_DURATION);
+  const [timerRunning, setTimerRunning] = useState<boolean>(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  /* ---------- Task 3.7: active tab for shared element animation ---------- */
-  const [activeTab, setActiveTab] = useState("learning-mode");
+  /* ---------- 外观设置 ---------- */
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [fontSize, setFontSize] = useState<"small" | "medium" | "large">("medium");
 
-  /* ---------- appearance settings ---------- */
-  const [themeMode, setThemeMode] = useState<"light" | "dark" | "system">("system");
-  const [leaderboardVisible, setLeaderboardVisible] = useState(true);
-
-  /* ---------- security settings ---------- */
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [passwordSaving, setPasswordSaving] = useState(false);
-  const [passwordSaveSuccess, setPasswordSaveSuccess] = useState(false);
-  const [passwordSaveError, setPasswordSaveError] = useState<string | null>(null);
-
-  /* ---------- LLM 大模型配置（Task 9.8 集成） ---------- */
-  const [wizardOpen, setWizardOpen] = useState(false);
-  const [activeConfig, setActiveConfig] = useState<AIServiceConfig>(() => loadAIServiceConfig());
-  const [advancedKey, setAdvancedKey] = useState(0);
-
-  /* ---------- Task 8.8: 语音设置 ---------- */
-  const [voiceSettings, setVoiceSettings] = useState<VoiceSettings>(() => loadVoiceSettings());
-  const [voiceTesting, setVoiceTesting] = useState(false);
-
-  const handleVoiceChange = useCallback((patch: Partial<VoiceSettings>) => {
-    const next = saveVoiceSettings(patch);
-    setVoiceSettings(next);
+  /* ---------- 加载模型配置 ---------- */
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const cfg = await loadAIServiceConfig();
+        if (cancelled) return;
+        setProvider(cfg.provider);
+        setBaseUrl(cfg.baseUrl);
+        setApiKey(cfg.apiKey);
+        setModel(cfg.model);
+        setTemperature(cfg.temperature ?? 0.5);
+        const profiles = await listProfiles();
+        if (cancelled) return;
+        setRecentProfiles(profiles.slice(0, 3));
+        const active = await getActiveProfile();
+        if (!cancelled && active) setActiveProfileId(active.id);
+      } catch (err) {
+        console.error("[SettingsPage] load config failed:", err);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleTestVoice = useCallback(async () => {
-    setVoiceTesting(true);
-    try {
-      await testVoice(voiceSettings);
-    } catch {
-      toast.error("语音测试失败");
-    } finally {
-      setVoiceTesting(false);
-    }
-  }, [voiceSettings]);
+  /* ---------- 加载外观偏好 ---------- */
+  useEffect(() => {
+    const storedTheme = (localStorage.getItem(THEME_KEY) as "dark" | "light") || "dark";
+    const storedFont =
+      (localStorage.getItem(FONT_SIZE_KEY) as "small" | "medium" | "large") || "medium";
+    setTheme(storedTheme);
+    setFontSize(storedFont);
+  }, []);
 
-  /* ---------- fetch profile on mount ---------- */
-  const fetchProfile = useCallback(async () => {
-    setLoading(true);
-    setFetchError(null);
-    try {
-      await initFromAuth();
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error("未登录");
-      }
-      setUser({
-        name: user.name,
-        grade: user.grade,
-        avatar: user.avatar ?? null,
-        learningMode: user.learningMode,
-        email: user.email,
+  /* ---------- 应用主题 ---------- */
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  /* ---------- 应用字号 ---------- */
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.documentElement.dataset.fontSize = fontSize;
+    localStorage.setItem(FONT_SIZE_KEY, fontSize);
+  }, [fontSize]);
+
+  /* ---------- 专注计时器（setInterval + 卸载清理） ---------- */
+  useEffect(() => {
+    if (!timerRunning) return;
+    intervalRef.current = setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          if (intervalRef.current) {
+            clearInterval(intervalRef.current);
+            intervalRef.current = null;
+          }
+          setTimerRunning(false);
+          toast.success(timerMode === "focus" ? "专注结束" : "休息结束");
+          return timerMode === "focus" ? FOCUS_DURATION : BREAK_DURATION;
+        }
+        return prev - 1;
       });
-    } catch (err) {
-      setFetchError(err instanceof Error ? err.message : "获取设置失败");
-    } finally {
-      setLoading(false);
-    }
-  }, [setUser, initFromAuth]);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    fetchProfile();
-  }, [fetchProfile]);
-
-  // Load theme preference from localStorage
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const saved = localStorage.getItem("theme-mode") as "light" | "dark" | "system" | null;
-    if (saved) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setThemeMode(saved);
-    }
-    setLeaderboardVisible(loadLeaderboardVisible());
-  }, []);
-
-  /* ---------- Task 9.8: 配置向导完成回调 ---------- */
-  const handleWizardComplete = (cfg: AIServiceConfig) => {
-    setActiveConfig(cfg);
-    setWizardOpen(false);
-    // 强制刷新高级设置区，让其重新从 localStorage 读取最新配置
-    setAdvancedKey((k) => k + 1);
-    toast.success("模型配置已保存");
-  };
-
-  /* ---------- Task 9.8: 高级设置变更回调 ---------- */
-  const handleAdvancedChange = (cfg: AIServiceConfig) => {
-    setActiveConfig(cfg);
-  };
-
-  /* ---------- theme toggle ---------- */
-  const applyTheme = (mode: "light" | "dark" | "system") => {
-    setThemeMode(mode);
-    localStorage.setItem("theme-mode", mode);
-    const root = document.documentElement;
-    if (mode === "dark") {
-      root.classList.add("dark");
-    } else if (mode === "light") {
-      root.classList.remove("dark");
-    } else {
-      // system
-      if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-        root.classList.add("dark");
-      } else {
-        root.classList.remove("dark");
+    }, 1000);
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
+    };
+  }, [timerRunning, timerMode]);
+
+  /* ---------- 处理函数 ---------- */
+  const handleProviderChange = (next: LLMProvider) => {
+    setProvider(next);
+    const opt = PROVIDER_OPTIONS.find((o) => o.value === next);
+    if (next !== "custom" && opt) {
+      setBaseUrl(opt.baseUrl);
     }
+    setModel(PROVIDER_DEFAULT_MODELS[next]);
   };
 
-  /* ---------- switch learning mode ---------- */
-  const handleSelectMode = async (modeId: LearningModeId) => {
-    // 乐观更新：如果与当前一致则无需请求
-    if (modeId === learningMode) return;
-    setModeSaving(true);
-    setModeSaveError(null);
-    setModeSaveSuccess(false);
-    // 立即更新本地 store，让 UI 即时反馈
-    setUser({ learningMode: modeId });
+  const handleSwitchProfile = async (id: string) => {
+    if (!id) return;
+    const profile = recentProfiles.find((p) => p.id === id);
+    if (!profile) return;
+    setActiveProfileId(id);
+    setActiveProfile(id);
+    setProvider(profile.provider);
+    setBaseUrl(profile.baseUrl);
+    setApiKey(profile.apiKey);
+    setModel(profile.model);
+    setTemperature(profile.temperature ?? 0.5);
+    toast.success("已切换到所选配置");
+  };
+
+  const buildConfig = (): AIServiceConfig => ({
+    provider,
+    apiKey,
+    baseUrl,
+    model: model || PROVIDER_DEFAULT_MODELS[provider],
+    temperature,
+  });
+
+  const handleSave = async () => {
+    setSaving(true);
     try {
-      const user = await getCurrentUser();
-      if (!user) {
-        throw new Error("未登录");
-      }
-      user.learningMode = modeId;
-      await repoUpdateUser(user);
-      setModeSaveSuccess(true);
-      setTimeout(() => setModeSaveSuccess(false), 2000);
+      const saved = await saveAIServiceConfig(buildConfig());
+      setActiveProfileId(saved.id);
+      // Task 12: API Key 同时写入 platform.secureStorage 的规范 key
+      await platform.secureStorage.set("llm_config_apiKey", apiKey);
+      const profiles = await listProfiles();
+      setRecentProfiles(profiles.slice(0, 3));
+      toast.success("配置已保存");
     } catch (err) {
-      // 回滚到上一次的 mode
-      setUser({ learningMode });
-      setModeSaveError(err instanceof Error ? err.message : "保存失败");
+      console.error("[SettingsPage] save failed:", err);
+      toast.error("保存失败，请重试");
     } finally {
-      setModeSaving(false);
+      setSaving(false);
     }
   };
 
-  /* ---------- save notification settings ---------- */
-  const handleSaveNotifications = async () => {
-    setNotifySaving(true);
-    setNotifySaveError(null);
-    setNotifySaveSuccess(false);
-    try {
-      // 通知设置仅持久化到 localStorage（无后端存储）
-      localStorage.setItem("polaris_notification_settings", JSON.stringify({
-        learningReminder: notifyLearningReminder,
-        dailyReport: notifyDailyReport,
-        achievement: notifyAchievement,
-        reminderTime,
-      }));
-      // 同步用户基本信息到 repository（确保 name/grade/avatar 不丢失）
-      const user = await getCurrentUser();
-      if (user) {
-        if (name !== undefined) user.name = name ?? user.name;
-        if (grade !== undefined) user.grade = grade ?? user.grade;
-        if (avatar !== undefined) user.avatar = avatar ?? user.avatar;
-        await repoUpdateUser(user);
-      }
-      setNotifySaveSuccess(true);
-      setTimeout(() => setNotifySaveSuccess(false), 2000);
-    } catch (err) {
-      setNotifySaveError(err instanceof Error ? err.message : "保存失败");
-    } finally {
-      setNotifySaving(false);
-    }
-  };
-
-  /* ---------- change password ---------- */
-  const handleChangePassword = async () => {
-    setPasswordSaveError(null);
-    if (!currentPassword || !newPassword || !confirmPassword) {
-      const msg = "请填写所有密码字段";
-      setPasswordSaveError(msg);
-      toast.error(msg);
+  const handleTest = async () => {
+    if (provider !== "ollama" && !apiKey.trim()) {
+      toast.error("请先填写 API Key");
       return;
     }
-    if (newPassword !== confirmPassword) {
-      const msg = "两次输入的新密码不一致";
-      setPasswordSaveError(msg);
-      toast.error(msg);
-      return;
-    }
-    if (newPassword.length < 6) {
-      const msg = "新密码至少需要6个字符";
-      setPasswordSaveError(msg);
-      toast.error(msg);
-      return;
-    }
-    setPasswordSaving(true);
-    setPasswordSaveSuccess(false);
+    setTesting(true);
     try {
-      await changePassword(currentPassword, newPassword);
-      setPasswordSaveSuccess(true);
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-      toast.success("密码修改成功");
-      setTimeout(() => setPasswordSaveSuccess(false), 2000);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "修改密码失败，请重试";
-      setPasswordSaveError(msg);
-      toast.error(msg);
+      const result = await testConnection(buildConfig());
+      if (result.success) toast.success(result.message);
+      else toast.error(result.message);
+    } catch (_err) {
+      toast.error("连接测试失败");
     } finally {
-      setPasswordSaving(false);
+      setTesting(false);
     }
   };
 
-  /* ---------- logout ---------- */
-  const handleLogout = () => {
-    if (confirm("确定要退出登录吗？")) {
-      clearUser();
+  const handleLearningModeChange = (mode: LearningMode) => {
+    setUser({ learningMode: mode });
+    toast.success(`已切换为「${getLearningModeConfig(mode).label}」`);
+  };
+
+  const handleSaveDisplayName = () => {
+    const trimmed = displayName.trim();
+    if (!trimmed) {
+      toast.error("显示名称不能为空");
+      return;
+    }
+    setUser({ name: trimmed });
+    toast.success("显示名称已更新");
+  };
+
+  /* ---------- 计时器控制 ---------- */
+  const startTimer = () => setTimerRunning(true);
+  const pauseTimer = () => setTimerRunning(false);
+  const resetTimer = () => {
+    setTimerRunning(false);
+    setSecondsLeft(timerMode === "focus" ? FOCUS_DURATION : BREAK_DURATION);
+  };
+  const switchTimerMode = (mode: "focus" | "break") => {
+    setTimerMode(mode);
+    setTimerRunning(false);
+    setSecondsLeft(mode === "focus" ? FOCUS_DURATION : BREAK_DURATION);
+  };
+
+  /* ---------- 数据管理 ---------- */
+  const handleClearCache = () => {
+    try {
+      const keep = new Set([THEME_KEY, FONT_SIZE_KEY]);
+      const keysToRemove: string[] = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && !keep.has(key) && !key.startsWith("llm_config")) {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach((k) => localStorage.removeItem(k));
+      toast.success("已清除本地缓存");
+    } catch {
+      toast.error("清除缓存失败");
     }
   };
 
-  /* ---------- loading skeleton ---------- */
-  if (loading) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8 space-y-6">
-        <Skeleton className="h-10 w-32 rounded-lg" />
-        <Skeleton className="h-9 w-80 rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-xl" />
-      </div>
-    );
-  }
+  const handleExportData = () => {
+    try {
+      const payload = {
+        exportedAt: new Date().toISOString(),
+        user: { name, learningMode },
+        settings: { theme, fontSize, timerMode },
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `polaris-data-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success("已导出学习数据");
+    } catch {
+      toast.error("导出失败");
+    }
+  };
 
-  /* ---------- error state ---------- */
-  if (fetchError) {
-    return (
-      <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>{fetchError}</AlertDescription>
-        </Alert>
-        <Button onClick={fetchProfile} variant="outline" className="mt-4">
-          重试
-        </Button>
-      </div>
-    );
-  }
-
+  /* ---------- 渲染 ---------- */
   return (
-    <div className="max-w-2xl mx-auto px-4 py-6 lg:py-8 space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">设置</h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          管理你的账户和学习偏好
-        </p>
-      </div>
-
-      {/* ====== Tabs Layout ====== */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="w-full sm:w-auto">
-          <TabsTrigger value="learning-mode" className="gap-1.5 relative data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-            {activeTab === "learning-mode" && (
-              <motion.span layoutId="active-tab" className="absolute inset-0 rounded-md bg-background shadow" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-            )}
-            <GraduationCap className="w-4 h-4 relative z-10" />
-            <span className="hidden sm:inline relative z-10">学习模式</span>
-            <span className="sm:hidden relative z-10">模式</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-1.5 relative data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-            {activeTab === "notifications" && (
-              <motion.span layoutId="active-tab" className="absolute inset-0 rounded-md bg-background shadow" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-            )}
-            <Bell className="w-4 h-4 relative z-10" />
-            <span className="hidden sm:inline relative z-10">通知设置</span>
-            <span className="sm:hidden relative z-10">通知</span>
-          </TabsTrigger>
-          <TabsTrigger value="appearance" className="gap-1.5 relative data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-            {activeTab === "appearance" && (
-              <motion.span layoutId="active-tab" className="absolute inset-0 rounded-md bg-background shadow" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-            )}
-            <Palette className="w-4 h-4 relative z-10" />
-            <span className="hidden sm:inline relative z-10">外观设置</span>
-            <span className="sm:hidden relative z-10">外观</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-1.5 relative data-[state=active]:bg-transparent data-[state=active]:shadow-none">
-            {activeTab === "security" && (
-              <motion.span layoutId="active-tab" className="absolute inset-0 rounded-md bg-background shadow" transition={{ type: "spring", stiffness: 400, damping: 30 }} />
-            )}
-            <Shield className="w-4 h-4 relative z-10" />
-            <span className="hidden sm:inline relative z-10">安全设置</span>
-            <span className="sm:hidden relative z-10">安全</span>
-          </TabsTrigger>
-        </TabsList>
-
-        {/* ====== 学习模式 Tab ====== */}
-        <TabsContent value="learning-mode" className="space-y-4">
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-primary" />
-                学习模式
-              </CardTitle>
-              <CardDescription>
-                选择适合你的学习阶段，系统将根据模式调整内容难度、学科范围与界面风格
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {modeSaveError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{modeSaveError}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {LEARNING_MODES.map((mode) => {
-                  const isSelected = mode.id === learningMode;
-                  const Icon = mode.icon;
-                  return (
-                    <button
-                      key={mode.id}
-                      type="button"
-                      onClick={() => handleSelectMode(mode.id)}
-                      disabled={modeSaving}
-                      className={`group relative text-left rounded-xl border p-4 cursor-pointer transition-all hover:shadow-md disabled:cursor-not-allowed disabled:opacity-60 ${
-                        isSelected
-                          ? "border-primary ring-2 ring-primary/20 bg-primary/5"
-                          : "border-border hover:border-primary/50"
-                      }`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-10 h-10 rounded-lg bg-gradient-to-br ${mode.color} flex items-center justify-center shadow-sm shrink-0`}
-                        >
-                          <Icon className="w-5 h-5 text-white" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <p className="text-sm font-semibold">{mode.label}</p>
-                            {isSelected && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1 leading-relaxed line-clamp-2">
-                            {mode.description}
-                          </p>
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* 状态提示条 */}
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-muted-foreground">
-                  {modeSaving ? (
-                    <span className="inline-flex items-center gap-1.5">
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      正在保存...
-                    </span>
-                  ) : modeSaveSuccess ? (
-                    <span className="inline-flex items-center gap-1.5 text-green-600 dark:text-green-400">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      保存成功
-                    </span>
-                  ) : (
-                    <>当前模式：{LEARNING_MODES.find((m) => m.id === learningMode)?.label ?? "小学"}</>
-                  )}
-                </span>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ====== 通知设置 Tab ====== */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Bell className="w-4 h-4 text-primary" />
-                通知偏好
-              </CardTitle>
-              <CardDescription>选择你希望接收的通知类型</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {notifySaveError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{notifySaveError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* 学习提醒 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">学习提醒</Label>
-                  <p className="text-xs text-muted-foreground">每天定时提醒你开始学习</p>
-                </div>
-                <Switch
-                  checked={notifyLearningReminder}
-                  onCheckedChange={setNotifyLearningReminder}
-                />
-              </div>
-
-              <Separator />
-
-              {/* 每日报告 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">每日报告</Label>
-                  <p className="text-xs text-muted-foreground">每天总结你的学习数据</p>
-                </div>
-                <Switch
-                  checked={notifyDailyReport}
-                  onCheckedChange={setNotifyDailyReport}
-                />
-              </div>
-
-              <Separator />
-
-              {/* 成就通知 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">成就通知</Label>
-                  <p className="text-xs text-muted-foreground">获得成就和升级时通知你</p>
-                </div>
-                <Switch
-                  checked={notifyAchievement}
-                  onCheckedChange={setNotifyAchievement}
-                />
-              </div>
-
-              <Separator />
-
-              {/* 提醒时间 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">提醒时间</Label>
-                  <p className="text-xs text-muted-foreground">选择每日学习提醒的时间</p>
-                </div>
-                <Select value={reminderTime} onValueChange={setReminderTime}>
-                  <SelectTrigger className="w-28">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {reminderTimeOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <Button onClick={handleSaveNotifications} disabled={notifySaving} className="w-full sm:w-auto">
-                {notifySaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    保存中...
-                  </>
-                ) : notifySaveSuccess ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    已保存
-                  </>
-                ) : (
-                  "保存通知设置"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ====== 外观设置 Tab ====== */}
-        <TabsContent value="appearance" className="space-y-4">
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="w-4 h-4 text-primary" />
-                主题与外观
-              </CardTitle>
-              <CardDescription>自定义你的界面外观</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* 主题模式 */}
-              <div className="space-y-3">
-                <Label className="text-sm font-medium">主题模式</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    onClick={() => applyTheme("light")}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      themeMode === "light"
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Sun className={`w-6 h-6 ${themeMode === "light" ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`text-xs font-medium ${themeMode === "light" ? "text-primary" : "text-muted-foreground"}`}>
-                      亮色
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => applyTheme("dark")}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      themeMode === "dark"
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Moon className={`w-6 h-6 ${themeMode === "dark" ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`text-xs font-medium ${themeMode === "dark" ? "text-primary" : "text-muted-foreground"}`}>
-                      暗色
-                    </span>
-                  </button>
-                  <button
-                    onClick={() => applyTheme("system")}
-                    className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
-                      themeMode === "system"
-                        ? "border-primary bg-primary/5 shadow-sm"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                  >
-                    <Monitor className={`w-6 h-6 ${themeMode === "system" ? "text-primary" : "text-muted-foreground"}`} />
-                    <span className={`text-xs font-medium ${themeMode === "system" ? "text-primary" : "text-muted-foreground"}`}>
-                      跟随系统
-                    </span>
-                  </button>
-                </div>
-              </div>
-
-              <Separator />
-
-              {/* 语言 */}
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium flex items-center gap-1.5">
-                    <Globe className="w-4 h-4" />
-                    语言
-                  </Label>
-                  <p className="text-xs text-muted-foreground">选择界面显示语言</p>
-                </div>
-                <Select defaultValue="zh-CN">
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="zh-CN">简体中文</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator />
-
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5">
-                  <Label>显示排行榜</Label>
-                  <p className="text-xs text-muted-foreground">上班族模式可隐藏排行榜以专注学习</p>
-                </div>
-                <Switch
-                  checked={leaderboardVisible}
-                  onCheckedChange={(v) => {
-                    setLeaderboardVisible(v);
-                    saveLeaderboardVisible(v);
-                  }}
-                />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* ====== 安全设置 Tab ====== */}
-        <TabsContent value="security" className="space-y-4">
-          {/* 修改密码 */}
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="w-4 h-4 text-primary" />
-                修改密码
-              </CardTitle>
-              <CardDescription>更新你的登录密码</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {passwordSaveError && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{passwordSaveError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* 当前密码 */}
-              <div className="space-y-2">
-                <Label htmlFor="current-password">当前密码</Label>
-                <div className="relative">
-                  <Input
-                    id="current-password"
-                    type={showCurrentPassword ? "text" : "password"}
-                    value={currentPassword}
-                    onChange={(e) => setCurrentPassword(e.target.value)}
-                    placeholder="输入当前密码"
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                  >
-                    {showCurrentPassword ? (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* 新密码 */}
-              <div className="space-y-2">
-                <Label htmlFor="new-password">新密码</Label>
-                <div className="relative">
-                  <Input
-                    id="new-password"
-                    type={showNewPassword ? "text" : "password"}
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    placeholder="输入新密码（至少6位）"
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => setShowNewPassword(!showNewPassword)}
-                  >
-                    {showNewPassword ? (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              {/* 确认密码 */}
-              <div className="space-y-2">
-                <Label htmlFor="confirm-password">确认密码</Label>
-                <div className="relative">
-                  <Input
-                    id="confirm-password"
-                    type={showConfirmPassword ? "text" : "password"}
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="再次输入新密码"
-                    className="pr-10"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  >
-                    {showConfirmPassword ? (
-                      <EyeOff className="w-4 h-4 text-muted-foreground" />
-                    ) : (
-                      <Eye className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </Button>
-                </div>
-              </div>
-
-              <Button onClick={handleChangePassword} disabled={passwordSaving} className="w-full sm:w-auto">
-                {passwordSaving ? (
-                  <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    修改中...
-                  </>
-                ) : passwordSaveSuccess ? (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    密码已修改
-                  </>
-                ) : (
-                  "修改密码"
-                )}
-              </Button>
-            </CardContent>
-          </Card>
-
-          {/* 登录设备 */}
-          <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Smartphone className="w-4 h-4 text-primary" />
-                登录设备
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center justify-between p-3 rounded-xl bg-muted/50 border">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <Smartphone className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium">当前设备</p>
-                    <p className="text-xs text-muted-foreground">
-                      {typeof navigator !== "undefined" ? navigator.userAgent.split(" ").slice(-1)[0] : "浏览器"} · 刚刚活跃
-                    </p>
-                  </div>
-                </div>
-                <Badge variant="secondary">当前</Badge>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* 退出登录 */}
-          <Card className="border-destructive/30">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium">退出登录</p>
-                  <p className="text-xs text-muted-foreground">退出当前账户</p>
-                </div>
-                <Button variant="outline" className="text-destructive border-destructive/50 hover:bg-destructive/10" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4" />
-                  退出登录
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* ====== LLM Configuration (Task 9.8: 集成 ModelConfigWizard + ModelConfigAdvanced) ====== */}
-      <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
+    <motion.div
+      {...safeMotion({ initial: "hidden", animate: "show", variants: fadeUp })}
+      className="mx-auto w-full max-w-3xl space-y-6 px-4 py-8"
+    >
+      {/* ===== 个人信息设置 ===== */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-primary" />
-            大模型配置
-          </CardTitle>
-          <CardDescription>
-            配置 AI 辅导使用的语言模型。推荐使用三步向导快速上手，进阶参数可在下方高级设置中调整。
-          </CardDescription>
+          <CardTitle>个人信息</CardTitle>
+          <CardDescription>学段与显示名称将影响 AI 辅导的语言风格。</CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          {/* 当前配置摘要 + 触发向导按钮 */}
-          <div className="rounded-lg border p-3 flex items-center justify-between gap-3 bg-muted/30">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
-                <Cpu className="w-5 h-5 text-primary" />
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <p className="text-sm font-medium">
-                    {activeConfig.provider === "deepseek" && "DeepSeek"}
-                    {activeConfig.provider === "qwen" && "通义千问"}
-                    {activeConfig.provider === "openai" && "OpenAI"}
-                    {activeConfig.provider === "ollama" && "Ollama (本地)"}
-                    {activeConfig.provider === "custom" && "自定义"}
-                  </p>
-                  <Badge variant="outline" className="text-[10px] h-4 py-0 px-1.5 font-mono">
-                    {activeConfig.model || "未设置"}
-                  </Badge>
-                </div>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  {activeConfig.provider === "ollama"
-                    ? "本地运行，无需 API Key"
-                    : activeConfig.apiKey
-                    ? `API Key: ••••${activeConfig.apiKey.slice(-4)}`
-                    : "未配置 API Key（当前为降级模式）"}
-                </p>
-              </div>
-            </div>
-            <Button onClick={() => setWizardOpen(true)} size="sm" className="shrink-0">
-              <Sparkles className="w-4 h-4" />
-              配置模型
-            </Button>
+        <CardContent className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="learning-mode">学段</Label>
+            <Select
+              value={(learningMode as string) || "TEEN"}
+              onValueChange={(v) => handleLearningModeChange(v as LearningMode)}
+            >
+              <SelectTrigger id="learning-mode">
+                <SelectValue placeholder="选择学段" />
+              </SelectTrigger>
+              <SelectContent>
+                {LEARNING_MODES.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>
+                    {m.label} — {m.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-
-          {/* L2 高级设置折叠区（Task 9.2/9.4） */}
-          <ModelConfigAdvanced
-            key={advancedKey}
-            onConfigChange={handleAdvancedChange}
-          />
-
-          <p className="text-[11px] text-muted-foreground leading-relaxed">
-            自托管用户请在此配置您的大模型 API Key。配置仅存储在本地浏览器中（API Key 已加密混淆），不会上传到服务器。
-          </p>
+          <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="display-name">显示名称</Label>
+            <div className="flex gap-2">
+              <Input
+                id="display-name"
+                value={displayName}
+                onChange={(e) => setDisplayName(e.target.value)}
+                placeholder="你的昵称"
+                className="flex-1"
+              />
+              <Button onClick={handleSaveDisplayName} variant="outline">
+                保存
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
-      {/* Task 9.1: 模型配置向导 */}
-      <ModelConfigWizard
-        open={wizardOpen}
-        onClose={() => setWizardOpen(false)}
-        onComplete={handleWizardComplete}
-      />
-
-      {/* ====== Task 8.8: 语音设置 ====== */}
-      <Card className="border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]">
+      {/* ===== AI 模型配置（单一表单） ===== */}
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Volume2 className="w-4 h-4 text-primary" />
-            语音设置
-          </CardTitle>
+          <CardTitle>AI 模型配置</CardTitle>
           <CardDescription>
-            配置 AI 老师的语音朗读功能。本地语音（Web Speech API / Capacitor）免费，云端语音质量更高但需配置 API Key。
+            单一表单配置大模型，API Key 通过平台安全存储加密保存。
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant={isWebSpeechAvailable() ? "default" : "secondary"} className="text-[10px]">
-              Web Speech API {isWebSpeechAvailable() ? "可用" : "不可用"}
-            </Badge>
-            {isCapacitorEnvironment() && (
-              <Badge variant="secondary" className="text-[10px]">
-                Capacitor 原生环境
-              </Badge>
-            )}
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">启用语音朗读</Label>
-              <p className="text-xs text-muted-foreground">在 AI 老师消息气泡显示朗读按钮</p>
+        <CardContent className="space-y-5">
+          {recentProfiles.length > 0 && (
+            <div className="space-y-2">
+              <Label htmlFor="recent-configs">最近使用过的配置</Label>
+              <Select
+                value={activeProfileId}
+                onValueChange={(v) => handleSwitchProfile(v)}
+              >
+                <SelectTrigger id="recent-configs">
+                  <SelectValue placeholder="切换到历史配置" />
+                </SelectTrigger>
+                <SelectContent>
+                  {recentProfiles.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.name || p.model}（{p.provider}）
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
-            <Switch
-              checked={voiceSettings.enabled}
-              onCheckedChange={(v) => handleVoiceChange({ enabled: v })}
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">本地 TTS 引擎</Label>
-              <p className="text-xs text-muted-foreground">选择语音合成引擎</p>
-            </div>
-            <Select
-              value={voiceSettings.engine}
-              onValueChange={(v) => handleVoiceChange({ engine: v as TtsEngine })}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="web">Web Speech API</SelectItem>
-                <SelectItem value="capacitor">Capacitor TTS</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">朗读语言</Label>
-              <p className="text-xs text-muted-foreground">影响发音与测试文本</p>
-            </div>
-            <Select
-              value={voiceSettings.lang}
-              onValueChange={(v) => handleVoiceChange({ lang: v })}
-            >
-              <SelectTrigger className="w-40">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="zh-CN">简体中文</SelectItem>
-                <SelectItem value="en-US">English (US)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Separator />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">语速</Label>
-              <span className="text-xs text-muted-foreground font-mono">{voiceSettings.rate.toFixed(1)}x</span>
-            </div>
-            <input
-              type="range"
-              min="0.5"
-              max="2.0"
-              step="0.1"
-              value={voiceSettings.rate}
-              onChange={(e) => handleVoiceChange({ rate: parseFloat(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium">音调</Label>
-              <span className="text-xs text-muted-foreground font-mono">{voiceSettings.pitch.toFixed(1)}</span>
-            </div>
-            <input
-              type="range"
-              min="0.5"
-              max="2.0"
-              step="0.1"
-              value={voiceSettings.pitch}
-              onChange={(e) => handleVoiceChange({ pitch: parseFloat(e.target.value) })}
-              className="w-full accent-primary"
-            />
-          </div>
-
-          <Separator />
-
-          <div className="flex items-center justify-between">
-            <div className="space-y-0.5">
-              <Label className="text-sm font-medium">高质量云端 TTS</Label>
-              <p className="text-xs text-muted-foreground">MiniMax 中文 / OpenAI 英文，按字符计费</p>
-            </div>
-            <Switch
-              checked={voiceSettings.cloudEnabled}
-              onCheckedChange={(v) => handleVoiceChange({ cloudEnabled: v })}
-            />
-          </div>
-
-          {voiceSettings.cloudEnabled && (
-            <>
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-medium">云端引擎</Label>
-                  <p className="text-xs text-muted-foreground">选择云端 TTS 服务商</p>
-                </div>
-                <Select
-                  value={voiceSettings.cloudEngine}
-                  onValueChange={(v) => handleVoiceChange({ cloudEngine: v as "minimax" | "openai" })}
-                >
-                  <SelectTrigger className="w-40">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="minimax">MiniMax（中文）</SelectItem>
-                    <SelectItem value="openai">OpenAI（英文）</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="cloud-tts-key">云端 API Key</Label>
-                <Input
-                  id="cloud-tts-key"
-                  type="password"
-                  value={voiceSettings.cloudApiKey}
-                  onChange={(e) => handleVoiceChange({ cloudApiKey: e.target.value })}
-                  placeholder="输入云端 TTS API Key"
-                />
-                <p className="text-[10px] text-muted-foreground">
-                  {voiceSettings.cloudEngine === "minimax"
-                    ? "MiniMax 计费：约 0.1 元/千字符"
-                    : "OpenAI 计费：约 $0.015/千字符"}
-                </p>
-              </div>
-            </>
           )}
 
-          <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="provider">Provider</Label>
+            <Select
+              value={provider}
+              onValueChange={(v) => handleProviderChange(v as LLMProvider)}
+            >
+              <SelectTrigger id="provider">
+                <SelectValue placeholder="选择服务商" />
+              </SelectTrigger>
+              <SelectContent>
+                {PROVIDER_OPTIONS.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Button onClick={handleTestVoice} disabled={voiceTesting} variant="outline" className="w-full sm:w-auto">
-            {voiceTesting ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                正在朗读...
-              </>
+          <div className="space-y-2">
+            <Label htmlFor="base-url">Base URL</Label>
+            <Input
+              id="base-url"
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={
+                provider === "custom"
+                  ? "https://your-endpoint/v1"
+                  : PROVIDER_OPTIONS.find((o) => o.value === provider)?.baseUrl || ""
+              }
+              disabled={provider !== "custom"}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="api-key">API Key</Label>
+            <div className="flex gap-2">
+              <Input
+                id="api-key"
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                placeholder={provider === "ollama" ? "本地模型无需 API Key" : "sk-..."}
+                className="flex-1"
+                autoComplete="off"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowApiKey((v) => !v)}
+              >
+                {showApiKey ? "隐藏" : "显示"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="model">Model</Label>
+            <Input
+              id="model"
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={PROVIDER_DEFAULT_MODELS[provider]}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="temperature">Temperature</Label>
+              <span className="text-muted-foreground text-sm tabular-nums">
+                {temperature.toFixed(2)}
+              </span>
+            </div>
+            <input
+              id="temperature"
+              type="range"
+              min={0}
+              max={2}
+              step={0.05}
+              value={temperature}
+              onChange={(e) => setTemperature(parseFloat(e.target.value))}
+              className="w-full cursor-pointer accent-foreground"
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button onClick={handleTest} disabled={testing} variant="outline">
+              {testing ? "测试中…" : "连接测试"}
+            </Button>
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? "保存中…" : "保存配置"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ===== 极简专注计时器 ===== */}
+      <Card>
+        <CardHeader>
+          <CardTitle>专注计时器</CardTitle>
+          <CardDescription>极简番茄钟，到时静默提醒，无任何游戏化干扰。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex gap-2">
+            <Button
+              variant={timerMode === "focus" ? "default" : "outline"}
+              onClick={() => switchTimerMode("focus")}
+              className="flex-1"
+            >
+              25 分钟专注
+            </Button>
+            <Button
+              variant={timerMode === "break" ? "default" : "outline"}
+              onClick={() => switchTimerMode("break")}
+              className="flex-1"
+            >
+              5 分钟休息
+            </Button>
+          </div>
+          <div className="text-center">
+            <div className="text-muted-foreground text-sm">
+              {timerMode === "focus" ? "专注中" : "休息中"}
+            </div>
+            <div className="mx-auto my-2 text-6xl font-bold tabular-nums">
+              {formatTime(secondsLeft)}
+            </div>
+          </div>
+          <div className="flex justify-center gap-2">
+            {!timerRunning ? (
+              <Button onClick={startTimer}>开始</Button>
             ) : (
-              <>
-                <Volume2 className="w-4 h-4" />
-                测试语音
-              </>
+              <Button onClick={pauseTimer} variant="outline">
+                暂停
+              </Button>
             )}
+            <Button onClick={resetTimer} variant="ghost">
+              重置
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ===== 外观设置 ===== */}
+      <Card>
+        <CardHeader>
+          <CardTitle>外观</CardTitle>
+          <CardDescription>主题与字号偏好保存在本地。</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="flex items-center justify-between">
+            <div className="space-y-0.5">
+              <Label htmlFor="theme-switch">暗色主题</Label>
+              <p className="text-muted-foreground text-sm">
+                关闭后切换为亮色主题（默认暗色）。
+              </p>
+            </div>
+            <Switch
+              id="theme-switch"
+              checked={theme === "dark"}
+              onCheckedChange={(v) => setTheme(v ? "dark" : "light")}
+            />
+          </div>
+          <Separator />
+          <div className="space-y-2">
+            <Label htmlFor="font-size">字体大小</Label>
+            <Select
+              value={fontSize}
+              onValueChange={(v) => setFontSize(v as "small" | "medium" | "large")}
+            >
+              <SelectTrigger id="font-size">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="small">小</SelectItem>
+                <SelectItem value="medium">中</SelectItem>
+                <SelectItem value="large">大</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ===== 数据管理 ===== */}
+      <Card>
+        <CardHeader>
+          <CardTitle>数据管理</CardTitle>
+          <CardDescription>清除缓存或导出你的学习数据。</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button onClick={handleClearCache} variant="outline">
+            清除缓存
+          </Button>
+          <Button onClick={handleExportData} variant="outline">
+            导出学习数据
           </Button>
         </CardContent>
       </Card>
-
-      {/* App version */}
-      <p className="text-center text-[11px] text-muted-foreground pb-4">
-        AI 课堂 v1.0.0
-      </p>
-    </div>
+    </motion.div>
   );
 }

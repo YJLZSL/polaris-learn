@@ -7,11 +7,8 @@
  *          or   npm run electron:icon
  */
 
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const zlib = require("zlib");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require("fs");
-// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path");
 
 // ---------------------------------------------------------------------------
@@ -465,7 +462,7 @@ for (const name of files) {
   let size = 0;
   try {
     size = fs.statSync(p).size;
-  } catch (e) {
+  } catch {
     /* ignore */
   }
   console.log(`  ${name.padEnd(16)} ${size.toString().padStart(8)} bytes`);

@@ -1,8 +1,8 @@
 export const DB_NAME = 'polaris_learn';
-// Task 15.1: 升级到 v2，新增 currency_transactions store。
-// Task 12.1: 升级到 v3，新增 daily_quests store。
-// upgrade 回调按 objectStoreNames 兜底创建，对 v1/v2 既有库平滑迁移。
-export const DB_VERSION = 3;
+// Polaris V2: 升级到 v4，移除商业游戏化 store（currency_transactions/daily_quests/
+// badges/user_badges/streak_records）。USER_STATS 保留以存储知识掌握度记录。
+// upgrade 回调按 objectStoreNames 兜底创建/删除，对 v1-v3 既有库平滑迁移。
+export const DB_VERSION = 4;
 
 export const STORES = {
   USERS: 'users',
@@ -10,15 +10,12 @@ export const STORES = {
   PRACTICE_RECORDS: 'practice_records',
   ERROR_NOTES: 'error_notes',
   KNOWLEDGE_POINTS: 'knowledge_points',
-  BADGES: 'badges',
-  USER_BADGES: 'user_badges',
-  STREAK_RECORDS: 'streak_records',
   AI_CONVERSATIONS: 'ai_conversations',
   SUBJECTS: 'subjects',
   QUESTIONS: 'questions',
-  USER_STATS: 'user_stats',  // XP, level, total study time etc
-  CURRENCY_TRANSACTIONS: 'currency_transactions',  // Task 15.1: 双货币流水
-  DAILY_QUESTS: 'daily_quests',  // Task 12.1: 每日任务
+  // Polaris V2: USER_STATS 仅保留知识掌握度记录（key 前缀 mastery::），
+  // XP/level/streak 字段随 gamification.repository 一并废弃。
+  USER_STATS: 'user_stats',
 } as const;
 
 export type StoreName = typeof STORES[keyof typeof STORES];
@@ -59,12 +56,16 @@ export const STORE_SCHEMAS: Record<StoreName, StoreSchema> = {
       { name: 'createdAt', keyPath: 'createdAt' },
     ],
   },
+  // Polaris V2: error_notes 增加 SM-2 间隔重复字段（IndexedDB schema-less，
+  // 字段直接写入记录，无需在此声明；仅 dueDate 建索引以支持"到期错题"查询）：
+  //   ease (默认 2.5)、interval (默认 0)、repetitions (默认 0)、dueDate (默认当前时间)
   [STORES.ERROR_NOTES]: {
     keyPath: 'id',
     indexes: [
       { name: 'userId', keyPath: 'userId' },
       { name: 'subject', keyPath: 'subject' },
       { name: 'status', keyPath: 'status' },  // 'new' | 'reviewing' | 'mastered'
+      { name: 'dueDate', keyPath: 'dueDate' },  // SM-2 到期日
     ],
   },
   [STORES.KNOWLEDGE_POINTS]: {
@@ -73,21 +74,6 @@ export const STORE_SCHEMAS: Record<StoreName, StoreSchema> = {
       { name: 'subject', keyPath: 'subject' },
       { name: 'gradeLevel', keyPath: 'gradeLevel' },
     ],
-  },
-  [STORES.BADGES]: {
-    keyPath: 'id',
-    indexes: [{ name: 'category', keyPath: 'category' }],
-  },
-  [STORES.USER_BADGES]: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'userId', keyPath: 'userId' },
-      { name: 'badgeId', keyPath: 'badgeId' },
-    ],
-  },
-  [STORES.STREAK_RECORDS]: {
-    keyPath: 'userId',
-    indexes: [],
   },
   [STORES.AI_CONVERSATIONS]: {
     keyPath: 'id',
@@ -108,27 +94,9 @@ export const STORE_SCHEMAS: Record<StoreName, StoreSchema> = {
       { name: 'gradeLevel', keyPath: 'gradeLevel' },
     ],
   },
+  // Polaris V2: USER_STATS 仅保留知识掌握度记录（复合 key 前缀 mastery::）。
   [STORES.USER_STATS]: {
     keyPath: 'userId',
     indexes: [],
-  },
-  // Task 15.1: 货币流水，按 userId 索引；自增 id 由调用方拼装时间戳。
-  [STORES.CURRENCY_TRANSACTIONS]: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'userId', keyPath: 'userId' },
-      { name: 'createdAt', keyPath: 'createdAt' },
-      { name: 'currency', keyPath: 'currency' },
-    ],
-  },
-  // Task 12.1: 每日任务。复合键 `${userId}_${date}_${templateId}` 保证唯一。
-  // userId 索引按用户查询当日任务；date 索引便于跨用户统计与清理。
-  [STORES.DAILY_QUESTS]: {
-    keyPath: 'id',
-    indexes: [
-      { name: 'userId', keyPath: 'userId' },
-      { name: 'date', keyPath: 'date' },
-      { name: 'templateId', keyPath: 'templateId' },
-    ],
   },
 };

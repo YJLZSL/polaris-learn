@@ -1,0 +1,39 @@
+name: Build Windows Installer
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Vite assets
+        run: npm run build
+
+      - name: Build Electron installer
+        run: npm run electron:build
+
+      - name: Upload Windows installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: polaris-windows-installer
+          path: |
+            electron-dist/*.exe
+            electron-dist/latest.yml

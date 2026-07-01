@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { getCurrentUser } from "@/lib/services/auth-service";
-import { getUserStats } from "@/lib/repositories/gamification.repository";
-import { type LearningModeId, migrateLearningMode } from "@/lib/learning-modes";
+import { type LearningMode, migrateLearningMode } from "@/lib/learning-modes";
 
 interface UserState {
   id: string | null;
@@ -9,13 +8,13 @@ interface UserState {
   email: string | null;
   grade: string | null;
   /** Task 1.4：learningMode 强类型为 5 学段联合，setUser 内部自动迁移旧值 */
-  learningMode: LearningModeId;
+  learningMode: LearningMode;
   xp: number;
   level: number;
   streak: number;
   avatar: string | null;
   weakPoints: string[];
-  // learningMode 接受 string 以兼容外部 string 入参，内部自动迁移为 LearningModeId
+  // learningMode 接受 string 以兼容外部 string 入参，内部自动迁移为 LearningMode
   setUser: (user: Partial<Omit<UserState, "learningMode"> & { learningMode?: string }>) => void;
   addXP: (amount: number) => void;
   clearUser: () => void;
@@ -27,7 +26,7 @@ export const useUserStore = create<UserState>((set, get) => ({
   name: null,
   email: null,
   grade: null,
-  learningMode: "ELEMENTARY",
+  learningMode: "YOUTH",
   xp: 0,
   level: 1,
   streak: 0,
@@ -56,7 +55,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     }),
   clearUser: () =>
     set({
-      id: null, name: null, email: null, grade: null, learningMode: "ELEMENTARY",
+      id: null, name: null, email: null, grade: null, learningMode: "YOUTH",
       xp: 0, level: 1, streak: 0, avatar: null, weakPoints: [],
     }),
   /**
@@ -69,7 +68,7 @@ export const useUserStore = create<UserState>((set, get) => ({
     try {
       const user = await getCurrentUser();
       if (!user) return;
-      const stats = await getUserStats(user.id);
+      // Polaris V2: gamification.repository 已移除，不再拉取 xp/level/streak
       set({
         id: user.id,
         name: user.name,
@@ -77,9 +76,6 @@ export const useUserStore = create<UserState>((set, get) => ({
         grade: user.grade,
         learningMode: migrateLearningMode(user.learningMode),
         avatar: user.avatar ?? null,
-        xp: stats?.xp ?? 0,
-        level: stats?.level ?? 1,
-        streak: stats?.currentStreak ?? 0,
       });
     } catch (e) {
       console.error("[useUserStore] initFromAuth failed:", e);

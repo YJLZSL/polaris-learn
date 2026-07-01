@@ -7,7 +7,7 @@ interface UpdateInfo {
 interface ElectronAPI {
   isElectron?: boolean;
   onUpdateDownloaded?: (callback: (data: UpdateInfo) => void) => void;
-  installUpdate?: () => void;
+  quitAndInstall?: () => void;
 }
 
 /**
@@ -59,7 +59,7 @@ export default function ElectronDetector() {
       <button
         onClick={() => {
           const api = (window as unknown as { electronAPI?: ElectronAPI }).electronAPI;
-          api?.installUpdate?.();
+          api?.quitAndInstall?.();
         }}
         style={{
           background: "white",

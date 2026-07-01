@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { staggerContainerCapped, listItem, cardHover } from "@/lib/motion";
+import { staggerContainer, listItem } from "@/lib/motion";
 import {
   Search,
   BookOpen,
@@ -142,7 +142,6 @@ export default function CoursesPage() {
   }, [subject, sort, toast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCourses();
   }, [fetchCourses]);
 
@@ -244,7 +243,7 @@ export default function CoursesPage() {
         />
       ) : (
         <motion.div
-          variants={staggerContainerCapped}
+          variants={staggerContainer}
           initial="hidden"
           animate="show"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4"
@@ -257,7 +256,7 @@ export default function CoursesPage() {
               <motion.div
                 key={course.id}
                 variants={listItem}
-                {...cardHover}
+                className="transition-colors"
               >
               <Card
                 className="group overflow-hidden cursor-pointer border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)] transition-shadow duration-300 hover:shadow-[0_0_28px_-4px_rgba(99,102,241,0.5)]"

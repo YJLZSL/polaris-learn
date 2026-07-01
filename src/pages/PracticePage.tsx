@@ -1,905 +1,770 @@
-import { useState, useCallback, useEffect, useRef, useMemo } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import {
   Check,
   X,
-  Flame,
-  Zap,
   ArrowRight,
-  Trophy,
-  Sparkles,
   ChevronLeft,
-  ChevronRight,
-  Search,
+  ChevronDown,
   RotateCcw,
-  AlertTriangle,
   BookOpen,
   Bot,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
-import { SUBJECT_MAP } from "@/lib/constants";
-import {
-  getSubjectsForMode,
-  getDifficultyRangeForMode,
-  getLearningModeConfig,
-} from "@/lib/learning-modes";
 import { useUserStore } from "@/stores/useUserStore";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Label } from "@/components/ui/label";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Separator } from "@/components/ui/separator";
-import { motion } from "framer-motion";
-import {
-  staggerContainerCapped,
-  listItem,
+  fadeUp,
   fadeIn,
-  cardHover,
-  buttonTap,
-  scaleIn,
+  listItem,
+  staggerContainer,
+  useSafeMotion,
 } from "@/lib/motion";
-import { ProgressRing } from "@/components/common/ProgressRing";
 import {
-  getQuestions as repoGetQuestions,
+  getQuestions,
   savePracticeRecord,
-  getQuestionById,
+  type Question,
 } from "@/lib/repositories/practice.repository";
-import { addXP, updateStreak, getUserStats as getUserStatsSnapshot } from "@/lib/repositories/gamification.repository";
+import {
+  getKnowledgePoints,
+  type KnowledgePoint,
+} from "@/lib/repositories/knowledge.repository";
 import { addErrorNote } from "@/lib/repositories/error-notes.repository";
-import { getCurrentUser } from "@/lib/services/auth-service";
-import { updateQuestProgress } from "@/lib/repositories/quest.repository";
-// Task 14: 专注心流护盾
-import FocusShield from "@/components/common/FocusShield";
 
-/* ====== Types ====== */
-interface Question {
-  id: string;
-  subject: string;
-  difficulty: number;
-  content: string;
-  options?: string[];
-  explanation?: string;
-  gradeLevel?: string;
+/* ====== 类型定义 ====== */
+type Step = "select-kp" | "select-count" | "quiz" | "result";
+
+interface AnswerResult {
+  questionId: string;
+  isCorrect: boolean;
+  userAnswer: string;
+  correctAnswer: string;
+  explanation: string;
 }
 
-// 全部难度级别（1-5）；实际可见项由学习模式范围动态过滤
-const difficultyLevels = [
-  { key: "easy", label: "基础", value: 1 },
-  { key: "medium", label: "中等", value: 2 },
-  { key: "hard", label: "困难", value: 3 },
-  { key: "expert", label: "极难", value: 4 },
-  { key: "hell", label: "地狱", value: 5 },
+/* ====== 题量选项（每题约 2 分钟） ====== */
+const COUNT_OPTIONS = [
+  { count: 5, minutes: 10 },
+  { count: 10, minutes: 20 },
+  { count: 20, minutes: 40 },
 ];
 
-const difficultyColor: Record<number, string> = {
-  1: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  2: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-  3: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300",
-  4: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
-  5: "bg-slate-200 text-slate-800 dark:bg-slate-700/60 dark:text-slate-200",
-};
-
-const xpForDifficulty: Record<number, number> = {
-  1: 10,
-  2: 25,
-  3: 50,
-  4: 80,
-  5: 120,
-};
-
-const DIFFICULTY_LABEL: Record<number, string> = {
-  1: "基础",
-  2: "中等",
-  3: "困难",
-  4: "极难",
-  5: "地狱",
-};
-
-const PAGE_SIZE = 10;
+/* 北极星靛蓝主色 */
+const PRIMARY = "#6366F1";
 
 export default function PracticePage() {
-  /* ---------- user / learning mode ---------- */
-  const learningMode = useUserStore((s) => s.learningMode);
-  const setUser = useUserStore((s) => s.setUser);
-  const initFromAuth = useUserStore((s) => s.initFromAuth);
   const userId = useUserStore((s) => s.id);
-  // Task 19.1: 答错后跳转 AI 老师携带题目上下文
   const navigate = useNavigate();
+  const safeMotion = useSafeMotion();
 
-  // 挂载时主动从本地 session 同步用户资料，确保 learningMode 与本地一致
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        await initFromAuth();
-        const user = await getCurrentUser();
-        if (!cancelled && user?.learningMode) {
-          setUser({ learningMode: user.learningMode });
-        }
-      } catch {
-        /* 静默失败：将使用默认 PRIMARY 模式 */
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [setUser, initFromAuth]);
+  /* ---------- 状态 ---------- */
+  const [step, setStep] = useState<Step>("select-kp");
 
-  // 当前模式的有效学习模式 id（learningMode 未就绪时回退到 ELEMENTARY）
-  const effectiveMode = learningMode || "ELEMENTARY";
+  // 知识点列表
+  const [knowledgePoints, setKnowledgePoints] = useState<KnowledgePoint[]>([]);
+  const [loadingKP, setLoadingKP] = useState(false);
+  const [kpError, setKpError] = useState<string | null>(null);
+  const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
 
-  // 基于模式派生：可用学科标签、可用难度列表、默认年级
-  const subjects = useMemo(() => {
-    const ids = getSubjectsForMode(effectiveMode);
-    return ids
-      .map((id) => SUBJECT_MAP[id]?.label)
-      .filter((label): label is string => Boolean(label));
-  }, [effectiveMode]);
+  // 选中的知识点
+  const [selectedKp, setSelectedKp] = useState<KnowledgePoint | null>(null);
 
-  const availableDifficulties = useMemo(() => {
-    const [min, max] = getDifficultyRangeForMode(effectiveMode);
-    return difficultyLevels.filter((d) => d.value >= min && d.value <= max);
-  }, [effectiveMode]);
-
-  const gradeLevel = useMemo(
-    () => getLearningModeConfig(effectiveMode).defaultGrade,
-    [effectiveMode]
-  );
-
-  /* ---------- state ---------- */
-  const [subject, setSubject] = useState("数学");
-  const [difficulty, setDifficulty] = useState(1);
+  // 题目
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [total, setTotal] = useState(0);
-  const [page, setPage] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
+  // 答题状态
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
   const [answered, setAnswered] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [showXP, setShowXP] = useState(false);
-  const [xpAmount, setXpAmount] = useState(0);
-  const [score, setScore] = useState({ correct: 0, total: 0 });
-  const [streakCount, setStreakCount] = useState(0);
-  const [showStreak, setShowStreak] = useState(false);
-  const [todayXP, setTodayXP] = useState(0);
-  const [comboCount, setComboCount] = useState(0);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [results, setResults] = useState<AnswerResult[]>([]);
 
-  // 缓存已提交的题目结果
-  const submittedRef = useRef<Map<string, { correct: boolean; explanation?: string }>>(new Map());
-
-  // 当学习模式变化导致当前 subject/difficulty 不再可选时，回退到首个合法值
-  useEffect(() => {
-    if (subjects.length === 0) return;
-    if (!subjects.includes(subject)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSubject(subjects[0]);
-    }
-  }, [subjects, subject]);
-
-  useEffect(() => {
-    if (availableDifficulties.length === 0) return;
-    const validValues = availableDifficulties.map((d) => d.value);
-    if (!validValues.includes(difficulty)) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setDifficulty(availableDifficulties[0].value);
-    }
-  }, [availableDifficulties, difficulty]);
-
-  /* ---------- fetch questions ---------- */
-  const fetchQuestions = useCallback(
-    async (subj: string, diff: number, p: number, grade?: string) => {
-      setLoading(true);
-      setFetchError(null);
-      try {
-        const all = await repoGetQuestions({
-          subject: subj,
-          difficulty: diff,
-          gradeLevel: grade,
-        });
-        const total = all.length;
-        const startIdx = (p - 1) * PAGE_SIZE;
-        const paged = all.slice(startIdx, startIdx + PAGE_SIZE);
-        setQuestions(paged);
-        setTotal(total);
-      } catch (e) {
-        setFetchError(e instanceof Error ? e.message : "加载失败");
-        setQuestions([]);
-      } finally {
-        setLoading(false);
+  /* ---------- 加载知识点 ---------- */
+  const loadKnowledgePoints = useCallback(async () => {
+    setLoadingKP(true);
+    setKpError(null);
+    try {
+      const points = await getKnowledgePoints();
+      setKnowledgePoints(points);
+      if (points.length > 0) {
+        setExpandedSubject(points[0].subject);
       }
+    } catch (e) {
+      setKpError(e instanceof Error ? e.message : "加载知识点失败");
+    } finally {
+      setLoadingKP(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadKnowledgePoints();
+  }, [loadKnowledgePoints]);
+
+  /* ---------- 按学科分组 ---------- */
+  const groupedBySubject = useMemo(() => {
+    const map = new Map<string, KnowledgePoint[]>();
+    for (const kp of knowledgePoints) {
+      if (!map.has(kp.subject)) map.set(kp.subject, []);
+      map.get(kp.subject)!.push(kp);
+    }
+    return Array.from(map.entries()).map(([subject, points]) => ({
+      subject,
+      points,
+    }));
+  }, [knowledgePoints]);
+
+  /* ---------- 派生值 ---------- */
+  const currentQuestion = questions[currentIndex] ?? null;
+  const isLastQuestion = currentIndex >= questions.length - 1;
+  const isMultiple = currentQuestion?.type === "multiple_choice";
+  const currentResult = results[results.length - 1] ?? null;
+  const correctCount = results.filter((r) => r.isCorrect).length;
+
+  /* ---------- 工具函数 ---------- */
+  // 选项索引数组转答案字符串（如 "AC"）
+  const toAnswerString = useCallback((opts: number[]): string => {
+    return opts
+      .slice()
+      .sort((a, b) => a - b)
+      .map((i) => String.fromCharCode(65 + i))
+      .join("");
+  }, []);
+
+  // 判断答案是否正确（兼容单选/多选/判断题）
+  const checkAnswer = useCallback(
+    (userAnswer: string, correctAnswer: string): boolean => {
+      const normalize = (s: string) =>
+        s.trim().toUpperCase().replace(/[\s,，]/g, "");
+      const u = normalize(userAnswer);
+      const c = normalize(correctAnswer);
+      if (u === c) return true;
+      // 多选：排序后逐字符比较
+      return (
+        u.split("").sort().join("") === c.split("").sort().join("")
+      );
     },
     []
   );
 
-  // 初始加载 & 筛选变化时重新加载
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPage(1);
-    setCurrentIndex(0);
-    setSelectedOption(null);
-    setAnswered(false);
-    setScore({ correct: 0, total: 0 });
-    setStreakCount(0);
-    setShowStreak(false);
-    setComboCount(0);
-    submittedRef.current.clear();
-    fetchQuestions(subject, difficulty, 1, gradeLevel);
-  }, [subject, difficulty, fetchQuestions, gradeLevel]);
-
-  // 翻页时重新加载
-  useEffect(() => {
-    if (page !== 1) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCurrentIndex(0);
-      setSelectedOption(null);
-      setAnswered(false);
-      fetchQuestions(subject, difficulty, page, gradeLevel);
-    }
-  }, [page, subject, difficulty, fetchQuestions, gradeLevel]);
-
-  /* ---------- derived ---------- */
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const question = questions[currentIndex] ?? null;
-  const totalQuestions = questions.length;
-  const _progressPct = totalQuestions > 0 ? (currentIndex / totalQuestions) * 100 : 0;
-  const isLastQuestion = currentIndex >= totalQuestions - 1;
-  const progressValue = total > 0 ? ((page - 1) * PAGE_SIZE + currentIndex + 1) / total * 100 : 0;
-
-  /* ---------- handlers ---------- */
-  const handleSelect = useCallback(
-    async (idx: number) => {
-      if (answered || !question || submitting) return;
-      setSelectedOption(idx);
-      setAnswered(true);
+  /* ---------- 提交答案 ---------- */
+  const submitAnswer = useCallback(
+    async (selectedIdxs: number[]) => {
+      if (answered || !currentQuestion || submitting) return;
       setSubmitting(true);
+      setSelectedOptions(selectedIdxs);
+      setAnswered(true);
 
-      // 检查是否已提交过
-      const cached = submittedRef.current.get(question.id);
-      if (cached) {
-        // 已提交过，使用缓存结果
-        if (cached.correct) {
-          setStreakCount((s) => s + 1);
-          if (streakCount + 1 >= 3) setShowStreak(true);
-          setComboCount((c) => c + 1);
-          setScore((s) => ({ ...s, correct: s.correct + 1 }));
-        } else {
-          setStreakCount(0);
-          setShowStreak(false);
-          setComboCount(0);
+      const userAnswer = toAnswerString(selectedIdxs);
+      const isCorrect = checkAnswer(userAnswer, currentQuestion.correctAnswer);
+      const result: AnswerResult = {
+        questionId: currentQuestion.id,
+        isCorrect,
+        userAnswer,
+        correctAnswer: currentQuestion.correctAnswer,
+        explanation: currentQuestion.explanation || "暂无解析",
+      };
+      setResults((prev) => [...prev, result]);
+
+      // 答错入错题本
+      if (!isCorrect && userId) {
+        try {
+          await addErrorNote({
+            id: `${userId}_${currentQuestion.id}_err_${Date.now()}`,
+            userId,
+            questionId: currentQuestion.id,
+            subject: currentQuestion.subject,
+            userAnswer,
+            correctAnswer: currentQuestion.correctAnswer,
+            status: "new",
+            reviewCount: 0,
+            createdAt: new Date().toISOString(),
+          });
+        } catch {
+          /* 静默失败，不阻塞答题流程 */
         }
-        setScore((s) => ({ ...s, total: s.total + 1 }));
-        setSubmitting(false);
-        return;
       }
 
-      try {
-        // 拉取完整题目（含 correctAnswer / explanation）
-        const fullQuestion = await getQuestionById(question.id);
-        const correctAnswer = fullQuestion?.correctAnswer ?? "";
-        const userAnswer = String.fromCharCode(65 + idx);
-        const isCorrect = userAnswer === correctAnswer;
-        const explanation = fullQuestion?.explanation ?? question.explanation ?? "";
-
-        // 难度 → XP 奖励映射（与原服务端规则一致）
-        const xpReward = xpForDifficulty[question.difficulty] ?? 10;
-
-        // 保存练习记录
-        if (userId) {
-          const record = {
-            id: `${userId}_${question.id}_${Date.now()}`,
+      // 保存练习记录
+      if (userId) {
+        try {
+          await savePracticeRecord({
+            id: `${userId}_${currentQuestion.id}_${Date.now()}`,
             userId,
-            questionId: question.id,
-            subject: question.subject,
-            difficulty: question.difficulty,
+            questionId: currentQuestion.id,
+            subject: currentQuestion.subject,
+            difficulty: currentQuestion.difficulty,
             isCorrect,
             userAnswer,
-            correctAnswer,
+            correctAnswer: currentQuestion.correctAnswer,
             timeSpentMs: 0,
             createdAt: new Date().toISOString(),
-          };
-          await savePracticeRecord(record);
-
-          // 更新 XP / 连续天数
-          if (isCorrect) {
-            const beforeStats = await getUserStatsSnapshot(userId);
-            const afterStats = await addXP(userId, xpReward);
-            await updateStreak(userId);
-            const leveledUp = afterStats.level > (beforeStats?.level ?? 1);
-
-            // Task 19.4: 答对题目上报每日任务进度（fire-and-forget，失败不阻塞）
-            updateQuestProgress(userId, "correct_answers", 1).catch(() => {
-              /* 静默失败 */
-            });
-
-            // 缓存结果
-            submittedRef.current.set(question.id, {
-              correct: true,
-              explanation,
-            });
-
-            setXpAmount(xpReward);
-            setShowXP(true);
-            setStreakCount((s) => s + 1);
-            if (streakCount + 1 >= 3) setShowStreak(true);
-            setComboCount((c) => c + 1);
-            setTodayXP((prev) => prev + xpReward);
-            setScore((s) => ({ ...s, correct: s.correct + 1 }));
-
-            toast.success(`+${xpReward} XP`, {
-              icon: <Sparkles className="w-4 h-4 text-amber-400" />,
-              duration: 2000,
-            });
-            if (leveledUp) {
-              toast(`恭喜升级到 Lv.${afterStats.level}！`, {
-                icon: "🎉",
-                duration: 3000,
-              });
-            }
-          } else {
-            // 答错：加入错题本
-            await addErrorNote({
-              id: `${userId}_${question.id}_err_${Date.now()}`,
-              userId,
-              questionId: question.id,
-              subject: question.subject,
-              userAnswer,
-              correctAnswer,
-              status: "new" as const,
-              reviewCount: 0,
-              createdAt: new Date().toISOString(),
-            });
-            submittedRef.current.set(question.id, {
-              correct: false,
-              explanation,
-            });
-            setStreakCount(0);
-            setShowStreak(false);
-            setComboCount(0);
-            toast.error("回答错误，看看解析吧", { duration: 2000 });
-          }
-        } else {
-          // 未登录情况下也缓存结果
-          submittedRef.current.set(question.id, {
-            correct: isCorrect,
-            explanation,
           });
-          if (isCorrect) {
-            setXpAmount(xpReward);
-            setShowXP(true);
-            setStreakCount((s) => s + 1);
-            setComboCount((c) => c + 1);
-            setTodayXP((prev) => prev + xpReward);
-            setScore((s) => ({ ...s, correct: s.correct + 1 }));
-          } else {
-            setStreakCount(0);
-            setShowStreak(false);
-            setComboCount(0);
-            toast.error("回答错误，看看解析吧", { duration: 2000 });
-          }
+        } catch {
+          /* 静默失败 */
         }
-        setScore((s) => ({ ...s, total: s.total + 1 }));
+      }
 
-        setTimeout(() => setShowXP(false), 1500);
-        setTimeout(() => setShowStreak(false), 2000);
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : "提交失败");
-      } finally {
-        setSubmitting(false);
+      setSubmitting(false);
+      if (!isCorrect) {
+        toast.error("回答错误，看看解析吧", { duration: 2000 });
       }
     },
-    [answered, question, submitting, streakCount, userId]
+    [answered, currentQuestion, submitting, toAnswerString, checkAnswer, userId]
+  );
+
+  /* ---------- 选择题量并加载题目 ---------- */
+  const handleSelectCount = useCallback(
+    async (count: number) => {
+      if (!selectedKp) return;
+      setLoadingQuestions(true);
+      try {
+        const all = await getQuestions({ subject: selectedKp.subject });
+        // 按 knowledgePointId 过滤
+        const filtered = all.filter(
+          (q) => q.knowledgePointId === selectedKp.id
+        );
+        const sliced = filtered.slice(0, count);
+        setQuestions(sliced);
+        setCurrentIndex(0);
+        setSelectedOptions([]);
+        setAnswered(false);
+        setResults([]);
+        setStep("quiz");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "加载题目失败");
+      } finally {
+        setLoadingQuestions(false);
+      }
+    },
+    [selectedKp]
+  );
+
+  /* ---------- 其他 handlers ---------- */
+  const handleSelectKp = useCallback((kp: KnowledgePoint) => {
+    setSelectedKp(kp);
+    setStep("select-count");
+  }, []);
+
+  const handleToggleOption = useCallback(
+    (idx: number) => {
+      if (answered || submitting) return;
+      setSelectedOptions((prev) =>
+        prev.includes(idx) ? prev.filter((i) => i !== idx) : [...prev, idx]
+      );
+    },
+    [answered, submitting]
   );
 
   const handleNext = useCallback(() => {
     if (!isLastQuestion) {
       setCurrentIndex((i) => i + 1);
-      setSelectedOption(null);
+      setSelectedOptions([]);
       setAnswered(false);
-    } else if (page < totalPages) {
-      // 跳转到下一页
-      setPage((p) => p + 1);
+    } else {
+      setStep("result");
     }
-  }, [isLastQuestion, page, totalPages]);
+  }, [isLastQuestion]);
 
-  const handlePrev = useCallback(() => {
-    if (currentIndex > 0) {
-      setCurrentIndex((i) => i - 1);
-      const prevQuestion = questions[currentIndex - 1];
-      const cached = prevQuestion ? submittedRef.current.get(prevQuestion.id) : undefined;
-      if (cached) {
-        // Restore previous answer state
-        setAnswered(true);
-      } else {
-        setSelectedOption(null);
-        setAnswered(false);
-      }
-    } else if (page > 1) {
-      setPage((p) => p - 1);
-    }
-  }, [currentIndex, page, questions]);
-
-  const handleRestart = useCallback(() => {
-    setPage(1);
-    setCurrentIndex(0);
-    setSelectedOption(null);
-    setAnswered(false);
-    setScore({ correct: 0, total: 0 });
-    setStreakCount(0);
-    setShowStreak(false);
-    setComboCount(0);
-    setTodayXP(0);
-    submittedRef.current.clear();
-    fetchQuestions(subject, difficulty, 1, gradeLevel);
-  }, [subject, difficulty, fetchQuestions, gradeLevel]);
-
-  // Task 19.1: 答错后跳转 AI 老师，携带题目上下文
-  const handleAskAI = useCallback(async () => {
-    if (!question || selectedOption === null) return;
-    const userAnswer = String.fromCharCode(65 + selectedOption);
-    let correctAnswer = "";
-    try {
-      const full = await getQuestionById(question.id);
-      correctAnswer = full?.correctAnswer ?? "";
-    } catch {
-      /* 取不到正确答案也允许跳转 */
-    }
+  // 答错后跳转 AI 老师，携带题目上下文
+  const handleAskAI = useCallback(() => {
+    if (!currentQuestion) return;
     navigate("/ai-teacher", {
       state: {
-        question: question.content,
-        userAnswer,
-        correctAnswer,
-        subject: question.subject,
+        question: currentQuestion.content,
+        myAnswer: toAnswerString(selectedOptions),
+        correctAnswer: currentQuestion.correctAnswer,
+        analysis: currentQuestion.explanation,
       },
     });
-  }, [question, selectedOption, navigate]);
+  }, [currentQuestion, navigate, selectedOptions, toAnswerString]);
 
-  const handleSubjectChange = useCallback(
-    (s: string) => {
-      setSubject(s);
-    },
-    []
-  );
+  // 再来一组：回到选题量
+  const handleRetry = useCallback(() => {
+    setQuestions([]);
+    setResults([]);
+    setCurrentIndex(0);
+    setSelectedOptions([]);
+    setAnswered(false);
+    setStep("select-count");
+  }, []);
 
-  const handleDifficultyChange = useCallback(
-    (d: string) => {
-      setDifficulty(Number(d));
-    },
-    []
-  );
+  // 返回选择知识点
+  const handleBackToKp = useCallback(() => {
+    setQuestions([]);
+    setResults([]);
+    setCurrentIndex(0);
+    setSelectedOptions([]);
+    setAnswered(false);
+    setSelectedKp(null);
+    setStep("select-kp");
+  }, []);
 
-  /* ---------- render ---------- */
+  /* ---------- 判断选项状态（答题后高亮） ---------- */
+  const getOptionState = (
+    idx: number
+  ): "correct" | "wrong" | "muted" | "default" => {
+    if (!answered || !currentQuestion) return "default";
+    const correctLetters = currentQuestion.correctAnswer
+      .toUpperCase()
+      .replace(/[\s,，]/g, "")
+      .split("");
+    const correctIdxs = correctLetters
+      .map((l) => l.charCodeAt(0) - 65)
+      .filter((i) => i >= 0);
+    const isCorrectOption = correctIdxs.includes(idx);
+    const isSelected = selectedOptions.includes(idx);
+    if (isCorrectOption) return "correct";
+    if (isSelected) return "wrong";
+    return "muted";
+  };
+
+  /* ===================== render ===================== */
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6 lg:py-8 space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">练习中心</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            刷题练习，积累经验升级！
-          </p>
-        </div>
-        {/* Combo + XP display */}
-        <div className="flex items-center gap-3">
-          {/* Task 14: 专注心流护盾入口 */}
-          <FocusShield triggerLabel="🛡️ 开始专注" triggerSize="sm" />
-          {comboCount >= 3 && (
-            <Badge className="bg-gradient-to-r from-orange-400 to-red-500 text-white border-0 animate-pulse-glow">
-              <Flame className="w-3.5 h-3.5 mr-1" />
-              {comboCount} 连击！
-            </Badge>
-          )}
-          <Badge variant="secondary" className="gap-1">
-            <Zap className="w-3.5 h-3.5" />
-            今日 {todayXP} XP
-          </Badge>
-        </div>
-      </div>
+    <div className="max-w-3xl mx-auto px-4 py-6 lg:py-8 space-y-6">
+      {/* 页面标题 */}
+      <motion.div {...safeMotion(fadeUp)} initial="hidden" animate="show">
+        <h1 className="text-2xl font-bold tracking-tight">练习中心</h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          按知识点选题，专注练习
+        </p>
+      </motion.div>
 
-      {/* Filter Bar */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-3">
-            {/* Subject filter */}
-            <Select value={subject} onValueChange={handleSubjectChange}>
-              <SelectTrigger className="w-full sm:w-[140px]">
-                <SelectValue placeholder="选择科目" />
-              </SelectTrigger>
-              <SelectContent>
-                {subjects.map((s) => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* ============ 第一步：选择知识点 ============ */}
+      {step === "select-kp" && (
+        <motion.div
+          {...safeMotion(fadeUp)}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
+          <h2 className="text-lg font-semibold">选择知识点</h2>
 
-            {/* Difficulty filter */}
-            <Select value={String(difficulty)} onValueChange={handleDifficultyChange}>
-              <SelectTrigger className="w-full sm:w-[160px]">
-                <SelectValue placeholder="选择难度" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableDifficulties.map((d) => (
-                  <SelectItem key={d.key} value={String(d.value)}>
-                    {d.label} (+{xpForDifficulty[d.value]}XP)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="搜索题目..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Loading State */}
-      {loading ? (
-        <Card>
-          <CardContent className="p-6 space-y-4">
-            <div className="flex items-center gap-2">
-              <Skeleton className="h-5 w-16 rounded-full" />
-              <Skeleton className="h-5 w-12 rounded-full" />
-            </div>
-            <Skeleton className="h-6 w-3/4" />
+          {loadingKP ? (
             <div className="space-y-3">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
+              {Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-16 w-full rounded-xl" />
+              ))}
             </div>
-          </CardContent>
-        </Card>
-      ) : fetchError ? (
-        /* Error State */
-        <Alert variant="destructive">
-          <AlertTriangle className="h-4 w-4" />
-          <AlertTitle>加载失败</AlertTitle>
-          <AlertDescription>{fetchError}</AlertDescription>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => fetchQuestions(subject, difficulty, page, gradeLevel)}
-            className="mt-2 gap-1"
-          >
-            <RotateCcw className="h-4 w-4" />
-            重试
-          </Button>
-        </Alert>
-      ) : (
-        <>
-          {/* Progress —— Task 18.2: ProgressRing 替换条形进度 */}
-          <div className="flex items-center gap-4">
-            <ProgressRing
-              value={progressValue}
-              size={64}
-              strokeWidth={6}
-              gradient={{ from: "#818cf8", to: "#6366f1" }}
-              label={
-                <div className="text-center">
-                  <div className="text-[11px] font-bold tabular-nums">
-                    {total > 0 ? (page - 1) * PAGE_SIZE + currentIndex + 1 : 0}/{total}
-                  </div>
-                </div>
-              }
-            />
-            <div className="flex-1 text-xs text-muted-foreground">
-              <p>题目进度</p>
-              <p className="text-foreground font-semibold mt-0.5">
-                正确 {score.correct}/{score.total || 0}
-              </p>
-            </div>
-          </div>
-
-          {/* Question Card */}
-          {question ? (
-            // eslint-disable-next-line react-hooks/refs
-            (() => {
-              const submittedResult = submittedRef.current.get(question.id);
-              const isCorrect = submittedResult?.correct;
-              // Task 18.2: 答题反馈动画 —— 正确 scaleIn + emerald 闪烁；错误 shake
-              const showCorrectAnim = answered && isCorrect === true;
-              const showWrongAnim = answered && isCorrect === false;
-              return (
-                <motion.div
-                  key={question.id}
-                  variants={fadeIn}
-                  initial="hidden"
-                  animate="show"
-                  {...cardHover}
-                >
-                <motion.div
-                  variants={showCorrectAnim ? scaleIn : undefined}
-                  initial={showCorrectAnim ? "hidden" : false}
-                  animate={showCorrectAnim ? "show" : showWrongAnim ? { x: [0, -8, 8, -6, 6, 0] } : undefined}
-                  transition={showWrongAnim ? { duration: 0.4 } : undefined}
-                >
-                <Card
-                  className={cn(
-                    "relative transition-colors duration-300 border border-white/5 shadow-[0_0_20px_-5px_rgba(99,102,241,0.3)]",
-                    answered && isCorrect && "border-green-400 dark:border-green-500 bg-green-50/50 dark:bg-green-900/10 shadow-[0_0_24px_-4px_rgba(16,185,129,0.5)]",
-                    answered && !isCorrect && "border-red-400 dark:border-red-500 bg-red-50/50 dark:bg-red-900/10 shadow-[0_0_24px_-4px_rgba(239,68,68,0.5)]"
-                  )}
-                >
-                  {/* XP gain animation */}
-                  {showXP && (
-                    <div className="absolute top-4 right-4 z-10 animate-xpGain pointer-events-none">
-                      <Badge className="bg-gradient-to-r from-amber-400 to-orange-500 text-white border-0 shadow-lg text-sm px-3 py-1">
-                        <Sparkles className="w-3.5 h-3.5 mr-1" />+{xpAmount} XP
-                      </Badge>
-                    </div>
-                  )}
-
-                  {/* Streak animation */}
-                  {showStreak && streakCount >= 3 && (
-                    <div className="absolute top-16 right-4 z-10 animate-xpGain pointer-events-none">
-                      <Badge className="bg-gradient-to-r from-red-400 to-pink-500 text-white border-0 shadow-lg text-xs px-3 py-1">
-                        <Flame className="w-3.5 h-3.5 mr-1" />{streakCount} 连胜！
-                      </Badge>
-                    </div>
-                  )}
-
-                  <CardHeader className="pb-4">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">
-                        第 {(page - 1) * PAGE_SIZE + currentIndex + 1} 题
-                      </Badge>
-                      <Badge variant="outline">{question.subject}</Badge>
-                      <Badge
-                        className={cn(
-                          "border-0",
-                          difficultyColor[question.difficulty] || difficultyColor[1]
-                        )}
-                      >
-                        {DIFFICULTY_LABEL[question.difficulty] || question.difficulty}
-                      </Badge>
-                    </div>
-                    <CardTitle className="leading-relaxed mt-2">
-                      {question.content}
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent className="space-y-3">
-                    {/* Options as card-style buttons */}
-                    <motion.div
-                      variants={staggerContainerCapped}
-                      initial="hidden"
-                      animate="show"
-                    >
-                    <RadioGroup
-                      value={selectedOption !== null ? String(selectedOption) : undefined}
-                      onValueChange={(val) => handleSelect(Number(val))}
-                      disabled={answered || submitting}
-                      className="space-y-3"
-                    >
-                      {(question.options ?? []).map((opt, idx) => {
-                        const isSelected = selectedOption === idx;
-                        const isCorrectAnswer = answered && isCorrect && isSelected;
-                        const isIncorrectAnswer = answered && isCorrect === false && isSelected;
-
-                        return (
-                          <motion.div key={idx} variants={listItem} {...cardHover}>
-                          <Card
-                            className={cn(
-                              "relative overflow-hidden transition-all duration-200 cursor-pointer border border-white/5 shadow-[0_0_16px_-6px_rgba(99,102,241,0.25)]",
-                              "hover:border-primary/50 hover:bg-accent/30",
-                              isCorrectAnswer &&
-                                "border-green-500 bg-green-50 dark:bg-green-950/30",
-                              isIncorrectAnswer &&
-                                "border-red-500 bg-red-50 dark:bg-red-950/30",
-                              isSelected &&
-                                !isCorrectAnswer &&
-                                !isIncorrectAnswer &&
-                                "border-primary bg-primary/5 text-primary",
-                              (answered || submitting) && "cursor-default"
-                            )}
-                          >
-                            <CardContent className="p-4">
-                              <Label
-                                htmlFor={`option-${idx}`}
-                                className={cn(
-                                  "flex items-start sm:items-center gap-3 min-h-[44px] py-2 cursor-pointer",
-                                  (answered || submitting) && "cursor-default"
-                                )}
-                              >
-                                <RadioGroupItem
-                                  value={String(idx)}
-                                  id={`option-${idx}`}
-                                  disabled={answered || submitting}
-                                />
-                                <span className="w-7 h-7 rounded-full bg-muted flex items-center justify-center text-xs font-semibold shrink-0">
-                                  {String.fromCharCode(65 + idx)}
-                                </span>
-                                <span className="flex-1 text-sm font-medium break-words whitespace-normal leading-snug">{opt}</span>
-                                {isCorrectAnswer && (
-                                  <Check className="w-5 h-5 text-green-500 shrink-0" />
-                                )}
-                                {isIncorrectAnswer && (
-                                  <X className="w-5 h-5 text-red-500 shrink-0" />
-                                )}
-                              </Label>
-                            </CardContent>
-                          </Card>
-                          </motion.div>
-                        );
-                      })}
-                    </RadioGroup>
-                    </motion.div>
-
-                    {/* Explanation after answering */}
-                    {answered && (
-                      <motion.div
-                        initial={{ opacity: 0, scale: 0.9 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30"
-                      >
-                        <p className={cn(
-                          "text-xs font-semibold mb-1",
-                          submittedResult?.correct
-                            ? "text-green-700 dark:text-green-300"
-                            : "text-red-700 dark:text-red-300"
-                        )}>
-                          {submittedResult?.correct
-                            ? "✓ 回答正确！"
-                            : "✗ 回答错误"}
-                        </p>
-                        <p className="text-xs text-blue-600/70 dark:text-blue-300/70">
-                          {question.explanation || "暂无解析"}
-                        </p>
-                      </motion.div>
-                    )}
-
-                    {/* Task 19.1: 答错时显示"问 AI 老师"按钮，携带题目上下文跳转 */}
-                    {answered && isCorrect === false && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 8 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="mt-3"
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleAskAI}
-                          className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
-                        >
-                          <Bot className="w-4 h-4" />
-                          问 AI 老师
-                        </Button>
-                      </motion.div>
-                    )}
-
-                    {/* Navigation buttons */}
-                    {answered && (
-                      <div className="mt-4 flex flex-col-reverse sm:flex-row gap-3">
-                        <motion.div {...buttonTap} className="w-full sm:w-auto">
-                        <Button
-                          variant="outline"
-                          onClick={handlePrev}
-                          disabled={currentIndex === 0 && page <= 1}
-                          className="gap-1 w-full sm:w-auto"
-                        >
-                          <ChevronLeft className="w-4 h-4" />
-                          上一题
-                        </Button>
-                        </motion.div>
-                        {!isLastQuestion || page < totalPages ? (
-                          <motion.div {...buttonTap} className="w-full">
-                          <Button
-                            onClick={handleNext}
-                            className="w-full gap-1"
-                          >
-                            {isLastQuestion && page < totalPages ? "下一页" : "下一题"}
-                            <ArrowRight className="w-4 h-4" />
-                          </Button>
-                          </motion.div>
-                        ) : (
-                          <motion.div {...buttonTap} className="w-full">
-                          <Button
-                            onClick={handleRestart}
-                            className="w-full gap-1"
-                          >
-                            <Trophy className="w-4 h-4" />
-                            重新练习
-                          </Button>
-                          </motion.div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-                </motion.div>
-                </motion.div>
-              );
-            })()
-          ) : (
-            /* Empty state */
+          ) : kpError ? (
+            <Alert variant="destructive">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>加载失败</AlertTitle>
+              <AlertDescription>{kpError}</AlertDescription>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadKnowledgePoints}
+                className="mt-2 gap-1"
+              >
+                <RotateCcw className="h-4 w-4" /> 重试
+              </Button>
+            </Alert>
+          ) : groupedBySubject.length === 0 ? (
             <EmptyState
               icon={BookOpen}
-              title="暂无题目"
-              description="请尝试选择其他科目或难度"
+              title="暂无知识点"
+              description="请先在管理页面导入知识点数据"
               actionLabel="重新加载"
-              onAction={() => fetchQuestions(subject, difficulty, 1, gradeLevel)}
+              onAction={loadKnowledgePoints}
             />
-          )}
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2">
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground px-3">
-                {page} / {totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page >= totalPages}
-              >
-                <ChevronRight className="w-4 h-4" />
-              </Button>
+          ) : (
+            <div className="space-y-3">
+              {groupedBySubject.map(({ subject, points }) => {
+                const isExpanded = expandedSubject === subject;
+                return (
+                  <Card key={subject} className="overflow-hidden">
+                    <button
+                      onClick={() =>
+                        setExpandedSubject(isExpanded ? null : subject)
+                      }
+                      className="w-full flex items-center justify-between p-4 hover:bg-accent/30 transition-colors"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{subject}</Badge>
+                        <span className="text-sm text-muted-foreground">
+                          {points.length} 个知识点
+                        </span>
+                      </div>
+                      <ChevronDown
+                        className={cn(
+                          "w-4 h-4 transition-transform",
+                          isExpanded && "rotate-180"
+                        )}
+                      />
+                    </button>
+                    {isExpanded && (
+                      <motion.div
+                        {...safeMotion(staggerContainer)}
+                        initial="hidden"
+                        animate="show"
+                        className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 pt-0"
+                      >
+                        {points.map((kp) => (
+                          <motion.div key={kp.id} {...safeMotion(listItem)}>
+                            <button
+                              onClick={() => handleSelectKp(kp)}
+                              className="w-full text-left p-3 rounded-xl border border-border hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all"
+                            >
+                              <div className="font-medium text-sm">
+                                {kp.title}
+                              </div>
+                              {kp.description && (
+                                <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                  {kp.description}
+                                </div>
+                              )}
+                            </button>
+                          </motion.div>
+                        ))}
+                      </motion.div>
+                    )}
+                  </Card>
+                );
+              })}
             </div>
           )}
-        </>
+        </motion.div>
       )}
 
-      {/* End-of-session summary */}
-      {answered && isLastQuestion && page >= totalPages && score.total > 0 && (
-        <Card className="animate-slideUp">
-          <CardContent className="p-6 text-center">
-            <Trophy className="w-10 h-10 text-amber-400 mx-auto mb-2" />
-            <h3 className="text-lg font-bold mb-1">练习完成！</h3>
-            <p className="text-sm text-muted-foreground mb-4">
-              正确率 {score.total > 0 ? Math.round((score.correct / score.total) * 100) : 0}%
-              （{score.correct}/{score.total}）
-            </p>
-            <Separator className="my-4" />
-            <div className="flex items-center justify-center gap-2">
-              <Badge variant="secondary" className="gap-1">
-                <Zap className="w-3 h-3" />
-                今日累计 {todayXP} XP
-              </Badge>
-              {comboCount >= 3 && (
-                <Badge className="bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 border-0 gap-1">
-                  <Flame className="w-3 h-3" />
-                  最高 {comboCount} 连击
-                </Badge>
+      {/* ============ 第二步：选择题量 ============ */}
+      {step === "select-count" && (
+        <motion.div
+          {...safeMotion(fadeUp)}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
+          <button
+            onClick={() => setStep("select-kp")}
+            className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> 返回选择知识点
+          </button>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">已选知识点</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline">{selectedKp?.subject}</Badge>
+              <p className="font-semibold mt-2">{selectedKp?.title}</p>
+              {selectedKp?.description && (
+                <p className="text-sm text-muted-foreground mt-1">
+                  {selectedKp.description}
+                </p>
               )}
+            </CardContent>
+          </Card>
+
+          <h2 className="text-lg font-semibold">选择题量</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {COUNT_OPTIONS.map((opt) => (
+              <motion.button
+                key={opt.count}
+                {...safeMotion(listItem)}
+                onClick={() => handleSelectCount(opt.count)}
+                disabled={loadingQuestions}
+                className="p-6 rounded-xl border-2 border-border hover:border-[#6366F1] hover:bg-[#6366F1]/5 transition-all text-center disabled:opacity-50"
+              >
+                <div
+                  className="text-3xl font-bold"
+                  style={{ color: PRIMARY }}
+                >
+                  {opt.count}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1">题</div>
+                <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground mt-3">
+                  <Clock className="w-3 h-3" /> 约 {opt.minutes} 分钟
+                </div>
+              </motion.button>
+            ))}
+          </div>
+          {loadingQuestions && (
+            <div className="text-center text-sm text-muted-foreground">
+              正在加载题目...
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </motion.div>
+      )}
+
+      {/* ============ 第三步：答题（一题一屏）============ */}
+      {step === "quiz" && (
+        <motion.div
+          {...safeMotion(fadeUp)}
+          initial="hidden"
+          animate="show"
+          className="space-y-4"
+        >
+          {/* 顶部进度条 */}
+          {questions.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                <span className="truncate">{selectedKp?.title}</span>
+                <span className="tabular-nums shrink-0 ml-2">
+                  {currentIndex + 1} / {questions.length}
+                </span>
+              </div>
+              <div className="h-1 bg-muted rounded-full overflow-hidden">
+                <div
+                  className="h-full transition-all duration-300"
+                  style={{
+                    width: `${((currentIndex + 1) / questions.length) * 100}%`,
+                    backgroundColor: PRIMARY,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
+          {/* 加载中 */}
+          {loadingQuestions ? (
+            <Card>
+              <CardContent className="p-6 space-y-4">
+                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+                <Skeleton className="h-12 w-full rounded-lg" />
+              </CardContent>
+            </Card>
+          ) : questions.length === 0 ? (
+            <EmptyState
+              icon={BookOpen}
+              title="该知识点暂无题目"
+              description="请尝试选择其他知识点"
+              actionLabel="返回选择知识点"
+              onAction={handleBackToKp}
+            />
+          ) : currentQuestion ? (
+            <Card
+              className={cn(
+                "border shadow-sm transition-colors",
+                answered &&
+                  currentResult?.isCorrect &&
+                  "border-green-400 dark:border-green-500",
+                answered &&
+                  !currentResult?.isCorrect &&
+                  "border-red-400 dark:border-red-500"
+              )}
+            >
+              <CardHeader>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Badge variant="secondary">第 {currentIndex + 1} 题</Badge>
+                  <Badge variant="outline">{currentQuestion.subject}</Badge>
+                  {isMultiple && (
+                    <Badge
+                      variant="outline"
+                      style={{ color: PRIMARY, borderColor: PRIMARY }}
+                    >
+                      多选题
+                    </Badge>
+                  )}
+                </div>
+                <CardTitle className="leading-relaxed mt-2 text-lg">
+                  {currentQuestion.content}
+                </CardTitle>
+              </CardHeader>
+
+              <CardContent className="space-y-3">
+                {/* 选项 */}
+                <div className="space-y-3">
+                  {(currentQuestion.options ?? []).map((opt, idx) => {
+                    const state = getOptionState(idx);
+                    const isSelected = selectedOptions.includes(idx);
+                    return (
+                      <button
+                        key={idx}
+                        onClick={() =>
+                          isMultiple
+                            ? handleToggleOption(idx)
+                            : submitAnswer([idx])
+                        }
+                        disabled={answered || submitting}
+                        className={cn(
+                          "w-full flex items-center gap-3 p-4 rounded-xl border-2 transition-all text-left",
+                          "border-border hover:border-[#6366F1]/50",
+                          !answered &&
+                            isSelected &&
+                            "border-[#6366F1] bg-[#6366F1]/5",
+                          state === "correct" &&
+                            "border-green-500 bg-green-50 dark:bg-green-950/30",
+                          state === "wrong" &&
+                            "border-red-500 bg-red-50 dark:bg-red-950/30",
+                          state === "muted" && "opacity-50",
+                          (answered || submitting) && "cursor-default"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold shrink-0",
+                            state === "correct"
+                              ? "bg-green-500 text-white"
+                              : state === "wrong"
+                              ? "bg-red-500 text-white"
+                              : isSelected
+                              ? "text-white"
+                              : "bg-muted"
+                          )}
+                          style={
+                            isSelected && state === "default"
+                              ? { backgroundColor: PRIMARY }
+                              : undefined
+                          }
+                        >
+                          {state === "correct" ? (
+                            <Check className="w-4 h-4" />
+                          ) : state === "wrong" ? (
+                            <X className="w-4 h-4" />
+                          ) : (
+                            String.fromCharCode(65 + idx)
+                          )}
+                        </span>
+                        <span className="flex-1 text-sm font-medium break-words">
+                          {opt}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* 多选确认按钮 */}
+                {isMultiple && !answered && (
+                  <Button
+                    onClick={() => submitAnswer(selectedOptions)}
+                    disabled={selectedOptions.length === 0 || submitting}
+                    className="w-full gap-1"
+                  >
+                    确认答案
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
+
+                {/* 答题反馈 */}
+                {answered && currentResult && (
+                  <motion.div
+                    {...safeMotion(fadeIn)}
+                    initial="hidden"
+                    animate="show"
+                    className="mt-4 p-4 rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/30"
+                  >
+                    <p
+                      className={cn(
+                        "text-xs font-semibold mb-1",
+                        currentResult.isCorrect
+                          ? "text-green-700 dark:text-green-300"
+                          : "text-red-700 dark:text-red-300"
+                      )}
+                    >
+                      {currentResult.isCorrect
+                        ? "✓ 回答正确！"
+                        : `✗ 回答错误 · 正确答案：${currentQuestion.correctAnswer}`}
+                    </p>
+                    <p className="text-xs text-blue-600/70 dark:text-blue-300/70 mt-1">
+                      {currentResult.explanation}
+                    </p>
+                  </motion.div>
+                )}
+
+                {/* 答错显示问 AI 老师 */}
+                {answered && currentResult && !currentResult.isCorrect && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleAskAI}
+                    className="gap-1.5 border-indigo-300 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400 dark:hover:bg-indigo-900/20"
+                  >
+                    <Bot className="w-4 h-4" />
+                    问 AI 老师
+                  </Button>
+                )}
+
+                {/* 下一题 / 查看结果 */}
+                {answered && (
+                  <Button
+                    onClick={handleNext}
+                    className="w-full gap-1"
+                    style={{ backgroundColor: PRIMARY }}
+                  >
+                    {isLastQuestion ? "查看结果" : "下一题"}
+                    <ArrowRight className="w-4 h-4" />
+                  </Button>
+                )}
+              </CardContent>
+            </Card>
+          ) : null}
+        </motion.div>
+      )}
+
+      {/* ============ 第四步：结果汇总 ============ */}
+      {step === "result" && (
+        <motion.div
+          {...safeMotion(fadeUp)}
+          initial="hidden"
+          animate="show"
+          className="space-y-6"
+        >
+          <Card>
+            <CardContent className="p-8 text-center">
+              <div
+                className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+                style={{ backgroundColor: `${PRIMARY}1A` }}
+              >
+                <Check
+                  className="w-10 h-10"
+                  style={{ color: PRIMARY }}
+                />
+              </div>
+              <h2 className="text-xl font-bold mb-2">练习完成！</h2>
+              <p
+                className="text-3xl font-bold"
+                style={{ color: PRIMARY }}
+              >
+                {correctCount}/{results.length}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                正确率{" "}
+                {results.length > 0
+                  ? Math.round((correctCount / results.length) * 100)
+                  : 0}
+                %
+              </p>
+              {selectedKp && (
+                <p className="text-xs text-muted-foreground mt-3">
+                  知识点：{selectedKp.title}
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button
+              onClick={handleRetry}
+              variant="outline"
+              className="flex-1 gap-1"
+            >
+              <RotateCcw className="w-4 h-4" />
+              再来一组
+            </Button>
+            <Button
+              onClick={handleBackToKp}
+              className="flex-1 gap-1"
+              style={{ backgroundColor: PRIMARY }}
+            >
+              <BookOpen className="w-4 h-4" />
+              返回选择知识点
+            </Button>
+          </div>
+        </motion.div>
       )}
     </div>
   );
