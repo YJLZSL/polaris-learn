@@ -12,11 +12,6 @@ import {
   FileQuestion,
   BarChart3,
   GraduationCap,
-  Camera,
-  Zap,
-  Users,
-  ClipboardList,
-  Layers,
   ChevronsLeft,
   ChevronsRight,
 } from "lucide-react";
@@ -24,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { getLearningModeConfig } from "@/lib/learning-modes";
 import {
   Sheet,
   SheetContent,
@@ -46,11 +42,6 @@ const NAV_ITEMS: NavItemConfig[] = [
   { href: "/error-notes", label: "错题本", icon: FileQuestion },
   { href: "/analytics", label: "学习报告", icon: BarChart3 },
   { href: "/courses", label: "课程", icon: GraduationCap },
-  { href: "/photo-search", label: "拍题", icon: Camera, disabled: true },
-  { href: "/badges", label: "徽章", icon: Layers, disabled: true },
-  { href: "/study-group", label: "学习小组", icon: Users, disabled: true },
-  { href: "/pk", label: "PK挑战", icon: Zap, disabled: true },
-  { href: "/plans", label: "学习计划", icon: ClipboardList, disabled: true },
 ];
 
 interface SidebarProps {
@@ -117,11 +108,12 @@ function NavItem({
 export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps) {
   const { pathname } = useLocation();
   const { data: session } = useSession();
-  const { name, xp, level: _level, streak, avatar } = useUserStore();
+  const { name, avatar, learningMode } = useUserStore();
 
   // Sync display name/avatar with session (same as Header) when store is empty
   const userName = session?.user?.name || name || "用户";
   const userAvatar = session?.user?.image || avatar;
+  const modeLabel = getLearningModeConfig(learningMode).label;
 
   // V2：等级系统已移除，不再计算 levelInfo
   const [collapsed, setCollapsed] = useState(false);
@@ -195,16 +187,8 @@ export default function Sidebar({ mobileOpen, onMobileOpenChange }: SidebarProps
           </div>
 
           {!collapsed && (
-            <div className="flex items-center gap-3 text-xs text-muted-foreground">
-              <div className="flex items-center gap-1">
-                <span className="font-bold text-foreground">{xp}</span>
-                <span>XP</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <Zap className="h-3 w-3 text-amber-500" />
-                <span className="font-bold text-amber-500">{streak}</span>
-                <span>天</span>
-              </div>
+            <div className="text-xs text-muted-foreground">
+              <span>{modeLabel}模式</span>
             </div>
           )}
         </div>

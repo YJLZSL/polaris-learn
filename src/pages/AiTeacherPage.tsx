@@ -193,7 +193,7 @@ function MessageToolbar({
 /* ---------- 主组件：安静的对话窗口 ---------- */
 export default function AiTeacherPage() {
   const safeMotion = useSafeMotion();
-  const { weakPoints, addXP, learningMode, setUser, id: userId, initFromAuth } = useUserStore();
+  const { weakPoints, learningMode, setUser, id: userId, initFromAuth } = useUserStore();
 
   /* ----- 拉取用户 learningMode（用于学科过滤与样式适配） ----- */
   useEffect(() => {
@@ -437,9 +437,6 @@ export default function AiTeacherPage() {
           await repoSaveConversation(conv);
           setConversationId(convId);
         }
-
-        // 互动奖励（V2: 仅保留 XP，删除任务进度上报）
-        addXP(5);
       } catch (err) {
         // AbortError：已在 stopGeneration 中处理消息更新，这里仅清理
         if ((err as Error)?.name === "AbortError") return;
@@ -464,7 +461,7 @@ export default function AiTeacherPage() {
         if (!streamTimerRef.current) setIsLoading(false);
       }
     },
-    [input, subject, isLoading, conversationId, addXP, learningMode, userId, messages, weakPoints, visibleSubjects]
+    [input, subject, isLoading, conversationId, learningMode, userId, messages, weakPoints, visibleSubjects]
   );
 
   const handleRegenerateMessage = useCallback(

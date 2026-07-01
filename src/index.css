@@ -183,7 +183,6 @@ body {
   --animate-fade-in: fadeIn 0.3s ease-out;
   --animate-slide-up: slideUp 0.4s ease-out;
   --animate-pulse-glow: pulse-glow 2s ease-in-out infinite;
-  --animate-xp-gain: xpGain 1s ease-out forwards;
   --animate-gradient-flow: gradient-flow 6s ease infinite;
   --animate-shimmer-fast: shimmer-fast 1.2s ease-in-out infinite;
   --animate-float: float 3s ease-in-out infinite;
@@ -351,12 +350,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
 
-@keyframes xpGain {
-  0% { opacity: 1; transform: translateY(0); }
-  100% { opacity: 0; transform: translateY(-30px); }
-}
-.animate-xpGain { animation: xpGain 1s ease-out forwards; }
-
 @keyframes gradient-flow {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
@@ -397,51 +390,6 @@ h1, h2, h3, h4, h5, h6 {
 @media (min-width: 769px) {
   .mobile-only { display: none !important; }
   .pc-only { display: flex !important; }
-}
-
-/* ===== Task 16 / Task 8: HomePage Bento Grid 布局 ===== */
-.bento-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  grid-template-areas:
-    "daily"
-    "companion"
-    "knowledge"
-    "ai-teacher"
-    "streak"
-    "error-notes";
-  gap: 1rem;
-}
-
-@media (min-width: 768px) {
-  .bento-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    grid-template-areas:
-      "daily companion"
-      "knowledge ai-teacher"
-      "streak error-notes";
-    gap: 1rem;
-  }
-}
-
-@media (min-width: 1024px) {
-  .bento-grid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    grid-template-areas:
-      "daily companion knowledge"
-      "ai-teacher streak error-notes";
-    gap: 1.5rem;
-  }
-}
-
-/* Bento 卡片基础样式：暗色实色 + 微发光边框（Task 16.5） */
-.bento-card {
-  background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: var(--radius-2xl);
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 0 20px -5px rgba(99, 102, 241, 0.3);
-  overflow: hidden;
-  position: relative;
 }
 
 /* ===== Task 6: Polaris 分层按钮状态工具类 ===== */
