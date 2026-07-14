@@ -40,7 +40,7 @@ dependencies:
 
   # 动画与图形
   rive: ^0.13.13
-  lottie: ^3.1.2
+  lottie: ^3.5.1
   flutter_svg: ^2.0.10+1
 
   # 内容渲染
