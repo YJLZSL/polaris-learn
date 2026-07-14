@@ -1,0 +1,238 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Lingxi Academy Course",
+  "description": "灵犀学院课程内容 JSON Schema，用于社区共建时校验课程文件结构。",
+  "type": "object",
+  "required": ["id", "title", "level", "modules"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "课程唯一标识"
+    },
+    "title": {
+      "type": "string",
+      "description": "课程标题"
+    },
+    "description": {
+      "type": "string",
+      "description": "课程描述"
+    },
+    "level": {
+      "type": "string",
+      "enum": ["l0", "l1", "l2", "l3", "l4"],
+      "description": "课程级别：l0 入门、l1 初级、l2 中级、l3 高级、l4 专家"
+    },
+    "icon": {
+      "type": "string",
+      "description": "图标标识符或 emoji"
+    },
+    "order": {
+      "type": "integer",
+      "description": "课程排序，数值越小越靠前",
+      "minimum": 0
+    },
+    "modules": {
+      "type": "array",
+      "description": "模块（章节）列表",
+      "items": {
+        "$ref": "#/definitions/module"
+      }
+    }
+  },
+  "definitions": {
+    "module": {
+      "type": "object",
+      "description": "模块（章节）",
+      "required": ["id", "title", "lessons"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "模块唯一标识"
+        },
+        "courseId": {
+          "type": "string",
+          "description": "所属课程 ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "模块标题"
+        },
+        "description": {
+          "type": "string",
+          "description": "模块描述"
+        },
+        "lessons": {
+          "type": "array",
+          "description": "课程（单节课）列表",
+          "items": {
+            "$ref": "#/definitions/lesson"
+          }
+        },
+        "order": {
+          "type": "integer",
+          "description": "模块排序",
+          "minimum": 0
+        }
+      }
+    },
+    "lesson": {
+      "type": "object",
+      "description": "课程（单节课）",
+      "required": ["id", "title", "knowledgePoints"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "课程（单节课）唯一标识"
+        },
+        "moduleId": {
+          "type": "string",
+          "description": "所属模块 ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "课程标题"
+        },
+        "description": {
+          "type": "string",
+          "description": "课程描述"
+        },
+        "knowledgePoints": {
+          "type": "array",
+          "description": "知识点列表",
+          "items": {
+            "$ref": "#/definitions/knowledgePoint"
+          }
+        },
+        "order": {
+          "type": "integer",
+          "description": "课程排序",
+          "minimum": 0
+        }
+      }
+    },
+    "knowledgePoint": {
+      "type": "object",
+      "description": "知识点",
+      "required": [
+        "id",
+        "title",
+        "coreExplanation",
+        "whyItMatters",
+        "quiz",
+        "socraticSeedQuestion"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "知识点唯一标识"
+        },
+        "lessonId": {
+          "type": "string",
+          "description": "所属课程（单节课）ID"
+        },
+        "title": {
+          "type": "string",
+          "description": "知识点标题"
+        },
+        "coreExplanation": {
+          "type": "string",
+          "description": "核心解释"
+        },
+        "whyItMatters": {
+          "type": "string",
+          "description": "为什么重要"
+        },
+        "vocabulary": {
+          "type": "array",
+          "description": "词汇建立",
+          "items": {
+            "$ref": "#/definitions/vocabularyTerm"
+          }
+        },
+        "imageUrl": {
+          "type": "string",
+          "description": "主图（可选，URL 或 asset 路径）"
+        },
+        "quiz": {
+          "type": "array",
+          "description": "嵌入式测验题目",
+          "items": {
+            "$ref": "#/definitions/quizQuestion"
+          }
+        },
+        "socraticSeedQuestion": {
+          "type": "string",
+          "description": "苏格拉底对话种子问题"
+        },
+        "relatedTopics": {
+          "type": "array",
+          "description": "相关主题（继续学习侧边栏）",
+          "items": {
+            "type": "string"
+          }
+        },
+        "commonMisconceptions": {
+          "type": "array",
+          "description": "常见误解",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "vocabularyTerm": {
+      "type": "object",
+      "description": "词汇术语",
+      "required": ["term", "definition"],
+      "properties": {
+        "term": {
+          "type": "string",
+          "description": "术语名称"
+        },
+        "definition": {
+          "type": "string",
+          "description": "术语释义"
+        }
+      }
+    },
+    "quizQuestion": {
+      "type": "object",
+      "description": "测验题目",
+      "required": ["question", "type"],
+      "properties": {
+        "question": {
+          "type": "string",
+          "description": "题干"
+        },
+        "type": {
+          "type": "string",
+          "enum": ["singleChoice", "multipleChoice", "fillInBlank"],
+          "description": "题目类型：单选、多选、填空"
+        },
+        "options": {
+          "type": "array",
+          "description": "选项（填空题为空）",
+          "items": {
+            "type": "string"
+          }
+        },
+        "correctAnswerIndices": {
+          "type": "array",
+          "description": "正确答案索引（填空题为空）",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "correctAnswerText": {
+          "type": "string",
+          "description": "填空题的正确答案"
+        },
+        "explanation": {
+          "type": "string",
+          "description": "解析"
+        }
+      }
+    }
+  }
+}

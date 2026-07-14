@@ -1,0 +1,234 @@
+{
+  "id": "l0_python_basics",
+  "title": "Python 基础",
+  "description": "面向零基础学习者的 Python 入门课程，涵盖变量、数据类型、控制流与函数四大核心概念，帮助你建立编程的第一块基石。",
+  "level": "l0",
+  "icon": "🐍",
+  "order": 0,
+  "modules": [
+    {
+      "id": "l0_python_basics_m1",
+      "courseId": "l0_python_basics",
+      "title": "第一章 Python 基础",
+      "description": "从变量与赋值出发，逐步掌握 Python 的数据类型、控制流与函数，形成对编程的基础认知。",
+      "lessons": [
+        {
+          "id": "l0_python_basics_m1_l1",
+          "moduleId": "l0_python_basics_m1",
+          "title": "Python 基础入门",
+          "description": "本节课串起 Python 编程的四个核心概念：变量、数据类型、控制流与函数，为零基础学员打下扎实根基。",
+          "knowledgePoints": [
+            {
+              "id": "l0_python_basics_m1_l1_kp1",
+              "lessonId": "l0_python_basics_m1_l1",
+              "title": "变量与赋值",
+              "coreExplanation": "变量是存储数据的容器，用 `=` 赋值。Python 是动态类型语言，变量无需提前声明类型，解释器会在运行时自动推断。",
+              "whyItMatters": "变量是编程的基础，所有数据操作都通过变量进行。理解变量的赋值与命名规则，才能后续处理运算、函数参数与数据结构。",
+              "vocabulary": [
+                {
+                  "term": "变量 (variable)",
+                  "definition": "用于存储数据值的命名容器，可通过变量名引用其内容。"
+                },
+                {
+                  "term": "赋值 (assignment)",
+                  "definition": "通过 `=` 将右侧的值绑定到左侧变量名的过程。"
+                },
+                {
+                  "term": "动态类型 (dynamic typing)",
+                  "definition": "变量类型在运行时确定，同一变量可在不同时刻绑定不同类型的值。"
+                }
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个是合法的变量名？",
+                  "type": "singleChoice",
+                  "options": ["1name", "name_1", "class", "name-1"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "变量名必须以字母或下划线开头，不能以数字开头；`class` 是关键字；`name-1` 含连字符会被解析为减法。"
+                },
+                {
+                  "question": "`x = 5` 中，`=` 是什么操作？",
+                  "type": "singleChoice",
+                  "options": ["等于比较", "赋值", "声明", "计算"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "`=` 是赋值运算符，将 5 赋给变量 x；`==` 才是等于比较。"
+                },
+                {
+                  "question": "Python 中查看变量类型的函数是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "type",
+                  "explanation": "`type(x)` 返回变量 x 的类型，例如 `<class 'int'>`。"
+                }
+              ],
+              "socraticSeedQuestion": "你能告诉我，为什么 Python 不需要像 Java 那样提前声明变量类型吗？",
+              "relatedTopics": ["数据类型", "运算符", "命名规范"],
+              "commonMisconceptions": [
+                "变量名可以以数字开头（错误，必须以字母或下划线开头）",
+                "= 是比较运算符（错误，= 是赋值，== 才是比较）"
+              ]
+            },
+            {
+              "id": "l0_python_basics_m1_l1_kp2",
+              "lessonId": "l0_python_basics_m1_l1",
+              "title": "数据类型",
+              "coreExplanation": "Python 基本数据类型：int(整数)、float(浮点数)、str(字符串)、bool(布尔)、list(列表)、dict(字典)。每个类型支持不同的操作与运算。",
+              "whyItMatters": "理解数据类型才能正确处理数据，不同类型支持不同操作。类型错误是初学者最常遇到的 bug 来源之一。",
+              "vocabulary": [
+                {
+                  "term": "整数 (int)",
+                  "definition": "不带小数点的数字，如 3、-7、0。支持任意精度。"
+                },
+                {
+                  "term": "浮点数 (float)",
+                  "definition": "带小数点的数字，如 3.14、-0.5。用于表示实数近似值。"
+                },
+                {
+                  "term": "字符串 (str)",
+                  "definition": "由字符组成的序列，用单引号或双引号包裹，如 'hello'。"
+                },
+                {
+                  "term": "布尔 (bool)",
+                  "definition": "表示真值的数据类型，只有 True 与 False 两个取值，是 int 的子类。"
+                }
+              ],
+              "quiz": [
+                {
+                  "question": "`type(3.14)` 返回什么？",
+                  "type": "singleChoice",
+                  "options": ["int", "float", "str", "double"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "3.14 含小数点，是浮点数 float；Python 中没有 double 类型。"
+                },
+                {
+                  "question": "下列哪个是字符串？",
+                  "type": "singleChoice",
+                  "options": ["hello", "\"hello\"", "'hello'", "B和C都对"],
+                  "correctAnswerIndices": [3],
+                  "explanation": "字符串既可用双引号也可用单引号包裹，裸写的 hello 是变量名而非字符串。"
+                },
+                {
+                  "question": "`True + True` 等于多少？",
+                  "type": "singleChoice",
+                  "options": ["True", "2", "报错", "\"TrueTrue\""],
+                  "correctAnswerIndices": [1],
+                  "explanation": "bool 是 int 的子类，True 视为 1，False 视为 0，故 True + True = 2。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 中 `True + True` 等于 2？这和 bool 类型的设计有什么关系？",
+              "relatedTopics": ["类型转换", "字符串操作", "列表"],
+              "commonMisconceptions": [
+                "字符串只能用双引号（错误，单引号也可以）",
+                "bool 不是数字（错误，bool 是 int 的子类）"
+              ]
+            },
+            {
+              "id": "l0_python_basics_m1_l1_kp3",
+              "lessonId": "l0_python_basics_m1_l1",
+              "title": "控制流（if/for/while）",
+              "coreExplanation": "控制流决定代码执行顺序。if 实现条件分支，for 遍历可迭代对象做循环，while 在条件为真时反复执行。Python 用缩进（推荐 4 空格）表示代码块归属。",
+              "whyItMatters": "控制流让程序能做出判断和重复操作，是逻辑实现的核心。没有控制流的程序只能按顺序逐行执行，无法应对真实世界的复杂逻辑。",
+              "vocabulary": [
+                {
+                  "term": "条件分支 (conditional)",
+                  "definition": "根据条件真假选择执行路径，由 if/elif/else 实现。"
+                },
+                {
+                  "term": "循环 (loop)",
+                  "definition": "重复执行一段代码的结构，分为 for 遍历循环与 while 条件循环。"
+                },
+                {
+                  "term": "缩进 (indentation)",
+                  "definition": "行首的空白字符，Python 用它界定代码块归属，推荐统一 4 空格。"
+                }
+              ],
+              "quiz": [
+                {
+                  "question": "Python 用什么表示代码块？",
+                  "type": "singleChoice",
+                  "options": ["大括号{}", "缩进", "begin/end", "小括号()"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 以缩进表示代码块，而非大括号或关键字，缩进必须一致。"
+                },
+                {
+                  "question": "`for i in range(3)` 循环几次？",
+                  "type": "singleChoice",
+                  "options": ["2", "3", "4", "0"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "range(3) 生成 0、1、2 三个数，故循环 3 次。"
+                },
+                {
+                  "question": "`while` 循环在条件为 ____ 时执行",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "True",
+                  "explanation": "while 在条件为真(True)时持续执行，条件为假(False)时退出。"
+                }
+              ],
+              "socraticSeedQuestion": "如果 Python 改用大括号表示代码块，会有什么优缺点？为什么 Python 选择了缩进？",
+              "relatedTopics": ["range函数", "break/continue", "列表推导式"],
+              "commonMisconceptions": [
+                "for 循环只能遍历数字（错误，可以遍历任何可迭代对象）",
+                "缩进可以是任意空格数（错误，Python 推荐统一 4 空格）"
+              ]
+            },
+            {
+              "id": "l0_python_basics_m1_l1_kp4",
+              "lessonId": "l0_python_basics_m1_l1",
+              "title": "函数",
+              "coreExplanation": "函数用 `def` 定义，可接收参数，用 `return` 返回值。函数提高代码复用性和可读性，是模块化编程的基础单元。",
+              "whyItMatters": "函数是模块化编程的基础，避免代码重复。把重复逻辑封装为函数，既便于维护，也降低了出错概率。",
+              "vocabulary": [
+                {
+                  "term": "函数定义 (def)",
+                  "definition": "用 `def 函数名(参数):` 声明一个函数，随后跟缩进的函数体。"
+                },
+                {
+                  "term": "参数 (parameter)",
+                  "definition": "函数定义中接收输入的变量，调用时由实参传入。"
+                },
+                {
+                  "term": "返回值 (return)",
+                  "definition": "函数通过 `return` 把结果交还给调用方；若无 return 则返回 None。"
+                }
+              ],
+              "quiz": [
+                {
+                  "question": "定义函数用哪个关键字？",
+                  "type": "singleChoice",
+                  "options": ["function", "def", "func", "define"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 用 `def` 关键字定义函数，而非 function 或 func。"
+                },
+                {
+                  "question": "函数没有 return 语句时返回什么？",
+                  "type": "singleChoice",
+                  "options": ["0", "null", "None", "报错"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "无 return 的函数默认返回 None，而非报错或 0。"
+                },
+                {
+                  "question": "下列哪个是默认参数？",
+                  "type": "singleChoice",
+                  "options": ["def f(a, b=1)", "def f(a=1, b)", "def f(a, b)", "def f(a, b 1)"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "默认参数必须放在非默认参数之后，`def f(a, b=1)` 合法；`def f(a=1, b)` 非法。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 函数没有 return 时返回 None，而不是报错？这种设计有什么好处？",
+              "relatedTopics": ["lambda表达式", "可变参数", "递归"],
+              "commonMisconceptions": [
+                "函数必须有 return（错误，可以没有）",
+                "默认参数可以在非默认参数前（错误，默认参数必须在最后）"
+              ]
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "order": 1
+    }
+  ]
+}

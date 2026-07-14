@@ -1,0 +1,539 @@
+{
+  "$schema": "https://design-tokens.github.io/community-group/format-tokens/",
+  "$description": "灵犀学院（Lingxi Academy）结构化设计令牌。基于现有 lib/core/theme 下的 AppTheme、LingxiColors、ShapeVariants、SpringMotion 提炼，并补充重设计所需的新增令牌。",
+  "meta": {
+    "project": "灵犀学院 Lingxi Academy",
+    "platform": ["android", "windows", "macos"],
+    "flutter": "3.44.4",
+    "dart": "3.12.2",
+    "materialVersion": "Material 3 Expressive",
+    "seedColor": "#6750A4"
+  },
+  "color": {
+    "primary": {
+      "light": "#6750A4",
+      "dark": "#D0BCFF",
+      "rgb": { "light": "103, 80, 164", "dark": "208, 188, 255" }
+    },
+    "onPrimary": {
+      "light": "#FFFFFF",
+      "dark": "#381E72",
+      "rgb": { "light": "255, 255, 255", "dark": "56, 30, 114" }
+    },
+    "primaryContainer": {
+      "light": "#EADDFF",
+      "dark": "#4F378B",
+      "rgb": { "light": "234, 221, 255", "dark": "79, 55, 139" }
+    },
+    "onPrimaryContainer": {
+      "light": "#21005D",
+      "dark": "#EADDFF",
+      "rgb": { "light": "33, 0, 93", "dark": "234, 221, 255" }
+    },
+    "secondary": {
+      "light": "#625B71",
+      "dark": "#CCC2DC",
+      "rgb": { "light": "98, 91, 113", "dark": "204, 194, 220" }
+    },
+    "onSecondary": {
+      "light": "#FFFFFF",
+      "dark": "#332D41",
+      "rgb": { "light": "255, 255, 255", "dark": "51, 45, 65" }
+    },
+    "secondaryContainer": {
+      "light": "#E8DEF8",
+      "dark": "#4A4458",
+      "rgb": { "light": "232, 222, 248", "dark": "74, 68, 88" }
+    },
+    "onSecondaryContainer": {
+      "light": "#1D192B",
+      "dark": "#E8DEF8",
+      "rgb": { "light": "29, 25, 43", "dark": "232, 222, 248" }
+    },
+    "tertiary": {
+      "light": "#7D5260",
+      "dark": "#EFB8C8",
+      "rgb": { "light": "125, 82, 96", "dark": "239, 184, 200" }
+    },
+    "onTertiary": {
+      "light": "#FFFFFF",
+      "dark": "#492532",
+      "rgb": { "light": "255, 255, 255", "dark": "73, 37, 50" }
+    },
+    "tertiaryContainer": {
+      "light": "#FFD8E4",
+      "dark": "#633B48",
+      "rgb": { "light": "255, 216, 228", "dark": "99, 59, 72" }
+    },
+    "onTertiaryContainer": {
+      "light": "#31111D",
+      "dark": "#FFD8E4",
+      "rgb": { "light": "49, 17, 29", "dark": "255, 216, 228" }
+    },
+    "error": {
+      "light": "#B3261E",
+      "dark": "#F2B8B5",
+      "rgb": { "light": "179, 38, 30", "dark": "242, 184, 181" }
+    },
+    "onError": {
+      "light": "#FFFFFF",
+      "dark": "#601410",
+      "rgb": { "light": "255, 255, 255", "dark": "96, 20, 16" }
+    },
+    "errorContainer": {
+      "light": "#F9DEDC",
+      "dark": "#8C1D18",
+      "rgb": { "light": "249, 222, 220", "dark": "140, 29, 24" }
+    },
+    "onErrorContainer": {
+      "light": "#410E0B",
+      "dark": "#F9DEDC",
+      "rgb": { "light": "65, 14, 11", "dark": "249, 222, 220" }
+    },
+    "background": {
+      "light": "#FEF7FF",
+      "dark": "#141218",
+      "rgb": { "light": "254, 247, 255", "dark": "20, 18, 24" }
+    },
+    "onBackground": {
+      "light": "#1D1B20",
+      "dark": "#E6E0E9",
+      "rgb": { "light": "29, 27, 32", "dark": "230, 224, 233" }
+    },
+    "surface": {
+      "light": "#FEF7FF",
+      "dark": "#141218",
+      "rgb": { "light": "254, 247, 255", "dark": "20, 18, 24" }
+    },
+    "onSurface": {
+      "light": "#1D1B20",
+      "dark": "#E6E0E9",
+      "rgb": { "light": "29, 27, 32", "dark": "230, 224, 233" }
+    },
+    "surfaceVariant": {
+      "light": "#E7E0EC",
+      "dark": "#49454F",
+      "rgb": { "light": "231, 224, 236", "dark": "73, 69, 79" }
+    },
+    "onSurfaceVariant": {
+      "light": "#49454F",
+      "dark": "#CAC4D0",
+      "rgb": { "light": "73, 69, 79", "dark": "202, 196, 208" }
+    },
+    "surfaceContainerLowest": {
+      "light": "#FFFFFF",
+      "dark": "#0F0D13",
+      "rgb": { "light": "255, 255, 255", "dark": "15, 13, 19" }
+    },
+    "surfaceContainerLow": {
+      "light": "#F7F2FA",
+      "dark": "#1D1B20",
+      "rgb": { "light": "247, 242, 250", "dark": "29, 27, 32" }
+    },
+    "surfaceContainer": {
+      "light": "#F3EDF7",
+      "dark": "#211F26",
+      "rgb": { "light": "243, 237, 247", "dark": "33, 31, 38" }
+    },
+    "surfaceContainerHigh": {
+      "light": "#ECE6F0",
+      "dark": "#2B2930",
+      "rgb": { "light": "236, 230, 240", "dark": "43, 41, 48" }
+    },
+    "surfaceContainerHighest": {
+      "light": "#E6E0E9",
+      "dark": "#36343B",
+      "rgb": { "light": "230, 224, 233", "dark": "54, 52, 59" }
+    },
+    "outline": {
+      "light": "#79747E",
+      "dark": "#938F99",
+      "rgb": { "light": "121, 116, 126", "dark": "147, 143, 153" }
+    },
+    "outlineVariant": {
+      "light": "#CAC4D0",
+      "dark": "#49454F",
+      "rgb": { "light": "202, 196, 208", "dark": "73, 69, 79" }
+    },
+    "mascot": {
+      "primary": {
+        "value": "#7C4DFF",
+        "rgb": "124, 77, 255",
+        "note": "吉祥物主色-星空紫，浅深色通用"
+      },
+      "secondary": {
+        "value": "#FFB74D",
+        "rgb": "255, 183, 77",
+        "note": "吉祥物辅色-温暖橙，浅深色通用"
+      },
+      "bodyGradientTop": "#7C4DFF",
+      "bodyGradientBottom": "#B39DDB",
+      "capColor": "#1C1B2E",
+      "tasselColor": "#FFD54F",
+      "starColor": "#FFE082",
+      "scleraColor": "#FFFFFF",
+      "pupilColor": "#2A2118",
+      "mouthColor": "#3E2723",
+      "hornTop": "#FFFFFF",
+      "hornBottom": "#B39DDB",
+      "tongueColor": "#FF8A95",
+      "blushColor": "#66FF8A95",
+      "wingFillColor": "#59FFFFFF",
+      "highlightColor": "#55FFFFFF",
+      "teardropColor": "#4FC3F7"
+    },
+    "streakFire": {
+      "light": "#FF5722",
+      "dark": "#FF7043",
+      "rgb": { "light": "255, 87, 34", "dark": "255, 112, 67" }
+    },
+    "achievementGold": {
+      "light": "#FFD700",
+      "dark": "#FFE082",
+      "rgb": { "light": "255, 215, 0", "dark": "255, 224, 130" }
+    },
+    "socraticBlue": {
+      "light": "#42A5F5",
+      "dark": "#64B5F6",
+      "rgb": { "light": "66, 165, 245", "dark": "100, 181, 246" }
+    },
+    "misconceptionRed": {
+      "light": "#EF5350",
+      "dark": "#EF9A9A",
+      "rgb": { "light": "239, 83, 80", "dark": "239, 154, 154" }
+    },
+    "gradient": {
+      "mascotHero": {
+        "colors": ["#7C4DFF", "#FFB74D"],
+        "direction": "topLeft-bottomRight",
+        "note": "学习卡片主图区渐变，alpha 0.6"
+      },
+      "celebrateConfetti": {
+        "colors": ["#FFE082", "#FF8A95", "#81D4FA", "#B39DDB", "#FFAB91"],
+        "note": "庆祝撒花调色板"
+      },
+      "streakFire": {
+        "colors": ["#FF5722", "#FFB74D"],
+        "direction": "bottom-top",
+        "note": "Streak 火焰渐变"
+      }
+    }
+  },
+  "typography": {
+    "fontFamily": "Quicksand",
+    "fontFamilyBody": "Noto Sans SC",
+    "fontFamilyFallback": ["Noto Sans SC", "Roboto"],
+    "note": "标题使用 Quicksand 圆润字体，正文使用 Noto Sans SC。重设计建议升级为 Google Sans Flex Rounded。",
+    "scale": {
+      "displayLarge": {
+        "fontSize": 57,
+        "fontWeight": 400,
+        "lineHeight": 64,
+        "letterSpacing": -0.25,
+        "usage": "超大展示标题，极少使用"
+      },
+      "displayMedium": {
+        "fontSize": 45,
+        "fontWeight": 400,
+        "lineHeight": 52,
+        "usage": "大型展示标题"
+      },
+      "displaySmall": {
+        "fontSize": 36,
+        "fontWeight": 400,
+        "lineHeight": 44,
+        "usage": "展示标题"
+      },
+      "headlineLarge": {
+        "fontSize": 32,
+        "fontWeight": 400,
+        "lineHeight": 40,
+        "usage": "页面主标题"
+      },
+      "headlineMedium": {
+        "fontSize": 28,
+        "fontWeight": 400,
+        "lineHeight": 36,
+        "usage": "区域标题"
+      },
+      "headlineSmall": {
+        "fontSize": 24,
+        "fontWeight": 400,
+        "lineHeight": 32,
+        "usage": "卡片标题、章节完成标题"
+      },
+      "titleLarge": {
+        "fontSize": 22,
+        "fontWeight": 400,
+        "lineHeight": 28,
+        "usage": "AppBar 标题、卡片标题"
+      },
+      "titleMedium": {
+        "fontSize": 16,
+        "fontWeight": 500,
+        "lineHeight": 24,
+        "letterSpacing": 0.15,
+        "usage": "列表项标题、小节标题"
+      },
+      "titleSmall": {
+        "fontSize": 14,
+        "fontWeight": 500,
+        "lineHeight": 20,
+        "letterSpacing": 0.1,
+        "usage": "分组标题、小标题"
+      },
+      "bodyLarge": {
+        "fontSize": 16,
+        "fontWeight": 400,
+        "lineHeight": 24,
+        "letterSpacing": 0.5,
+        "usage": "正文主要文字"
+      },
+      "bodyMedium": {
+        "fontSize": 14,
+        "fontWeight": 400,
+        "lineHeight": 20,
+        "letterSpacing": 0.25,
+        "usage": "正文次要文字、描述文案"
+      },
+      "bodySmall": {
+        "fontSize": 12,
+        "fontWeight": 400,
+        "lineHeight": 16,
+        "letterSpacing": 0.4,
+        "usage": "辅助文字、时间戳"
+      },
+      "labelLarge": {
+        "fontSize": 14,
+        "fontWeight": 500,
+        "lineHeight": 20,
+        "letterSpacing": 0.1,
+        "usage": "按钮文字"
+      },
+      "labelMedium": {
+        "fontSize": 12,
+        "fontWeight": 500,
+        "lineHeight": 16,
+        "letterSpacing": 0.5,
+        "usage": "Chip、Badge 文字"
+      },
+      "labelSmall": {
+        "fontSize": 11,
+        "fontWeight": 500,
+        "lineHeight": 16,
+        "letterSpacing": 0.5,
+        "usage": "徽章标签、极小文字"
+      }
+    },
+    "fontWeight": {
+      "regular": 400,
+      "medium": 500,
+      "semibold": 600,
+      "bold": 700
+    }
+  },
+  "spacing": {
+    "base": 4,
+    "scale": {
+      "xs": 4,
+      "sm": 8,
+      "md": 12,
+      "lg": 16,
+      "xl": 24,
+      "2xl": 32,
+      "3xl": 48,
+      "4xl": 64
+    },
+    "usage": {
+      "xs": "图标与文字间距、极小间隙",
+      "sm": "Chip 间距、列表项内部小间距",
+      "md": "卡片内部子元素间距、按钮间距",
+      "lg": "卡片内边距（默认）、页面边距",
+      "xl": "区域间距、空状态吉祥物与文字间距",
+      "2xl": "大区域间距、空状态内边距",
+      "3xl": "引导页步骤间距",
+      "4xl": "页面级大间距"
+    }
+  },
+  "radius": {
+    "scale": {
+      "sm": 4,
+      "md": 8,
+      "lg": 12,
+      "xl": 16,
+      "2xl": 24,
+      "3xl": 32,
+      "full": 9999
+    },
+    "usage": {
+      "sm": "进度条圆角、极小元素",
+      "md": "Chip 圆角、贴纸圆角、小按钮",
+      "lg": "Button 圆角、Input 圆角、NavRail 指示器",
+      "xl": "Card 圆角、FAB 圆角、消息气泡大圆角",
+      "2xl": "Dialog 圆角（当前 20，建议 24）、大卡片",
+      "3xl": "大型弹出层、特殊容器",
+      "full": "头像、圆形按钮、胶囊形元素"
+    }
+  },
+  "elevation": {
+    "level0": {
+      "shadow": "none",
+      "note": "默认卡片、表面容器，无阴影"
+    },
+    "level1": {
+      "shadow": "0px 1px 2px rgba(0,0,0,0.08), 0px 1px 3px rgba(0,0,0,0.06)",
+      "note": "悬浮卡片、可点击卡片 hover 态"
+    },
+    "level2": {
+      "shadow": "0px 2px 4px rgba(0,0,0,0.10), 0px 1px 5px rgba(0,0,0,0.06)",
+      "note": "拖拽中卡片、弹出菜单"
+    },
+    "level3": {
+      "shadow": "0px 4px 8px rgba(0,0,0,0.12), 0px 3px 6px rgba(0,0,0,0.08)",
+      "note": "对话框、底部抽屉"
+    },
+    "level4": {
+      "shadow": "0px 6px 12px rgba(0,0,0,0.14), 0px 4px 8px rgba(0,0,0,0.10)",
+      "note": "已解锁成就徽章、悬浮 FAB"
+    }
+  },
+  "motion": {
+    "spring": {
+      "default": {
+        "mass": 1,
+        "stiffness": 100,
+        "damping": 15,
+        "note": "常规过渡：卡片入场、页面切换"
+      },
+      "fast": {
+        "mass": 1,
+        "stiffness": 200,
+        "damping": 20,
+        "note": "小元素：按钮按压回弹、Chip 切换"
+      },
+      "slow": {
+        "mass": 1,
+        "stiffness": 50,
+        "damping": 12,
+        "note": "大元素/页面切换：引导页、对话框"
+      }
+    },
+    "curve": {
+      "default": "easeOutCubic",
+      "fast": "easeOut",
+      "slow": "easeInOutCubicEmphasized",
+      "emphasized": "easeInOutCubicEmphasized"
+    },
+    "duration": {
+      "fast": 150,
+      "normal": 250,
+      "default": 300,
+      "slow": 400,
+      "slower": 500,
+      "pageTransition": 300
+    },
+    "usage": {
+      "fast": "按钮按压、图标切换、微动效",
+      "normal": "Chip 选中、开关切换、进度条",
+      "default": "卡片入场、弹簧过渡默认时长",
+      "slow": "页面切换、展开/收起",
+      "slower": "大页面切换、引导页步骤切换"
+    },
+    "springTransition": {
+      "beginScale": 0.92,
+      "beginOpacity": 0.0,
+      "endScale": 1.0,
+      "endOpacity": 1.0,
+      "note": "SpringMotion.springTransition 默认参数：淡入+轻微缩放"
+    }
+  },
+  "shape": {
+    "description": "35 种形状变体，由 5 种形状模式 × 7 种圆角程度组合",
+    "modes": ["rectangle", "rounded", "capsule", "circle", "octagon"],
+    "sizes": ["none", "extraSmall", "small", "medium", "large", "extraLarge", "full"],
+    "radiusValues": {
+      "none": 0,
+      "extraSmall": 4,
+      "small": 8,
+      "medium": 12,
+      "large": 16,
+      "extraLarge": 28,
+      "full": 9999
+    },
+    "variants": [
+      "rectangleNone", "rectangleExtraSmall", "rectangleSmall", "rectangleMedium", "rectangleLarge", "rectangleExtraLarge", "rectangleFull",
+      "roundedNone", "roundedExtraSmall", "roundedSmall", "roundedMedium", "roundedLarge", "roundedExtraLarge", "roundedFull",
+      "capsuleNone", "capsuleExtraSmall", "capsuleSmall", "capsuleMedium", "capsuleLarge", "capsuleExtraLarge", "capsuleFull",
+      "circleNone", "circleExtraSmall", "circleSmall", "circleMedium", "circleLarge", "circleExtraLarge", "circleFull",
+      "octagonNone", "octagonExtraSmall", "octagonSmall", "octagonMedium", "octagonLarge", "octagonExtraLarge", "octagonFull"
+    ],
+    "usageMapping": {
+      "roundedMedium": "默认卡片、容器",
+      "roundedLarge": "大型卡片、消息气泡",
+      "roundedExtraLarge": "特殊大卡片、引导页元素",
+      "roundedFull": "胶囊按钮、标签",
+      "circleFull": "头像、圆形徽章、FAB",
+      "rectangleSmall": "进度条、贴纸",
+      "capsuleFull": "筛选 Chip、状态标签",
+      "octagonLarge": "成就徽章（建议升级后使用）"
+    },
+    "note": "当前 capsule 和 octagon 系列以 RoundedRectangle 近似，full 程度形成胶囊观感。circle 系列返回 CircleBorder。"
+  },
+  "breakpoints": {
+    "mobile": {
+      "min": 0,
+      "max": 599,
+      "layout": "单栏、底部 NavigationBar、紧凑间距",
+      "maxContentWidth": "100%"
+    },
+    "tablet": {
+      "min": 600,
+      "max": 1023,
+      "layout": "双栏、可折叠 NavigationRail、中等间距",
+      "maxContentWidth": "100%"
+    },
+    "desktop": {
+      "min": 1024,
+      "max": null,
+      "layout": "三栏或宽限居中、NavigationRail、最大内容宽度限制",
+      "maxContentWidth": 1200,
+      "navRailWidth": 80
+    },
+    "note": "当前 app_router.dart 中 _AppShell 使用 840 作为 NavigationRail 切换阈值，与 Responsive 的 1024 不一致。重设计时应统一为 1024。"
+  },
+  "iconography": {
+    "defaultSet": "Material Icons",
+    "sizes": {
+      "xs": 16,
+      "sm": 18,
+      "md": 20,
+      "lg": 24,
+      "xl": 28,
+      "2xl": 32,
+      "3xl": 40,
+      "4xl": 48,
+      "5xl": 64
+    },
+    "usage": {
+      "sm": "按钮内图标、Chip avatar",
+      "md": "列表项图标、卡片标题图标",
+      "lg": "AppBar 图标、导航图标",
+      "xl": "空状态图标",
+      "2xl": "统计卡片图标",
+      "4xl": "引导页图标",
+      "5xl": "大型空状态图标"
+    }
+  },
+  "accessibility": {
+    "minContrastRatio": 4.5,
+    "minContrastRatioLarge": 3.0,
+    "standard": "WCAG 2.1 AA",
+    "focusVisibleOutline": "2px solid primary",
+    "focusVisibleOutlineRadius": 4,
+    "minTouchTarget": 48,
+    "minTouchTargetDesktop": 40,
+    "textScaleSupport": true,
+    "reduceMotionSupport": true,
+    "note": "通过 MediaQuery.platformAccessibilityFeatures.disableAnimations 检测减少动效偏好"
+  }
+}

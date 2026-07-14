@@ -1,0 +1,103 @@
+name: lingxi_academy
+description: 灵犀学院 - 引导式 AI 学习应用
+publish_to: 'none'
+
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.10.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+
+  # 状态管理
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # 路由
+  go_router: ^14.2.0
+
+  # 数据库
+  drift: ^2.18.0
+  sqlite3_flutter_libs: ^0.5.24
+  sqlcipher_flutter_libs: ^0.6.4
+  path_provider: ^2.1.3
+  path: ^1.9.0
+  sqflite: ^2.3.3+1
+
+  # 工具
+  uuid: ^4.4.0
+
+  # 安全存储
+  flutter_secure_storage: ^9.2.2
+
+  # 网络
+  dio: ^5.4.3+1
+
+  # 动画与图形
+  rive: ^0.13.13
+  lottie: ^3.1.2
+  flutter_svg: ^2.0.10+1
+
+  # 内容渲染
+  flutter_markdown: ^0.7.2+1
+  flutter_highlight: ^0.7.0
+  flutter_math_fork: ^0.7.2
+  markdown: ^7.2.0
+
+  # 样式与字体
+  google_fonts: ^6.2.1
+
+  # 国际化与本地化
+  intl: ^0.20.2
+  shared_preferences: ^2.2.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+  build_runner: ^2.4.11
+  drift_dev: ^2.18.0
+  riverpod_generator: ^2.4.0
+  json_serializable: ^6.8.0
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
+  http_mock_adapter: ^0.6.1
+  msix: ^3.16.7
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/courses/
+    - assets/rive/
+    - assets/prompts/
+
+flutter_launcher_icons:
+  android: true
+  windows: true
+  macos: true
+  image_path: "assets/images/app_icon.png"
+  min_sdk_android: 24
+
+flutter_native_splash:
+  color: "#6750A4"
+  image: assets/images/splash_logo.png
+  android_12:
+    image: assets/images/splash_logo.png
+    color: "#6750A4"
+
+msix_config:
+  display_name: 灵犀学院
+  publisher_display_name: Lingxi Academy
+  identity_name: com.lingxiacademy.lingxiacademy
+  msix_version: 0.1.0.0
+  logo_path: assets/images/app_icon.png
+  capabilities: internetClient
+  architecture: x64
+  build_windows: false
