@@ -1,17 +1,30 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+/// 学习者年龄段枚举，用于选择不同风格的提示词。
+enum LearnerAgeGroup {
+  /// 小学高年级/初中生（10-15 岁）
+  young,
+
+  /// 高中生/大学生（15+ 岁）
+  advanced,
+}
+
 /// 提示词管理器。
 ///
 /// 负责从 assets 加载苏格拉底式与直接解答两套系统提示词，并生成
 /// 分级探索（简化/深入/图示）所需的辅助提示词。应用启动时通过
 /// [loadPrompts] 预加载，运行期通过 [getSystemPrompt] 取用。
 ///
+/// 支持按 [LearnerAgeGroup] 切换不同年龄段的苏格拉底提示词风格。
+///
 /// 加载失败时（如 assets 缺失或读取异常）会自动回退到内置兜底提示词，
 /// 保证调用方拿到的提示词一定非空。
 class PromptManager {
   static const _socraticPath = 'assets/prompts/socratic_system_prompt.md';
   static const _directPath = 'assets/prompts/direct_answer_prompt.md';
+  static const _socraticYoungPath = 'assets/prompts/socratic_young_learner.md';
+  static const _socraticAdvancedPath = 'assets/prompts/socratic_advanced.md';
 
   /// 苏格拉底模式兜底提示词（assets 加载失败时使用）。
   static const _fallbackSocraticPrompt = '''你是一位苏格拉底式学习引导者。请遵循以下原则：
@@ -26,6 +39,8 @@ class PromptManager {
 
   String? _socraticPrompt;
   String? _directPrompt;
+  String? _socraticYoungPrompt;
+  String? _socraticAdvancedPrompt;
 
   /// 加载提示词文件（可在应用启动时调用）。
   ///
@@ -34,6 +49,8 @@ class PromptManager {
   Future<void> loadPrompts() async {
     _socraticPrompt = await _loadOrDefault(_socraticPath, _fallbackSocraticPrompt);
     _directPrompt = await _loadOrDefault(_directPath, _fallbackDirectPrompt);
+    _socraticYoungPrompt = await _loadOrDefault(_socraticYoungPath, _fallbackSocraticPrompt);
+    _socraticAdvancedPrompt = await _loadOrDefault(_socraticAdvancedPath, _fallbackSocraticPrompt);
   }
 
   /// 读取指定 asset，失败时返回 [fallback]。
@@ -56,11 +73,28 @@ class PromptManager {
   /// 根据是否开启苏格拉底模式返回对应系统提示词。
   ///
   /// 若提示词尚未加载，返回兜底默认提示词，保证调用方安全。
-  String getSystemPrompt({required bool socraticMode}) {
+  /// 可选传入 [ageGroup] 选择年龄段特定提示词。
+  String getSystemPrompt({
+    required bool socraticMode,
+    LearnerAgeGroup? ageGroup,
+  }) {
     if (socraticMode) {
+      if (ageGroup != null) {
+        return getSocraticPromptForAge(ageGroup);
+      }
       return _socraticPrompt ?? _fallbackSocraticPrompt;
     }
     return _directPrompt ?? _fallbackDirectPrompt;
+  }
+
+  /// 根据年龄段返回苏格拉底提示词。
+  String getSocraticPromptForAge(LearnerAgeGroup ageGroup) {
+    switch (ageGroup) {
+      case LearnerAgeGroup.young:
+        return _socraticYoungPrompt ?? _fallbackSocraticPrompt;
+      case LearnerAgeGroup.advanced:
+        return _socraticAdvancedPrompt ?? _fallbackSocraticPrompt;
+    }
   }
 
   /// 返回苏格拉底模式系统提示词（加载后一定非空）。

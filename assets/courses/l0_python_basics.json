@@ -7,6 +7,889 @@
   "order": 0,
   "modules": [
     {
+      "id": "l0_m1_variables",
+      "courseId": "l0_python_basics",
+      "title": "第一章 变量与数据类型",
+      "description": "从变量与赋值出发，掌握 Python 的基本数据类型和类型转换。",
+      "lessons": [
+        {
+          "id": "l0_m1_l1",
+          "moduleId": "l0_m1_variables",
+          "title": "变量与赋值",
+          "description": "理解变量的概念、命名规则和赋值操作。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m1_l1_kp1",
+              "lessonId": "l0_m1_l1",
+              "title": "变量与赋值",
+              "difficulty": 1,
+              "estimatedMinutes": 8,
+              "prerequisites": [],
+              "coreExplanation": "变量是存储数据的容器，用 `=` 赋值。Python 是动态类型语言，变量无需提前声明类型，解释器会在运行时自动推断。",
+              "whyItMatters": "变量是编程的基础，所有数据操作都通过变量进行。理解变量的赋值与命名规则，才能后续处理运算、函数参数与数据结构。",
+              "vocabulary": [
+                {"term": "变量 (variable)", "definition": "用于存储数据值的命名容器，可通过变量名引用其内容。"},
+                {"term": "赋值 (assignment)", "definition": "通过 `=` 将右侧的值绑定到左侧变量名的过程。"},
+                {"term": "动态类型 (dynamic typing)", "definition": "变量类型在运行时确定，同一变量可在不同时刻绑定不同类型的值。"}
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个是合法的变量名？",
+                  "type": "singleChoice",
+                  "options": ["1name", "name_1", "class", "name-1"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "变量名必须以字母或下划线开头，不能以数字开头；`class` 是关键字；`name-1` 含连字符会被解析为减法。"
+                },
+                {
+                  "question": "`x = 5` 中，`=` 是什么操作？",
+                  "type": "singleChoice",
+                  "options": ["等于比较", "赋值", "声明", "计算"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "`=` 是赋值运算符，将 5 赋给变量 x；`==` 才是等于比较。"
+                },
+                {
+                  "question": "Python 中查看变量类型的函数是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "type",
+                  "explanation": "`type(x)` 返回变量 x 的类型，例如 `<class 'int'>`。"
+                }
+              ],
+              "socraticSeedQuestion": "你能告诉我，为什么 Python 不需要像 Java 那样提前声明变量类型吗？",
+              "relatedTopics": ["数据类型", "运算符", "命名规范"],
+              "commonMisconceptions": [
+                "变量名可以以数字开头（错误，必须以字母或下划线开头）",
+                "= 是比较运算符（错误，= 是赋值，== 才是比较）"
+              ]
+            },
+            {
+              "id": "l0_m1_l1_kp2",
+              "lessonId": "l0_m1_l1",
+              "title": "变量命名规范",
+              "difficulty": 1,
+              "estimatedMinutes": 6,
+              "prerequisites": ["l0_m1_l1_kp1"],
+              "coreExplanation": "Python 变量命名遵循 snake_case（蛇形命名），即全小写字母用下划线连接。好的变量名应有描述性，如 `student_name` 而非 `x`。常量通常全大写如 `MAX_SIZE`。",
+              "whyItMatters": "统一的命名规范让代码更易读，也是团队协作的基础。PEP 8 是 Python 社区公认的代码风格指南。",
+              "vocabulary": [
+                {"term": "snake_case", "definition": "用下划线连接单词的命名风格，如 my_variable，是 Python 变量/函数的标准命名方式。"},
+                {"term": "PEP 8", "definition": "Python 官方代码风格指南，定义了缩进、命名、导入等编码约定。"},
+                {"term": "关键字 (keyword)", "definition": "Python 保留的特殊单词（如 if/for/class），不可用作变量名。"}
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个命名风格符合 Python 规范？",
+                  "type": "singleChoice",
+                  "options": ["myVariable", "MyVariable", "my_variable", "myvariable"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "Python 变量和函数使用 snake_case 风格，即 my_variable。camelCase 是 Java/JS 风格。"
+                },
+                {
+                  "question": "Python 中常量通常用什么命名方式？",
+                  "type": "singleChoice",
+                  "options": ["snake_case", "UPPER_SNAKE_CASE", "camelCase", "PascalCase"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "常量用全大写下划线分隔，如 MAX_RETRY_COUNT，虽然 Python 不强制，但这是约定。"
+                },
+                {
+                  "question": "以下哪些是 Python 关键字？（多选）",
+                  "type": "multipleChoice",
+                  "options": ["if", "print", "while", "len"],
+                  "correctAnswerIndices": [0, 2],
+                  "explanation": "if 和 while 是关键字；print 和 len 是内置函数，不是关键字。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么给变量取一个有意义的名字比取 a、b、c 更重要？你能想到一个实际例子吗？",
+              "relatedTopics": ["PEP 8 规范", "代码可读性", "注释"],
+              "commonMisconceptions": [
+                "Python 强制命名规范（错误，PEP 8 是约定而非语法规则）",
+                "print 是关键字（错误，print 是内置函数，可以被覆盖）"
+              ]
+            }
+          ],
+          "order": 1
+        },
+        {
+          "id": "l0_m1_l2",
+          "moduleId": "l0_m1_variables",
+          "title": "数据类型",
+          "description": "掌握 Python 的基本数据类型及其操作。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m1_l2_kp1",
+              "lessonId": "l0_m1_l2",
+              "title": "数值类型：int 与 float",
+              "difficulty": 1,
+              "estimatedMinutes": 8,
+              "prerequisites": ["l0_m1_l1_kp1"],
+              "coreExplanation": "Python 基本数值类型：int(整数)支持任意精度，float(浮点数)用于表示小数。两者可混合运算，结果自动提升为 float。",
+              "whyItMatters": "数值运算是编程最基础的操作。理解 int 与 float 的区别能避免精度问题和类型错误。",
+              "vocabulary": [
+                {"term": "整数 (int)", "definition": "不带小数点的数字，如 3、-7、0。Python 整数支持任意精度。"},
+                {"term": "浮点数 (float)", "definition": "带小数点的数字，如 3.14、-0.5。用 IEEE 754 双精度表示。"},
+                {"term": "类型提升", "definition": "int 与 float 混合运算时，int 自动转为 float 参与计算。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`type(3.14)` 返回什么？",
+                  "type": "singleChoice",
+                  "options": ["int", "float", "str", "double"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "3.14 含小数点，是浮点数 float；Python 中没有 double 类型。"
+                },
+                {
+                  "question": "`5 / 2` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["2", "2.5", "2.0", "报错"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 3 中 `/` 是真除法，5/2 = 2.5；整除用 `//`。"
+                },
+                {
+                  "question": "Python 中整除运算符是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "//",
+                  "explanation": "`//` 是整除（地板除），如 7//2 = 3。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 0.1 + 0.2 在 Python 中不等于 0.3？这和浮点数的存储方式有什么关系？",
+              "relatedTopics": ["运算符", "类型转换", "math 模块"],
+              "commonMisconceptions": [
+                "Python 中 / 是整除（错误，/ 是真除法，// 才是整除）",
+                "浮点数是精确的（错误，浮点数有精度限制）"
+              ]
+            },
+            {
+              "id": "l0_m1_l2_kp2",
+              "lessonId": "l0_m1_l2",
+              "title": "字符串基础",
+              "difficulty": 1,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m1_l1_kp1"],
+              "coreExplanation": "字符串(str)是由字符组成的不可变序列，用单引号或双引号包裹。支持拼接(+)、重复(*)、索引([0])、切片([1:3])等操作。f-string 是格式化字符串的现代方式。",
+              "whyItMatters": "字符串处理是最常见的编程任务之一。从用户输入到文件处理，几乎所有程序都涉及字符串操作。",
+              "vocabulary": [
+                {"term": "字符串 (str)", "definition": "由字符组成的不可变序列，用引号包裹，如 'hello'。"},
+                {"term": "索引 (index)", "definition": "通过位置访问序列元素，从 0 开始计数，如 s[0] 取第一个字符。"},
+                {"term": "f-string", "definition": "格式化字符串字面量，在字符串前加 f，用 {} 嵌入表达式，如 f'Hello {name}'。"}
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个是字符串？",
+                  "type": "singleChoice",
+                  "options": ["hello", "\"hello\"", "'hello'", "B和C都对"],
+                  "correctAnswerIndices": [3],
+                  "explanation": "字符串既可用双引号也可用单引号包裹，裸写的 hello 是变量名而非字符串。"
+                },
+                {
+                  "question": "`'hello'[1]` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["h", "e", "l", "报错"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "索引从 0 开始，[0]是'h'，[1]是'e'。"
+                },
+                {
+                  "question": "`'hi' * 3` 的结果是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "hihihi",
+                  "explanation": "字符串乘以整数表示重复该字符串若干次。"
+                }
+              ],
+              "socraticSeedQuestion": "字符串为什么被设计成不可变的？如果可以修改字符串中的单个字符，会带来什么问题？",
+              "relatedTopics": ["字符串方法", "正则表达式", "编码"],
+              "commonMisconceptions": [
+                "字符串只能用双引号（错误，单引号也可以）",
+                "字符串可以修改单个字符（错误，str 是不可变类型）"
+              ]
+            },
+            {
+              "id": "l0_m1_l2_kp3",
+              "lessonId": "l0_m1_l2",
+              "title": "布尔类型与类型转换",
+              "difficulty": 2,
+              "estimatedMinutes": 8,
+              "prerequisites": ["l0_m1_l2_kp1", "l0_m1_l2_kp2"],
+              "coreExplanation": "布尔类型(bool)只有 True 和 False 两个值，是 int 的子类。Python 中任何对象都可以转换为布尔值：0、空字符串、空列表等为 False，其余为 True。类型转换使用 int()、float()、str()、bool() 等函数。",
+              "whyItMatters": "布尔值是条件判断的基础，理解真值测试规则能写出更简洁的代码。类型转换是数据处理中必不可少的技能。",
+              "vocabulary": [
+                {"term": "布尔 (bool)", "definition": "表示真假的数据类型，只有 True 与 False，是 int 的子类。"},
+                {"term": "真值测试 (truthy/falsy)", "definition": "Python 中任何对象都可参与布尔判断：0、None、空容器为 falsy，其余为 truthy。"},
+                {"term": "类型转换 (type casting)", "definition": "用 int()、str() 等函数将数据从一种类型转换为另一种类型。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`True + True` 等于多少？",
+                  "type": "singleChoice",
+                  "options": ["True", "2", "报错", "\"TrueTrue\""],
+                  "correctAnswerIndices": [1],
+                  "explanation": "bool 是 int 的子类，True 视为 1，False 视为 0，故 True + True = 2。"
+                },
+                {
+                  "question": "以下哪些值在 if 判断中为 False？（多选）",
+                  "type": "multipleChoice",
+                  "options": ["0", "\"\"", "[]", "\"0\""],
+                  "correctAnswerIndices": [0, 1, 2],
+                  "explanation": "0、空字符串\"\"、空列表[]是 falsy；字符串\"0\"非空，为 truthy。"
+                },
+                {
+                  "question": "`int('42')` 的结果是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "42",
+                  "explanation": "int() 将字符串 '42' 转换为整数 42。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 把空列表 [] 视为 False？这种设计给编程带来了什么便利？",
+              "relatedTopics": ["条件判断", "逻辑运算符", "None"],
+              "commonMisconceptions": [
+                "bool 不是数字（错误，bool 是 int 的子类）",
+                "字符串 '0' 是 False（错误，非空字符串都是 True）"
+              ]
+            }
+          ],
+          "order": 2
+        }
+      ],
+      "order": 1
+    },
+    {
+      "id": "l0_m2_control_flow",
+      "courseId": "l0_python_basics",
+      "title": "第二章 控制流",
+      "description": "掌握条件判断和循环结构，让程序能做出决策和重复执行操作。",
+      "lessons": [
+        {
+          "id": "l0_m2_l1",
+          "moduleId": "l0_m2_control_flow",
+          "title": "条件判断",
+          "description": "学习 if/elif/else 条件分支与比较运算符。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m2_l1_kp1",
+              "lessonId": "l0_m2_l1",
+              "title": "if/elif/else 条件分支",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m1_l2_kp3"],
+              "coreExplanation": "if 语句根据条件表达式的真假决定执行哪个代码块。elif 添加更多分支，else 处理所有条件都不满足的情况。条件表达式后必须跟冒号，代码块用缩进表示。",
+              "whyItMatters": "条件判断让程序能做出决策，是实现逻辑的核心。从简单的用户输入验证到复杂的业务规则，都离不开条件分支。",
+              "vocabulary": [
+                {"term": "条件分支 (conditional)", "definition": "根据条件真假选择执行路径，由 if/elif/else 实现。"},
+                {"term": "比较运算符", "definition": "用于比较两个值的运算符：==、!=、>、<、>=、<=。"},
+                {"term": "逻辑运算符", "definition": "组合多个条件的运算符：and（且）、or（或）、not（非）。"}
+              ],
+              "quiz": [
+                {
+                  "question": "Python 用什么表示代码块？",
+                  "type": "singleChoice",
+                  "options": ["大括号{}", "缩进", "begin/end", "小括号()"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 以缩进表示代码块，而非大括号或关键字，缩进必须一致。"
+                },
+                {
+                  "question": "if 条件后必须跟什么符号？",
+                  "type": "singleChoice",
+                  "options": ["分号;", "冒号:", "括号()", "大括号{}"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 中 if/elif/else/for/while/def/class 后面都跟冒号 :。"
+                },
+                {
+                  "question": "`not True` 的结果是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "False",
+                  "explanation": "not 是逻辑非运算符，取反。not True = False。"
+                }
+              ],
+              "socraticSeedQuestion": "如果 Python 改用大括号表示代码块，会有什么优缺点？为什么 Python 选择了缩进？",
+              "relatedTopics": ["三元表达式", "match-case", "嵌套条件"],
+              "commonMisconceptions": [
+                "if 后面需要括号包裹条件（错误，Python 中不需要，但加了也不报错）",
+                "elif 可以不跟在 if 后面单独使用（错误，必须有前置 if）"
+              ]
+            },
+            {
+              "id": "l0_m2_l1_kp2",
+              "lessonId": "l0_m2_l1",
+              "title": "比较与逻辑运算",
+              "difficulty": 2,
+              "estimatedMinutes": 8,
+              "prerequisites": ["l0_m2_l1_kp1"],
+              "coreExplanation": "比较运算符（==、!=、>、<、>=、<=）返回布尔值。逻辑运算符 and、or、not 用于组合多个条件。Python 支持链式比较如 `1 < x < 10`。",
+              "whyItMatters": "复杂的条件判断往往需要组合多个比较。掌握逻辑运算的短路特性能写出更高效的代码。",
+              "vocabulary": [
+                {"term": "短路求值 (short-circuit)", "definition": "and 左边为 False 时不再计算右边；or 左边为 True 时不再计算右边。"},
+                {"term": "链式比较", "definition": "Python 特有的连续比较写法，如 `1 < x < 10` 等价于 `1 < x and x < 10`。"},
+                {"term": "is vs ==", "definition": "== 比较值是否相等，is 比较是否为同一对象（内存地址相同）。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`5 == 5.0` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["True", "False", "报错", "None"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "== 比较值，5 和 5.0 值相等，所以为 True。"
+                },
+                {
+                  "question": "`True and False or True` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["True", "False", "None", "报错"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "先算 and：True and False = False；再算 or：False or True = True。"
+                },
+                {
+                  "question": "Python 判断一个值是否为 None 应该用 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "is",
+                  "explanation": "判断 None 用 `x is None`，因为 None 是单例对象，用 is 更准确。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 建议用 `is None` 而不是 `== None`？两者有什么区别？",
+              "relatedTopics": ["身份运算符", "成员运算符 in", "优先级"],
+              "commonMisconceptions": [
+                "== 和 is 完全一样（错误，== 比值，is 比身份/地址）",
+                "and 和 or 的优先级相同（错误，and 优先级高于 or）"
+              ]
+            }
+          ],
+          "order": 1
+        },
+        {
+          "id": "l0_m2_l2",
+          "moduleId": "l0_m2_control_flow",
+          "title": "循环结构",
+          "description": "学习 for 和 while 循环，以及循环控制语句。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m2_l2_kp1",
+              "lessonId": "l0_m2_l2",
+              "title": "for 循环",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m2_l1_kp1"],
+              "coreExplanation": "for 循环遍历可迭代对象（列表、字符串、range 等）。`for item in iterable:` 每次循环将下一个元素赋给 item。range(n) 生成 0 到 n-1 的整数序列。",
+              "whyItMatters": "循环让我们能处理批量数据，避免重复代码。Python 的 for 循环设计简洁优雅，是数据处理的核心工具。",
+              "vocabulary": [
+                {"term": "可迭代对象 (iterable)", "definition": "能被 for 循环遍历的对象，如列表、字符串、range、字典等。"},
+                {"term": "range()", "definition": "生成整数序列的内置函数。range(5) = [0,1,2,3,4]，range(1,5) = [1,2,3,4]。"},
+                {"term": "enumerate()", "definition": "同时获取索引和值的内置函数，如 for i, val in enumerate(list)。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`for i in range(3)` 循环几次？",
+                  "type": "singleChoice",
+                  "options": ["2", "3", "4", "0"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "range(3) 生成 0、1、2 三个数，故循环 3 次。"
+                },
+                {
+                  "question": "`range(2, 6)` 包含哪些数？",
+                  "type": "singleChoice",
+                  "options": ["2,3,4,5,6", "2,3,4,5", "3,4,5,6", "3,4,5"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "range(start, stop) 包含 start，不包含 stop，所以是 2,3,4,5。"
+                },
+                {
+                  "question": "同时获取索引和值的函数是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "enumerate",
+                  "explanation": "enumerate(iterable) 返回 (索引, 值) 元组序列。"
+                }
+              ],
+              "socraticSeedQuestion": "Python 的 for 循环和 C/Java 的 for(int i=0; i<n; i++) 有什么本质区别？为什么 Python 这样设计？",
+              "relatedTopics": ["列表推导式", "嵌套循环", "迭代器"],
+              "commonMisconceptions": [
+                "for 循环只能遍历数字（错误，可以遍历任何可迭代对象）",
+                "range(5) 包含 5（错误，range 不包含终止值）"
+              ]
+            },
+            {
+              "id": "l0_m2_l2_kp2",
+              "lessonId": "l0_m2_l2",
+              "title": "while 循环与循环控制",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m2_l2_kp1"],
+              "coreExplanation": "while 循环在条件为 True 时持续执行。break 立即退出循环，continue 跳过本次迭代进入下一次。死循环是 while True 不加 break 的常见陷阱。",
+              "whyItMatters": "while 循环适合不确定循环次数的场景（如等待用户输入、持续监听）。掌握 break/continue 能更灵活地控制循环流程。",
+              "vocabulary": [
+                {"term": "while 循环", "definition": "在条件表达式为 True 时持续执行循环体。"},
+                {"term": "break", "definition": "立即终止整个循环，跳出循环体。"},
+                {"term": "continue", "definition": "跳过本次循环剩余代码，直接进入下一次迭代。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`while` 循环在条件为 ____ 时执行",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "True",
+                  "explanation": "while 在条件为真(True)时持续执行，条件为假(False)时退出。"
+                },
+                {
+                  "question": "break 的作用是？",
+                  "type": "singleChoice",
+                  "options": ["跳过本次循环", "终止整个循环", "暂停循环", "重启循环"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "break 终止整个循环；continue 才是跳过本次循环进入下一次。"
+                },
+                {
+                  "question": "以下代码会执行几次循环体？\n```python\ni = 0\nwhile i < 3:\n    i += 1\n```",
+                  "type": "singleChoice",
+                  "options": ["2次", "3次", "4次", "无限次"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "i从0开始，每次+1，当i=3时条件不满足退出，共执行3次（i=0,1,2时）。"
+                }
+              ],
+              "socraticSeedQuestion": "什么情况下你会选择 while 循环而不是 for 循环？能举一个具体的例子吗？",
+              "relatedTopics": ["死循环", "for vs while", "递归"],
+              "commonMisconceptions": [
+                "break 只能在 for 循环中使用（错误，while 循环中也可以）",
+                "continue 会终止循环（错误，continue 只跳过当次迭代）"
+              ]
+            }
+          ],
+          "order": 2
+        }
+      ],
+      "order": 2
+    },
+    {
+      "id": "l0_m3_functions",
+      "courseId": "l0_python_basics",
+      "title": "第三章 函数与模块",
+      "description": "学习如何定义和使用函数，理解参数传递和模块化编程。",
+      "lessons": [
+        {
+          "id": "l0_m3_l1",
+          "moduleId": "l0_m3_functions",
+          "title": "函数基础",
+          "description": "学习函数定义、参数和返回值。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m3_l1_kp1",
+              "lessonId": "l0_m3_l1",
+              "title": "定义与调用函数",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m2_l1_kp1"],
+              "coreExplanation": "函数用 `def` 定义，可接收参数，用 `return` 返回值。函数提高代码复用性和可读性，是模块化编程的基础单元。调用函数时用函数名加括号。",
+              "whyItMatters": "函数是模块化编程的基础，避免代码重复。把重复逻辑封装为函数，既便于维护，也降低了出错概率。",
+              "vocabulary": [
+                {"term": "函数定义 (def)", "definition": "用 `def 函数名(参数):` 声明一个函数，随后跟缩进的函数体。"},
+                {"term": "参数 (parameter)", "definition": "函数定义中接收输入的变量，调用时由实参传入。"},
+                {"term": "返回值 (return)", "definition": "函数通过 `return` 把结果交还给调用方；若无 return 则返回 None。"}
+              ],
+              "quiz": [
+                {
+                  "question": "定义函数用哪个关键字？",
+                  "type": "singleChoice",
+                  "options": ["function", "def", "func", "define"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "Python 用 `def` 关键字定义函数，而非 function 或 func。"
+                },
+                {
+                  "question": "函数没有 return 语句时返回什么？",
+                  "type": "singleChoice",
+                  "options": ["0", "null", "None", "报错"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "无 return 的函数默认返回 None，而非报错或 0。"
+                },
+                {
+                  "question": "调用函数 greet 的正确写法是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "greet()",
+                  "explanation": "调用函数需要在函数名后加括号，括号内放参数（如果有的话）。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 函数没有 return 时返回 None，而不是报错？这种设计有什么好处？",
+              "relatedTopics": ["lambda表达式", "装饰器", "递归"],
+              "commonMisconceptions": [
+                "函数必须有 return（错误，可以没有，默认返回 None）",
+                "调用函数不需要括号（错误，不加括号是函数对象引用，不是调用）"
+              ]
+            },
+            {
+              "id": "l0_m3_l1_kp2",
+              "lessonId": "l0_m3_l1",
+              "title": "参数类型与默认值",
+              "difficulty": 3,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l0_m3_l1_kp1"],
+              "coreExplanation": "Python 函数支持位置参数、关键字参数、默认参数和可变参数(*args, **kwargs)。默认参数必须放在非默认参数之后。关键字参数调用时可以不按顺序。",
+              "whyItMatters": "灵活的参数机制让函数设计更优雅。理解参数类型能帮你设计出易用且强大的函数接口。",
+              "vocabulary": [
+                {"term": "位置参数", "definition": "按位置顺序传入的参数，调用时必须按定义顺序提供。"},
+                {"term": "关键字参数", "definition": "通过参数名=值的方式传入，可以不按顺序，如 f(name='Alice')。"},
+                {"term": "*args", "definition": "接收任意数量位置参数，打包为元组。"},
+                {"term": "**kwargs", "definition": "接收任意数量关键字参数，打包为字典。"}
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个是默认参数？",
+                  "type": "singleChoice",
+                  "options": ["def f(a, b=1)", "def f(a=1, b)", "def f(a, b)", "def f(a, b 1)"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "默认参数必须放在非默认参数之后，`def f(a, b=1)` 合法。"
+                },
+                {
+                  "question": "*args 收集的参数类型是？",
+                  "type": "singleChoice",
+                  "options": ["列表", "元组", "字典", "集合"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "*args 将多余的位置参数打包为元组(tuple)。"
+                },
+                {
+                  "question": "**kwargs 收集的参数类型是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "字典",
+                  "explanation": "**kwargs 将多余的关键字参数打包为字典(dict)。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 规定默认参数必须放在非默认参数后面？如果允许混排会有什么问题？",
+              "relatedTopics": ["函数重载", "类型注解", "文档字符串"],
+              "commonMisconceptions": [
+                "默认参数可以在非默认参数前（错误，会导致语法错误）",
+                "*args 是列表（错误，是元组，不可修改）"
+              ]
+            }
+          ],
+          "order": 1
+        },
+        {
+          "id": "l0_m3_l2",
+          "moduleId": "l0_m3_functions",
+          "title": "作用域与模块",
+          "description": "理解变量作用域和 Python 模块导入机制。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m3_l2_kp1",
+              "lessonId": "l0_m3_l2",
+              "title": "变量作用域",
+              "difficulty": 3,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m3_l1_kp1"],
+              "coreExplanation": "Python 变量有 LEGB 四层作用域：Local（函数内）→ Enclosing（外层函数）→ Global（模块级）→ Built-in（内置）。函数内赋值默认创建局部变量，用 global 声明可修改全局变量。",
+              "whyItMatters": "理解作用域能避免变量命名冲突和意外覆盖。这是编写大型程序时避免 bug 的关键知识。",
+              "vocabulary": [
+                {"term": "作用域 (scope)", "definition": "变量可被访问的代码范围。Python 遵循 LEGB 规则。"},
+                {"term": "局部变量", "definition": "在函数内部定义的变量，只在该函数内可见。"},
+                {"term": "global 关键字", "definition": "在函数内声明某变量为全局变量，使其可修改模块级变量。"}
+              ],
+              "quiz": [
+                {
+                  "question": "函数内赋值的变量默认是？",
+                  "type": "singleChoice",
+                  "options": ["全局变量", "局部变量", "类变量", "环境变量"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "函数内赋值默认创建局部变量，不影响同名的全局变量。"
+                },
+                {
+                  "question": "LEGB 中的 E 代表什么？",
+                  "type": "singleChoice",
+                  "options": ["External", "Enclosing", "Environment", "Exception"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "E = Enclosing，指外层嵌套函数的作用域（闭包场景）。"
+                },
+                {
+                  "question": "在函数内修改全局变量需要用 ____ 关键字",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "global",
+                  "explanation": "在函数内用 `global x` 声明后，对 x 的赋值会修改全局变量。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 不建议过多使用 global 变量？全局变量多了会带来什么问题？",
+              "relatedTopics": ["闭包", "nonlocal", "命名空间"],
+              "commonMisconceptions": [
+                "函数内可以直接修改全局变量（错误，赋值会创建新的局部变量）",
+                "函数内不能读取全局变量（错误，可以读取，不能直接赋值修改）"
+              ]
+            },
+            {
+              "id": "l0_m3_l2_kp2",
+              "lessonId": "l0_m3_l2",
+              "title": "模块与 import",
+              "difficulty": 2,
+              "estimatedMinutes": 8,
+              "prerequisites": ["l0_m3_l1_kp1"],
+              "coreExplanation": "Python 模块是 .py 文件，通过 import 导入。`import math` 导入整个模块，`from math import sqrt` 导入特定函数。Python 标准库提供了大量实用模块（math、random、os、json 等）。",
+              "whyItMatters": "模块化是大型项目的基础。善用标准库和第三方模块能极大提高开发效率，避免重复造轮子。",
+              "vocabulary": [
+                {"term": "模块 (module)", "definition": "一个 .py 文件就是一个模块，包含函数、类和变量的定义。"},
+                {"term": "import", "definition": "导入模块的关键字，使其内容可在当前文件中使用。"},
+                {"term": "标准库", "definition": "Python 自带的模块集合，无需安装即可使用，如 math、json、os。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`from math import sqrt` 后如何调用平方根函数？",
+                  "type": "singleChoice",
+                  "options": ["math.sqrt(4)", "sqrt(4)", "Math.sqrt(4)", "import.sqrt(4)"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "from...import 直接导入函数名，可以直接使用 sqrt(4)。"
+                },
+                {
+                  "question": "下列哪个不是 Python 标准库模块？",
+                  "type": "singleChoice",
+                  "options": ["math", "json", "numpy", "os"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "numpy 是第三方库需要 pip install，其余都是标准库。"
+                },
+                {
+                  "question": "给导入的模块起别名用 ____ 关键字",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "as",
+                  "explanation": "`import numpy as np` 用 as 给模块起别名，简化后续使用。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 不建议使用 `from module import *`？这可能带来什么问题？",
+              "relatedTopics": ["pip 包管理", "虚拟环境", "__name__"],
+              "commonMisconceptions": [
+                "import * 是最方便的导入方式（错误，会污染命名空间，导致名称冲突）",
+                "所有好用的库都是标准库（错误，很多如 numpy/pandas 需要单独安装）"
+              ]
+            }
+          ],
+          "order": 2
+        }
+      ],
+      "order": 3
+    },
+    {
+      "id": "l0_m4_data_structures",
+      "courseId": "l0_python_basics",
+      "title": "第四章 数据结构基础",
+      "description": "学习列表、字典和元组，掌握 Python 最常用的数据容器。",
+      "lessons": [
+        {
+          "id": "l0_m4_l1",
+          "moduleId": "l0_m4_data_structures",
+          "title": "列表与元组",
+          "description": "掌握有序集合的创建、访问和常用操作。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m4_l1_kp1",
+              "lessonId": "l0_m4_l1",
+              "title": "列表 (list)",
+              "difficulty": 2,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l0_m2_l2_kp1"],
+              "coreExplanation": "列表是有序、可变的元素集合，用方括号 [] 创建。支持增删改查：append() 追加、insert() 插入、pop() 删除、索引访问和切片。列表可以存储不同类型的元素。",
+              "whyItMatters": "列表是 Python 最常用的数据结构。从处理学生成绩到管理文件列表，几乎所有批量数据处理都用到列表。",
+              "vocabulary": [
+                {"term": "列表 (list)", "definition": "有序、可变的元素序列，用 [] 创建，如 [1, 2, 3]。"},
+                {"term": "切片 (slicing)", "definition": "用 [start:stop:step] 提取子序列，如 list[1:3] 取索引 1 和 2 的元素。"},
+                {"term": "列表推导式", "definition": "用简洁语法创建列表的表达式，如 [x**2 for x in range(5)]。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`[1,2,3].append(4)` 后列表变为？",
+                  "type": "singleChoice",
+                  "options": ["[1,2,3,4]", "[4,1,2,3]", "[[1,2,3],4]", "报错"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "append() 在列表末尾追加元素，所以变为 [1,2,3,4]。"
+                },
+                {
+                  "question": "`[1,2,3,4,5][1:4]` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["[1,2,3,4]", "[2,3,4]", "[2,3,4,5]", "[1,2,3]"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "切片 [1:4] 取索引 1、2、3 的元素，即 [2,3,4]。"
+                },
+                {
+                  "question": "`len([1, [2,3], 4])` 的结果是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "3",
+                  "explanation": "len() 计算列表元素个数，[2,3] 作为整体算一个元素，共 3 个。"
+                }
+              ],
+              "socraticSeedQuestion": "列表的 append() 和 + 运算符都能添加元素，它们有什么区别？什么时候用哪个更好？",
+              "relatedTopics": ["列表排序", "列表推导式", "深拷贝vs浅拷贝"],
+              "commonMisconceptions": [
+                "append() 可以一次添加多个元素（错误，只能添加一个，多个用 extend()）",
+                "列表切片会修改原列表（错误，切片返回新列表）"
+              ]
+            },
+            {
+              "id": "l0_m4_l1_kp2",
+              "lessonId": "l0_m4_l1",
+              "title": "元组与不可变性",
+              "difficulty": 2,
+              "estimatedMinutes": 8,
+              "prerequisites": ["l0_m4_l1_kp1"],
+              "coreExplanation": "元组(tuple)是有序、不可变的元素集合，用圆括号 () 创建。一旦创建不能修改。元组常用于函数返回多个值、字典键、以及不想被修改的数据。",
+              "whyItMatters": "不可变性带来安全和性能优势。元组可作为字典键（列表不行），函数返回多值时自动打包为元组。",
+              "vocabulary": [
+                {"term": "元组 (tuple)", "definition": "有序、不可变的元素序列，用 () 创建，如 (1, 2, 3)。"},
+                {"term": "解包 (unpacking)", "definition": "将元组/列表的元素赋给多个变量，如 a, b = (1, 2)。"},
+                {"term": "不可变 (immutable)", "definition": "对象创建后不可修改其内容。元组、字符串、数字都是不可变类型。"}
+              ],
+              "quiz": [
+                {
+                  "question": "如何创建只有一个元素的元组？",
+                  "type": "singleChoice",
+                  "options": ["(1)", "(1,)", "[1]", "{1}"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "单元素元组必须加逗号 (1,)，否则 (1) 只是数学括号。"
+                },
+                {
+                  "question": "元组与列表的主要区别是？",
+                  "type": "singleChoice",
+                  "options": ["元组更快", "元组不可修改", "元组只能存数字", "没有区别"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "最核心的区别是元组不可变（immutable），列表可变（mutable）。"
+                },
+                {
+                  "question": "`a, b = 1, 2` 之后 b 的值是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "2",
+                  "explanation": "这是元组解包，右侧 1,2 是元组 (1,2)，分别赋值给 a 和 b。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 需要同时有列表和元组？什么情况下你会优先选择元组而不是列表？",
+              "relatedTopics": ["命名元组", "字典键", "函数多返回值"],
+              "commonMisconceptions": [
+                "(1) 是元组（错误，需要加逗号 (1,) 才是元组）",
+                "元组比列表慢（错误，元组通常更快，因为不可变）"
+              ]
+            }
+          ],
+          "order": 1
+        },
+        {
+          "id": "l0_m4_l2",
+          "moduleId": "l0_m4_data_structures",
+          "title": "字典",
+          "description": "学习键值对数据结构的创建和操作。",
+          "knowledgePoints": [
+            {
+              "id": "l0_m4_l2_kp1",
+              "lessonId": "l0_m4_l2",
+              "title": "字典 (dict)",
+              "difficulty": 2,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l0_m4_l1_kp1"],
+              "coreExplanation": "字典是键值对(key-value)的无序集合，用花括号 {} 创建。键必须是不可变类型（字符串、数字、元组），值可以是任意类型。通过键访问值的时间复杂度为 O(1)。",
+              "whyItMatters": "字典是 Python 中最强大的数据结构之一。JSON 数据、配置文件、数据库记录都可以用字典表示。快速查找是字典的核心优势。",
+              "vocabulary": [
+                {"term": "字典 (dict)", "definition": "键值对集合，用 {} 创建，如 {'name': 'Alice', 'age': 20}。"},
+                {"term": "键 (key)", "definition": "字典中用于查找值的标识，必须是不可变且唯一的。"},
+                {"term": "get() 方法", "definition": "安全获取字典值的方法，键不存在时返回默认值而非报错。"}
+              ],
+              "quiz": [
+                {
+                  "question": "字典的键可以是下列哪种类型？",
+                  "type": "singleChoice",
+                  "options": ["列表", "字典", "元组", "集合"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "字典键必须是不可变类型，元组不可变可以做键；列表可变不行。"
+                },
+                {
+                  "question": "`d = {'a': 1}; d['b']` 会怎样？",
+                  "type": "singleChoice",
+                  "options": ["返回 None", "返回 0", "KeyError", "返回 ''"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "用 [] 访问不存在的键会抛出 KeyError；用 get() 则返回 None。"
+                },
+                {
+                  "question": "安全获取字典值应该用 ____ 方法",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "get",
+                  "explanation": "d.get('key', default) 键不存在时返回 default 而不报错。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么字典要求键必须是不可变类型？如果允许列表做键，会发生什么问题？",
+              "relatedTopics": ["JSON", "字典推导式", "defaultdict"],
+              "commonMisconceptions": [
+                "字典是有序的（Python 3.7+ 保持插入顺序，但概念上不应依赖顺序）",
+                "列表可以作为字典的键（错误，键必须是可哈希的不可变类型）"
+              ]
+            },
+            {
+              "id": "l0_m4_l2_kp2",
+              "lessonId": "l0_m4_l2",
+              "title": "异常处理基础",
+              "difficulty": 3,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l0_m3_l1_kp1", "l0_m4_l2_kp1"],
+              "coreExplanation": "异常是程序运行中的错误信号。用 try/except 捕获异常避免程序崩溃。finally 块无论是否异常都会执行。常见异常：TypeError、ValueError、KeyError、IndexError。",
+              "whyItMatters": "真实程序中错误不可避免。优雅地处理异常让程序更健壮，给用户更好的体验。这是从初学者迈向实际开发的必备技能。",
+              "vocabulary": [
+                {"term": "异常 (exception)", "definition": "程序运行中遇到的错误，如 ZeroDivisionError、FileNotFoundError。"},
+                {"term": "try/except", "definition": "异常处理结构：try 块尝试执行代码，except 块处理捕获到的异常。"},
+                {"term": "finally", "definition": "无论是否发生异常都会执行的清理代码块，常用于关闭文件、释放资源。"}
+              ],
+              "quiz": [
+                {
+                  "question": "下列哪个不是 Python 内置异常？",
+                  "type": "singleChoice",
+                  "options": ["TypeError", "ValueError", "NullPointerError", "IndexError"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "NullPointerError 是 Java 的异常；Python 中没有空指针，用 None 代替。"
+                },
+                {
+                  "question": "finally 块在什么时候执行？",
+                  "type": "singleChoice",
+                  "options": ["只在异常时", "只在无异常时", "无论是否异常都执行", "从不执行"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "finally 无论 try 是否抛出异常都会执行，用于清理资源。"
+                },
+                {
+                  "question": "捕获所有异常用 `except ____:`",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "Exception",
+                  "explanation": "except Exception 捕获所有常规异常（不含 SystemExit/KeyboardInterrupt）。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么不建议用 `except:` 捕获所有异常而不指定类型？这可能隐藏什么问题？",
+              "relatedTopics": ["自定义异常", "raise", "上下文管理器 with"],
+              "commonMisconceptions": [
+                "except: 不指定类型是最安全的写法（错误，会隐藏真实错误，应指定具体异常类型）",
+                "try/except 会让程序变慢（错误，无异常时几乎无性能开销）"
+              ]
+            }
+          ],
+          "order": 2
+        }
+      ],
+      "order": 4
+    }
+  ]
+}
+{
+  "id": "l0_python_basics",
+  "title": "Python 基础",
+  "description": "面向零基础学习者的 Python 入门课程，涵盖变量、数据类型、控制流与函数四大核心概念，帮助你建立编程的第一块基石。",
+  "level": "l0",
+  "icon": "🐍",
+  "order": 0,
+  "modules": [
+    {
       "id": "l0_python_basics_m1",
       "courseId": "l0_python_basics",
       "title": "第一章 Python 基础",

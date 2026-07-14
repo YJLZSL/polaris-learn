@@ -1,0 +1,352 @@
+{
+  "id": "l1_python_data_structures",
+  "title": "Python 数据结构与算法思维",
+  "description": "面向有 Python 基础的学习者，深入掌握列表、字典、集合等数据结构的高级用法，培养算法思维和问题解决能力。",
+  "level": "l1",
+  "icon": "🧩",
+  "order": 1,
+  "modules": [
+    {
+      "id": "l1_m1_advanced_collections",
+      "courseId": "l1_python_data_structures",
+      "title": "第一章 集合与高级容器",
+      "description": "深入学习集合运算、推导式与 collections 模块中的高级数据容器。",
+      "lessons": [
+        {
+          "id": "l1_m1_l1",
+          "moduleId": "l1_m1_advanced_collections",
+          "title": "集合与推导式",
+          "description": "掌握集合的去重与运算特性，学习列表/字典/集合推导式。",
+          "knowledgePoints": [
+            {
+              "id": "l1_m1_l1_kp1",
+              "lessonId": "l1_m1_l1",
+              "title": "集合 (set) 与运算",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": [],
+              "coreExplanation": "集合(set)是无序、不重复的元素集合，用花括号 {} 或 set() 创建。支持数学集合运算：并集(|)、交集(&)、差集(-)、对称差(^)。集合自动去重，常用于快速判断成员存在性。",
+              "whyItMatters": "集合的 O(1) 查找比列表的 O(n) 快得多。处理去重、交集、差集等需求时，集合是最佳选择。",
+              "vocabulary": [
+                {"term": "集合 (set)", "definition": "无序、不重复的元素集合，元素必须可哈希（不可变）。"},
+                {"term": "并集 (union)", "definition": "两个集合的所有元素合并，用 | 运算符或 union() 方法。"},
+                {"term": "交集 (intersection)", "definition": "两个集合的公共元素，用 & 运算符或 intersection() 方法。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`{1, 2, 3} & {2, 3, 4}` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["{1,2,3,4}", "{2,3}", "{1,4}", "报错"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "& 是交集运算，取两个集合的公共元素 {2, 3}。"
+                },
+                {
+                  "question": "`set([1,1,2,2,3])` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["[1,2,3]", "{1,1,2,2,3}", "{1,2,3}", "报错"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "set() 自动去重，结果为 {1, 2, 3}。"
+                },
+                {
+                  "question": "创建空集合应该用 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "set()",
+                  "explanation": "{} 创建的是空字典而非空集合，空集合必须用 set()。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 中 {} 是空字典而不是空集合？这个设计决策背后的原因是什么？",
+              "relatedTopics": ["frozenset", "哈希", "成员运算符 in"],
+              "commonMisconceptions": [
+                "{} 是空集合（错误，{} 是空字典，空集合用 set()）",
+                "集合中可以放列表（错误，集合元素必须可哈希）"
+              ]
+            },
+            {
+              "id": "l1_m1_l1_kp2",
+              "lessonId": "l1_m1_l1",
+              "title": "推导式 (Comprehension)",
+              "difficulty": 3,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l1_m1_l1_kp1"],
+              "coreExplanation": "推导式是创建集合的简洁语法。列表推导式 `[expr for x in iterable if cond]`、字典推导式 `{k:v for ...}`、集合推导式 `{expr for ...}`。推导式比等价的 for 循环更 Pythonic 且通常更快。",
+              "whyItMatters": "推导式是 Python 最优雅的特性之一。掌握推导式能让代码更简洁、更易读，是 Python 程序员的标志性技能。",
+              "vocabulary": [
+                {"term": "列表推导式", "definition": "用简洁语法创建列表，如 [x**2 for x in range(5)] → [0,1,4,9,16]。"},
+                {"term": "条件过滤", "definition": "推导式中用 if 筛选元素，如 [x for x in range(10) if x%2==0]。"},
+                {"term": "嵌套推导式", "definition": "推导式中包含多个 for 循环，如 [(i,j) for i in range(3) for j in range(3)]。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`[x*2 for x in range(4)]` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["[0,2,4,6]", "[2,4,6,8]", "[0,1,2,3]", "[1,2,3,4]"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "range(4) = [0,1,2,3]，每个乘以 2 得 [0,2,4,6]。"
+                },
+                {
+                  "question": "`{x:x**2 for x in range(3)}` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["{0,1,4}", "{0:0, 1:1, 2:4}", "[0,1,4]", "报错"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "这是字典推导式，键是 x，值是 x 的平方。"
+                },
+                {
+                  "question": "列表推导式中过滤偶数的条件应写为 `if x % 2 == ____`",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "0",
+                  "explanation": "x % 2 == 0 表示 x 能被 2 整除，即为偶数。"
+                }
+              ],
+              "socraticSeedQuestion": "推导式和普通 for 循环各有什么优缺点？在什么情况下你不应该使用推导式？",
+              "relatedTopics": ["生成器表达式", "map/filter", "性能对比"],
+              "commonMisconceptions": [
+                "推导式总是比 for 循环快（错误，简单情况更快，但过于复杂时可读性更重要）",
+                "推导式可以替代所有循环（错误，有副作用的操作不适合用推导式）"
+              ]
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "order": 1
+    },
+    {
+      "id": "l1_m2_algorithms",
+      "courseId": "l1_python_data_structures",
+      "title": "第二章 算法思维基础",
+      "description": "培养用算法思维解决问题的能力，学习排序、搜索和复杂度分析。",
+      "lessons": [
+        {
+          "id": "l1_m2_l1",
+          "moduleId": "l1_m2_algorithms",
+          "title": "排序与搜索",
+          "description": "理解基本排序算法原理和 Python 内置排序的使用。",
+          "knowledgePoints": [
+            {
+              "id": "l1_m2_l1_kp1",
+              "lessonId": "l1_m2_l1",
+              "title": "排序算法与 sorted()",
+              "difficulty": 3,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l1_m1_l1_kp1"],
+              "coreExplanation": "Python 内置 sorted() 函数和 .sort() 方法使用 Timsort 算法（O(n log n)）。支持 key 参数自定义排序规则，reverse 参数控制升降序。理解冒泡排序等基础算法有助于理解排序的本质。",
+              "whyItMatters": "排序是最基本的算法操作，几乎所有数据处理都涉及。理解排序复杂度和 key 函数设计，能让你在实际项目中高效处理数据。",
+              "vocabulary": [
+                {"term": "Timsort", "definition": "Python 内置排序算法，结合归并排序和插入排序，时间复杂度 O(n log n)。"},
+                {"term": "key 函数", "definition": "传给 sorted() 的函数，决定排序依据，如 key=len 按长度排序。"},
+                {"term": "稳定排序", "definition": "相等元素的相对顺序在排序后保持不变。Python 的排序是稳定的。"}
+              ],
+              "quiz": [
+                {
+                  "question": "`sorted([3,1,2])` 的结果是？",
+                  "type": "singleChoice",
+                  "options": ["[3,2,1]", "[1,2,3]", "[3,1,2]", "None"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "sorted() 返回新的升序排列列表 [1,2,3]，不修改原列表。"
+                },
+                {
+                  "question": "sorted() 和 .sort() 的区别是？",
+                  "type": "singleChoice",
+                  "options": ["没有区别", "sorted()原地排序", ".sort()返回新列表", "sorted()返回新列表"],
+                  "correctAnswerIndices": [3],
+                  "explanation": "sorted() 返回新列表，.sort() 原地修改列表并返回 None。"
+                },
+                {
+                  "question": "按字符串长度排序应该传 key=____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "len",
+                  "explanation": "sorted(words, key=len) 按每个元素的长度排序。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 .sort() 方法返回 None 而不是排序后的列表？Python 这样设计的考虑是什么？",
+              "relatedTopics": ["冒泡排序", "时间复杂度", "lambda 作为 key"],
+              "commonMisconceptions": [
+                ".sort() 返回排序后的列表（错误，返回 None，原地修改）",
+                "sorted() 只能处理数字（错误，任何可比较的元素都行）"
+              ]
+            },
+            {
+              "id": "l1_m2_l1_kp2",
+              "lessonId": "l1_m2_l1",
+              "title": "时间复杂度入门",
+              "difficulty": 3,
+              "estimatedMinutes": 15,
+              "prerequisites": ["l1_m2_l1_kp1"],
+              "coreExplanation": "时间复杂度用大 O 表示法描述算法效率随输入规模增长的趋势。常见复杂度：O(1) 常数 < O(log n) 对数 < O(n) 线性 < O(n log n) < O(n²) 平方。选择合适的数据结构和算法能极大提升性能。",
+              "whyItMatters": "理解时间复杂度是判断算法好坏的核心能力。在数据量大时，O(n) 和 O(n²) 的差别是秒级与小时级的差距。",
+              "vocabulary": [
+                {"term": "大 O 表示法", "definition": "描述算法时间复杂度的渐近表示法，忽略常数因子和低阶项。"},
+                {"term": "O(1)", "definition": "常数时间复杂度，执行时间不随输入规模变化，如字典查找。"},
+                {"term": "O(n)", "definition": "线性时间复杂度，执行时间与输入规模成正比，如遍历列表。"}
+              ],
+              "quiz": [
+                {
+                  "question": "在列表中用 `in` 查找元素的时间复杂度是？",
+                  "type": "singleChoice",
+                  "options": ["O(1)", "O(log n)", "O(n)", "O(n²)"],
+                  "correctAnswerIndices": [2],
+                  "explanation": "列表的 in 操作需要逐个比较，最坏情况遍历整个列表，为 O(n)。"
+                },
+                {
+                  "question": "字典 d['key'] 取值的时间复杂度是？",
+                  "type": "singleChoice",
+                  "options": ["O(1)", "O(log n)", "O(n)", "O(n²)"],
+                  "correctAnswerIndices": [0],
+                  "explanation": "字典基于哈希表，查找是 O(1) 常数时间。"
+                },
+                {
+                  "question": "嵌套两层 for 循环遍历 n 个元素的复杂度是 O(____)",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "n²",
+                  "explanation": "两层嵌套循环各遍历 n 次，总操作 n×n = n²。"
+                }
+              ],
+              "socraticSeedQuestion": "如果你需要频繁查找某个元素是否存在，应该用列表还是集合？为什么？",
+              "relatedTopics": ["空间复杂度", "二分查找", "哈希表原理"],
+              "commonMisconceptions": [
+                "O(2n) 和 O(n) 不同（错误，大 O 忽略常数因子，O(2n)=O(n)）",
+                "时间复杂度低的算法一定更快（错误，小数据量时常数因子更重要）"
+              ]
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "order": 2
+    },
+    {
+      "id": "l1_m3_oop",
+      "courseId": "l1_python_data_structures",
+      "title": "第三章 面向对象基础",
+      "description": "学习类与对象的概念，理解封装、继承等面向对象核心思想。",
+      "lessons": [
+        {
+          "id": "l1_m3_l1",
+          "moduleId": "l1_m3_oop",
+          "title": "类与对象",
+          "description": "学习如何定义类、创建对象、使用属性和方法。",
+          "knowledgePoints": [
+            {
+              "id": "l1_m3_l1_kp1",
+              "lessonId": "l1_m3_l1",
+              "title": "类的定义与实例化",
+              "difficulty": 3,
+              "estimatedMinutes": 12,
+              "prerequisites": ["l1_m1_l1_kp2"],
+              "coreExplanation": "类(class)是创建对象的蓝图，用 `class ClassName:` 定义。`__init__` 方法在创建对象时自动调用（构造函数）。`self` 代表实例本身，用于访问属性和方法。实例化时调用类名加括号。",
+              "whyItMatters": "面向对象编程(OOP)是组织复杂代码的核心范式。理解类和对象能帮你设计出结构清晰、易维护的大型程序。",
+              "vocabulary": [
+                {"term": "类 (class)", "definition": "创建对象的蓝图/模板，定义了对象的属性和行为。"},
+                {"term": "__init__", "definition": "构造方法，在创建对象时自动调用，用于初始化属性。"},
+                {"term": "self", "definition": "实例方法的第一个参数，代表对象自身，通过它访问实例属性。"}
+              ],
+              "quiz": [
+                {
+                  "question": "创建对象时自动调用的方法是？",
+                  "type": "singleChoice",
+                  "options": ["__new__", "__init__", "__create__", "__start__"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "__init__ 是初始化方法（构造函数），对象创建时自动调用。"
+                },
+                {
+                  "question": "self 代表什么？",
+                  "type": "singleChoice",
+                  "options": ["类本身", "当前实例", "父类", "全局对象"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "self 是对当前实例的引用，通过它访问该对象的属性和方法。"
+                },
+                {
+                  "question": "定义类的关键字是 ____",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "class",
+                  "explanation": "Python 用 class 关键字定义类，如 class Dog:。"
+                }
+              ],
+              "socraticSeedQuestion": "为什么 Python 方法定义中必须显式写 self 参数，而 Java/C++ 中的 this 是隐式的？各有什么优缺点？",
+              "relatedTopics": ["继承", "类方法 vs 静态方法", "属性装饰器"],
+              "commonMisconceptions": [
+                "self 是关键字（错误，self 只是约定俗成的名字，可以用其他名字但不建议）",
+                "__init__ 是创建对象的方法（错误，__new__ 创建对象，__init__ 初始化对象）"
+              ]
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "order": 3
+    },
+    {
+      "id": "l1_m4_file_io",
+      "courseId": "l1_python_data_structures",
+      "title": "第四章 文件操作与实战",
+      "description": "学习文件读写、JSON 数据处理和简单的数据分析实践。",
+      "lessons": [
+        {
+          "id": "l1_m4_l1",
+          "moduleId": "l1_m4_file_io",
+          "title": "文件与 JSON",
+          "description": "学习文件读写操作和 JSON 数据格式处理。",
+          "knowledgePoints": [
+            {
+              "id": "l1_m4_l1_kp1",
+              "lessonId": "l1_m4_l1",
+              "title": "文件读写与 with 语句",
+              "difficulty": 2,
+              "estimatedMinutes": 10,
+              "prerequisites": ["l1_m3_l1_kp1"],
+              "coreExplanation": "Python 用 open() 打开文件，支持读('r')、写('w')、追加('a')模式。with 语句（上下文管理器）确保文件正确关闭。read() 读取全部内容，readline() 逐行读取，writelines() 写入多行。",
+              "whyItMatters": "文件操作是程序与外部数据交互的基础。从读取配置文件到保存用户数据，文件 IO 无处不在。with 语句避免了资源泄漏。",
+              "vocabulary": [
+                {"term": "open()", "definition": "打开文件的内置函数，返回文件对象。第二个参数指定模式。"},
+                {"term": "with 语句", "definition": "上下文管理器语法，自动管理资源的获取和释放（如自动关闭文件）。"},
+                {"term": "文件模式", "definition": "'r' 读取、'w' 写入（覆盖）、'a' 追加、'rb'/'wb' 二进制模式。"}
+              ],
+              "quiz": [
+                {
+                  "question": "with 语句的主要好处是？",
+                  "type": "singleChoice",
+                  "options": ["代码更短", "自动关闭文件", "读取更快", "支持并发"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "with 确保代码块结束后自动关闭文件，即使发生异常也不会泄漏资源。"
+                },
+                {
+                  "question": "'w' 模式打开已有文件会怎样？",
+                  "type": "singleChoice",
+                  "options": ["追加内容", "覆盖内容", "报错", "只读"],
+                  "correctAnswerIndices": [1],
+                  "explanation": "'w' 模式会清空文件内容重新写入。要追加请用 'a' 模式。"
+                },
+                {
+                  "question": "逐行读取文件用 ____ 方法",
+                  "type": "fillInBlank",
+                  "options": [],
+                  "correctAnswerIndices": [],
+                  "correctAnswerText": "readline",
+                  "explanation": "readline() 每次读取一行；也可以直接 for line in file 遍历。"
+                }
+              ],
+              "socraticSeedQuestion": "如果不用 with 语句而忘记调用 close()，会发生什么问题？在什么场景下这个问题特别严重？",
+              "relatedTopics": ["JSON 处理", "CSV 处理", "路径操作 pathlib"],
+              "commonMisconceptions": [
+                "'w' 模式是追加写入（错误，'w' 会覆盖，追加用 'a'）",
+                "不关闭文件也没关系（错误，可能导致数据丢失和资源泄漏）"
+              ]
+            }
+          ],
+          "order": 1
+        }
+      ],
+      "order": 4
+    }
+  ]
+}

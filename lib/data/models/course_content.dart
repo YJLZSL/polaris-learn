@@ -162,6 +162,9 @@ class KnowledgePoint {
     required this.socraticSeedQuestion,
     required this.relatedTopics,
     required this.commonMisconceptions,
+    this.difficulty = 1,
+    this.estimatedMinutes = 10,
+    this.prerequisites = const [],
   });
 
   /// 知识点 ID。
@@ -197,6 +200,15 @@ class KnowledgePoint {
   /// 常见误解。
   final List<String> commonMisconceptions;
 
+  /// 难度等级（1-5，1 最简单）。
+  final int difficulty;
+
+  /// 预估学习时长（分钟）。
+  final int estimatedMinutes;
+
+  /// 前置知识点 ID 列表。
+  final List<String> prerequisites;
+
   /// 从 JSON 反序列化。
   factory KnowledgePoint.fromJson(Map<String, dynamic> json) {
     return KnowledgePoint(
@@ -221,6 +233,11 @@ class KnowledgePoint {
           (json['commonMisconceptions'] as List<dynamic>? ?? <dynamic>[])
               .map((e) => e as String)
               .toList(),
+      difficulty: (json['difficulty'] as num?)?.toInt() ?? 1,
+      estimatedMinutes: (json['estimatedMinutes'] as num?)?.toInt() ?? 10,
+      prerequisites: (json['prerequisites'] as List<dynamic>? ?? <dynamic>[])
+          .map((e) => e as String)
+          .toList(),
     );
   }
 
@@ -240,6 +257,9 @@ class KnowledgePoint {
       'socraticSeedQuestion': socraticSeedQuestion,
       'relatedTopics': relatedTopics,
       'commonMisconceptions': commonMisconceptions,
+      'difficulty': difficulty,
+      'estimatedMinutes': estimatedMinutes,
+      if (prerequisites.isNotEmpty) 'prerequisites': prerequisites,
     };
   }
 }

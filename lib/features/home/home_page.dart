@@ -9,6 +9,9 @@ import 'package:lingxi_academy/core/router/route_names.dart';
 import 'package:lingxi_academy/core/theme/lingxi_colors.dart';
 import 'package:lingxi_academy/core/theme/lingxi_gradients.dart';
 import 'package:lingxi_academy/core/theme/shape_variants.dart';
+import 'package:lingxi_academy/data/models/course_content.dart';
+import 'package:lingxi_academy/data/providers/course_providers.dart';
+import 'package:lingxi_academy/data/providers/db_providers.dart';
 import 'package:lingxi_academy/features/mascot/mascot_controller.dart';
 import 'package:lingxi_academy/features/mascot/mascot_state.dart';
 import 'package:lingxi_academy/features/mascot/mascot_widget.dart';
@@ -298,87 +301,71 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // ── 课程进度卡片 ────────────────────────────────────────
 
+  /// 为不同级别的课程生成渐变色
+  static const _levelGradients = <CourseLevel, List<Color>>{
+    CourseLevel.l0: [Color(0xFF7C4DFF), Color(0xFF536DFE)],
+    CourseLevel.l1: [Color(0xFFFF7043), Color(0xFFFFB74D)],
+    CourseLevel.l2: [Color(0xFF66BB6A), Color(0xFF26A69A)],
+    CourseLevel.l3: [Color(0xFF29B6F6), Color(0xFF0288D1)],
+    CourseLevel.l4: [Color(0xFFAB47BC), Color(0xFF7B1FA2)],
+  };
+
+  /// 为不同级别的课程生成图标
+  static const _levelIcons = <CourseLevel, IconData>{
+    CourseLevel.l0: Icons.code_rounded,
+    CourseLevel.l1: Icons.auto_awesome_rounded,
+    CourseLevel.l2: Icons.rocket_launch_rounded,
+    CourseLevel.l3: Icons.psychology_rounded,
+    CourseLevel.l4: Icons.architecture_rounded,
+  };
+
   Widget _buildCourseProgressCards({
     required ThemeData theme,
     required ColorScheme colorScheme,
     required int startIndex,
   }) {
-    final courses = _getDemoCourses();
+    final coursesAsync = ref.watch(allCoursesProvider);
 
-    return Column(
-      children: [
-        for (var i = 0; i < courses.length; i++)
-          Padding(
-            padding: EdgeInsets.only(bottom: i < courses.length - 1 ? 12 : 0),
-            child: LingxiCard(
-              animateEntrance: true,
-              entranceDelay: _entranceDelayFor(startIndex + i),
-              onTap: () {
-                AnimationUtils.hapticLight();
-                context.go(RouteNames.learningPath);
-              },
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: courses[i].gradient,
-                          borderRadius: ShapeVariants.roundedMedium.borderRadius,
-                        ),
-                        child: Icon(
-                          courses[i].icon,
-                          color: Colors.white,
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              courses[i].title,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              courses[i].subtitle,
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Text(
-                        '${(courses[i].progress * 100).round()}%',
-                        style: theme.textTheme.labelSmall?.copyWith(
-                          color: colorScheme.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  AnimatedProgressBar(
-                    progress: courses[i].progress,
-                    height: 6,
-                    borderRadius: 3,
-                    gradient: courses[i].gradient,
-                    enablePulse: courses[i].progress > 0 && courses[i].progress < 1,
-                  ),
-                ],
+    return coursesAsync.when(
+      data: (courses) {
+        if (courses.isEmpty) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              '暂无课程，请稍后再来',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: colorScheme.onSurfaceVariant,
               ),
+              textAlign: TextAlign.center,
             ),
+          );
+        }
+        return Column(
+          children: [
+            for (var i = 0; i < courses.length; i++)
+              _CourseProgressCard(
+                course: courses[i],
+                index: startIndex + i,
+                entranceDelay: _entranceDelayFor(startIndex + i),
+                isLast: i == courses.length - 1,
+              ),
+          ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.symmetric(vertical: 24),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (_, __) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Text(
+          '课程加载失败',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: colorScheme.error,
           ),
-      ],
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 
@@ -439,54 +426,7 @@ class _HomePageState extends ConsumerState<HomePage> {
     );
   }
 
-  // ── 演示数据 ────────────────────────────────────────────
-
-  List<_DemoCourse> _getDemoCourses() {
-    return [
-      _DemoCourse(
-        title: 'Python 入门：AI 编程第一课',
-        subtitle: 'L0 基础 · 第 3 课时',
-        progress: 0.6,
-        icon: Icons.code_rounded,
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF7C4DFF),
-            Color(0xFF536DFE),
-          ],
-        ),
-      ),
-      _DemoCourse(
-        title: 'Prompt Engineering 基础',
-        subtitle: 'L1 进阶 · 第 1 课时',
-        progress: 0.2,
-        icon: Icons.auto_awesome_rounded,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFFFF7043),
-            const Color(0xFFFFB74D),
-          ],
-        ),
-      ),
-      _DemoCourse(
-        title: 'AI 应用开发入门',
-        subtitle: 'L2 实战 · 未开始',
-        progress: 0.0,
-        icon: Icons.rocket_launch_rounded,
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            const Color(0xFF66BB6A),
-            const Color(0xFF26A69A),
-          ],
-        ),
-      ),
-    ];
-  }
+  // ── 演示数据（已移除 _getDemoCourses，改用真实数据）────────────
 
   List<_QuickAction> _getQuickActions() {
     final colorScheme = Theme.of(context).colorScheme;
@@ -519,22 +459,142 @@ class _HomePageState extends ConsumerState<HomePage> {
   }
 }
 
-// ── 私有数据模型 ──────────────────────────────────────────
+// ── 课程进度卡片组件（从真实数据渲染）────────────────────
 
-class _DemoCourse {
-  const _DemoCourse({
-    required this.title,
-    required this.subtitle,
-    required this.progress,
-    required this.icon,
-    required this.gradient,
+/// 单个课程进度卡片，从 [ProgressRepository] 实时查询完成率。
+class _CourseProgressCard extends ConsumerWidget {
+  const _CourseProgressCard({
+    required this.course,
+    required this.index,
+    required this.entranceDelay,
+    required this.isLast,
   });
 
-  final String title;
-  final String subtitle;
-  final double progress;
-  final IconData icon;
-  final Gradient gradient;
+  final Course course;
+  final int index;
+  final Duration entranceDelay;
+  final bool isLast;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final progressRepo = ref.watch(progressRepositoryProvider);
+
+    final gradientColors =
+        _HomePageState._levelGradients[course.level] ??
+        [const Color(0xFF7C4DFF), const Color(0xFF536DFE)];
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: gradientColors,
+    );
+    final icon =
+        _HomePageState._levelIcons[course.level] ?? Icons.code_rounded;
+
+    // 计算总知识点数用于统计
+    final totalKnowledgePoints = course.modules.fold<int>(
+      0,
+      (sum, m) => sum + m.lessons.fold<int>(
+        0,
+        (s, l) => s + l.knowledgePoints.length,
+      ),
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : 12),
+      child: FutureBuilder<double>(
+        future: progressRepo.getCompletionRate(course.id),
+        builder: (context, snapshot) {
+          final progress = snapshot.data ?? 0.0;
+          final levelLabel = _levelDisplayName(course.level);
+          final subtitle = progress > 0
+              ? '$levelLabel · 已完成 ${(progress * 100).round()}%'
+              : '$levelLabel · $totalKnowledgePoints 个知识点';
+
+          return LingxiCard(
+            animateEntrance: true,
+            entranceDelay: entranceDelay,
+            onTap: () {
+              AnimationUtils.hapticLight();
+              context.go(RouteNames.learningPath);
+            },
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        gradient: gradient,
+                        borderRadius:
+                            ShapeVariants.roundedMedium.borderRadius,
+                      ),
+                      child: Icon(icon, color: Colors.white, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            course.title,
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            subtitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(
+                      '${(progress * 100).round()}%',
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                AnimatedProgressBar(
+                  progress: progress,
+                  height: 6,
+                  borderRadius: 3,
+                  gradient: gradient,
+                  enablePulse: progress > 0 && progress < 1,
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  String _levelDisplayName(CourseLevel level) {
+    switch (level) {
+      case CourseLevel.l0:
+        return 'L0 入门';
+      case CourseLevel.l1:
+        return 'L1 进阶';
+      case CourseLevel.l2:
+        return 'L2 应用';
+      case CourseLevel.l3:
+        return 'L3 实践';
+      case CourseLevel.l4:
+        return 'L4 高阶';
+    }
+  }
 }
 
 class _QuickAction {

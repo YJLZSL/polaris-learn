@@ -132,13 +132,43 @@ class Streaks extends Table {
   Set<Column> get primaryKey => {dayCount};
 }
 
+/// 学习者画像表：存储用户的学习偏好、年龄段与目标。
+///
+/// 单行表，由固定 id='default' 标识。如未创建过则由 Repository 懒初始化。
+class LearnerProfiles extends Table {
+  TextColumn get id =>
+      text().clientDefault(() => 'default')();
+  /// 年龄段：young / advanced
+  TextColumn get ageGroup =>
+      text().withDefault(const Constant('young'))();
+  /// 自评编程水平：beginner / intermediate / advanced
+  TextColumn get skillLevel =>
+      text().withDefault(const Constant('beginner'))();
+  /// 学习目标（自由文本）
+  TextColumn get learningGoal =>
+      text().withDefault(const Constant(''))();
+  /// 每日偏好学习时长（分钟）
+  IntColumn get dailyMinutes =>
+      integer().withDefault(const Constant(30))();
+  /// 偏好的学习节奏：relaxed / balanced / intensive
+  TextColumn get pace =>
+      text().withDefault(const Constant('balanced'))();
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+  DateTimeColumn get updatedAt =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // =====================================================================
 // 数据库
 // =====================================================================
 
 /// 灵犀学院本地数据库。
 ///
-/// 当前 schema 版本为 1，包含 8 张表。后续升级通过 [migrationStrategy]
+/// 当前 schema 版本为 2，包含 9 张表。后续升级通过 [migrationStrategy]
 /// 的 `onUpgrade` 回调逐步迁移。
 @DriftDatabase(tables: [
   Conversations,
@@ -149,6 +179,7 @@ class Streaks extends Table {
   Settings,
   Achievements,
   Streaks,
+  LearnerProfiles,
 ])
 class LingxiDatabase extends _$LingxiDatabase {
   /// 通过任意 [QueryExecutor] 构造数据库，主要用于生产环境。
@@ -169,7 +200,7 @@ class LingxiDatabase extends _$LingxiDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -178,11 +209,10 @@ class LingxiDatabase extends _$LingxiDatabase {
           await m.createAll();
         },
         onUpgrade: (m, from, to) async {
-          // 预留迁移框架：未来按版本增量迁移。
-          // 示例：if (from < 2) { await m.addColumn(...); }
-          // 当前仅有 v1，无需执行任何迁移步骤。
-          // ignore: unused_local_variable
-          final _ = (from, to); // 占位，避免未使用参数告警。
+          // v1 → v2：新增 LearnerProfiles 表
+          if (from < 2) {
+            await m.createTable(learnerProfiles);
+          }
         },
         beforeOpen: (details) async {
           // 启用外键约束，确保未来表关联完整性。

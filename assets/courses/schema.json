@@ -177,6 +177,26 @@
           "items": {
             "type": "string"
           }
+        },
+        "difficulty": {
+          "type": "integer",
+          "description": "难度等级（1-5，1 最简单，5 最难）",
+          "minimum": 1,
+          "maximum": 5,
+          "default": 1
+        },
+        "estimatedMinutes": {
+          "type": "integer",
+          "description": "预估学习时长（分钟），建议 5-15 分钟",
+          "minimum": 1,
+          "default": 10
+        },
+        "prerequisites": {
+          "type": "array",
+          "description": "前置知识点 ID 列表，学习该知识点前建议先完成这些",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },
