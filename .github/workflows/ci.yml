@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [main, master, develop]
   push:
-    branches: [main, master]
+    branches: [main, master, develop]
 
 # 同一 PR/分支后续 push 取消前一次运行
 concurrency:
@@ -30,8 +30,18 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Dart fix check
+        run: dart fix --dry-run
+
       - name: Flutter analyze
         run: flutter analyze
 
-      - name: Flutter test
-        run: flutter test
+      - name: Flutter test with coverage
+        run: flutter test --coverage
+
+      - name: Check coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-lcov
+          path: coverage/lcov.info
+          if-no-files-found: ignore

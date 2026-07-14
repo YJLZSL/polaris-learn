@@ -162,13 +162,38 @@ class LearnerProfiles extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+/// 学习事件表：记录细粒度的学习行为事件。
+///
+/// 用于学习分析、遗忘曲线计算和效果评估。
+class LearningEvents extends Table {
+  TextColumn get id => text().clientDefault(_uuid)();
+  /// 事件类型：lesson_start / lesson_complete / quiz_attempt /
+  /// quiz_pass / socratic_turn / note_create / review_complete
+  TextColumn get eventType => text()();
+  /// 关联课程 ID（可选）
+  TextColumn get courseId => text().nullable()();
+  /// 关联课时 ID（可选）
+  TextColumn get lessonId => text().nullable()();
+  /// 关联知识点 ID（可选）
+  TextColumn get knowledgePointId => text().nullable()();
+  /// 事件元数据 JSON（如测验分数、对话轮次等）
+  TextColumn get metadata => text().withDefault(const Constant('{}'))();
+  /// 持续时长（秒，可选）
+  IntColumn get durationSeconds => integer().nullable()();
+  DateTimeColumn get createdAt =>
+      dateTime().withDefault(currentDateAndTime)();
+
+  @override
+  Set<Column> get primaryKey => {id};
+}
+
 // =====================================================================
 // 数据库
 // =====================================================================
 
 /// 灵犀学院本地数据库。
 ///
-/// 当前 schema 版本为 2，包含 9 张表。后续升级通过 [migrationStrategy]
+/// 当前 schema 版本为 3，包含 10 张表。后续升级通过 [migrationStrategy]
 /// 的 `onUpgrade` 回调逐步迁移。
 @DriftDatabase(tables: [
   Conversations,
@@ -180,6 +205,7 @@ class LearnerProfiles extends Table {
   Achievements,
   Streaks,
   LearnerProfiles,
+  LearningEvents,
 ])
 class LingxiDatabase extends _$LingxiDatabase {
   /// 通过任意 [QueryExecutor] 构造数据库，主要用于生产环境。
@@ -200,7 +226,7 @@ class LingxiDatabase extends _$LingxiDatabase {
       const DriftDatabaseOptions(storeDateTimeAsText: true);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -212,6 +238,10 @@ class LingxiDatabase extends _$LingxiDatabase {
           // v1 → v2：新增 LearnerProfiles 表
           if (from < 2) {
             await m.createTable(learnerProfiles);
+          }
+          // v2 → v3：新增 LearningEvents 表
+          if (from < 3) {
+            await m.createTable(learningEvents);
           }
         },
         beforeOpen: (details) async {
