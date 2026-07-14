@@ -50,7 +50,7 @@ dependencies:
   markdown: ^7.2.0
 
   # 样式与字体
-  google_fonts: ^6.2.1
+  google_fonts: ^8.1.0
 
   # 国际化与本地化
   intl: ^0.20.2
