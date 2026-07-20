@@ -12,6 +12,7 @@ import 'package:lingxi_academy/core/theme/shape_variants.dart';
 import 'package:lingxi_academy/data/models/course_content.dart';
 import 'package:lingxi_academy/data/providers/course_providers.dart';
 import 'package:lingxi_academy/data/providers/db_providers.dart';
+import 'package:lingxi_academy/features/learning/course_level_extensions.dart';
 import 'package:lingxi_academy/features/mascot/mascot_controller.dart';
 import 'package:lingxi_academy/features/mascot/mascot_state.dart';
 import 'package:lingxi_academy/features/mascot/mascot_widget.dart';
@@ -355,15 +356,6 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // ── 课程进度卡片 ────────────────────────────────────────
 
-  /// 为不同级别的课程生成渐变色
-  static const _levelGradients = <CourseLevel, List<Color>>{
-    CourseLevel.l0: [Color(0xFF7C4DFF), Color(0xFF536DFE)],
-    CourseLevel.l1: [Color(0xFFFF7043), Color(0xFFFFB74D)],
-    CourseLevel.l2: [Color(0xFF66BB6A), Color(0xFF26A69A)],
-    CourseLevel.l3: [Color(0xFF29B6F6), Color(0xFF0288D1)],
-    CourseLevel.l4: [Color(0xFFAB47BC), Color(0xFF7B1FA2)],
-  };
-
   /// 为不同级别的课程生成图标
   static const _levelIcons = <CourseLevel, IconData>{
     CourseLevel.l0: Icons.code_rounded,
@@ -553,13 +545,13 @@ class _CourseProgressCard extends ConsumerWidget {
     final colorScheme = theme.colorScheme;
     final progressRepo = ref.watch(progressRepositoryProvider);
 
-    final gradientColors =
-        _HomePageState._levelGradients[course.level] ??
-        [const Color(0xFF7C4DFF), const Color(0xFF536DFE)];
+    // 级别渐变：以 [CourseLevel.levelColor] 语义色为主色，配以 70% 透明度
+    // 形成同色系渐变，避免硬编码十六进制色值。
+    final levelColor = course.level.levelColor(context.lingxiColors);
     final gradient = LinearGradient(
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
-      colors: gradientColors,
+      colors: [levelColor, levelColor.withValues(alpha: 0.7)],
     );
     final icon =
         _HomePageState._levelIcons[course.level] ?? Icons.code_rounded;

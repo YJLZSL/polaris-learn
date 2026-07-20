@@ -181,12 +181,14 @@ class _CelebrationOverlayState extends State<CelebrationOverlay> {
         widget.child,
         ..._bursts.map(
           (b) => Positioned.fill(
-            child: ParticleSystem(
-              origin: b.origin,
-              particleCount: widget.particleCount,
-              type: _effectFor(widget.type),
-              colors: widget.colors,
-              onComplete: () => _onBurstComplete(b.id),
+            child: RepaintBoundary(
+              child: ParticleSystem(
+                origin: b.origin,
+                particleCount: widget.particleCount,
+                type: _effectFor(widget.type),
+                colors: widget.colors,
+                onComplete: () => _onBurstComplete(b.id),
+              ),
             ),
           ),
         ),
@@ -222,12 +224,14 @@ class _OverlayParticleBurst extends StatelessWidget {
     return IgnorePointer(
       child: Material(
         type: MaterialType.transparency,
-        child: ParticleSystem(
-          origin: origin,
-          particleCount: particleCount,
-          type: _effectFor(type),
-          colors: colors,
-          onComplete: onComplete,
+        child: RepaintBoundary(
+          child: ParticleSystem(
+            origin: origin,
+            particleCount: particleCount,
+            type: _effectFor(type),
+            colors: colors,
+            onComplete: onComplete,
+          ),
         ),
       ),
     );

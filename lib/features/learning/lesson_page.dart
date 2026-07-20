@@ -5,6 +5,7 @@ import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
 import 'package:lingxi_academy/core/providers/app_providers.dart';
 import 'package:lingxi_academy/core/router/route_names.dart';
+import 'package:lingxi_academy/core/theme/lingxi_gradients.dart';
 import 'package:lingxi_academy/data/models/course_content.dart';
 import 'package:lingxi_academy/data/providers/course_providers.dart';
 import 'package:lingxi_academy/data/providers/db_providers.dart';
@@ -306,12 +307,8 @@ class _LessonPageState extends ConsumerState<LessonPage> {
               const MascotWidget(size: 160, mood: MascotMood.celebrate),
               const SizedBox(height: 24),
               ShaderMask(
-                shaderCallback: (bounds) => LinearGradient(
-                  colors: [
-                    Theme.of(context).colorScheme.primary,
-                    const Color(0xFFFFA726),
-                  ],
-                ).createShader(bounds),
+                shaderCallback: (bounds) =>
+                    context.lingxiGradients.celebration.createShader(bounds),
                 child: Text(
                   '🎉 章节完成！',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -547,9 +544,9 @@ class _KnowledgePointLearnerState
             SpringMotion.pulseBreathing(
               period: const Duration(seconds: 2),
               child: ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFFFFD54F), Color(0xFFFFA726)],
-                ).createShader(bounds),
+                shaderCallback: (bounds) => context.lingxiGradients
+                    .achievementGold
+                    .createShader(bounds),
                 child: const Icon(Icons.celebration,
                     size: 64, color: Colors.white),
               ),

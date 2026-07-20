@@ -436,13 +436,15 @@ class _PulseBreathingState extends State<_PulseBreathing>
     if (_reduceMotion) {
       return widget.child;
     }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => Transform.scale(
-        scale: _scale.value,
-        child: child,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) => Transform.scale(
+          scale: _scale.value,
+          child: child,
+        ),
+        child: widget.child,
       ),
-      child: widget.child,
     );
   }
 }
@@ -596,30 +598,32 @@ class _ShimmerGlowState extends State<_ShimmerGlow>
     }
     final theme = Theme.of(context);
     final glowColor = widget.glowColor ?? theme.colorScheme.primary;
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return ShaderMask(
-          shaderCallback: (bounds) {
-            return LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Colors.transparent,
-                glowColor.withValues(alpha: 0.0),
-                glowColor.withValues(alpha: 0.3),
-                glowColor.withValues(alpha: 0.0),
-                Colors.transparent,
-              ],
-              stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
-              transform: _SlidingGradientTransform(_position.value),
-            ).createShader(bounds);
-          },
-          blendMode: BlendMode.srcATop,
-          child: child,
-        );
-      },
-      child: widget.child,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, child) {
+          return ShaderMask(
+            shaderCallback: (bounds) {
+              return LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.transparent,
+                  glowColor.withValues(alpha: 0.0),
+                  glowColor.withValues(alpha: 0.3),
+                  glowColor.withValues(alpha: 0.0),
+                  Colors.transparent,
+                ],
+                stops: const [0.0, 0.35, 0.5, 0.65, 1.0],
+                transform: _SlidingGradientTransform(_position.value),
+              ).createShader(bounds);
+            },
+            blendMode: BlendMode.srcATop,
+            child: child,
+          );
+        },
+        child: widget.child,
+      ),
     );
   }
 }

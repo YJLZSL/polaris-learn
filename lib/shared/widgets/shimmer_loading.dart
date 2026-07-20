@@ -131,26 +131,29 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
     // 动画值 0→1 映射到位移比例 -1→1，使高光带从左侧外完全滑入、右侧外完全滑出。
     final slidePercent = -1.0 + _controller.value * 2.0;
 
-    return ShaderMask(
-      blendMode: BlendMode.srcATop,
-      shaderCallback: (bounds) {
-        return LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [
-            baseColor,
-            baseColor,
-            highlightColor,
-            baseColor,
-            baseColor,
-          ],
-          // 高光带约占 40% 宽度（0.3~0.7），中央最亮。
-          const stops: [0.0, 0.3, 0.5, 0.7, 1.0],
-          tileMode: TileMode.clamp,
-          transform: _SlidingGradientTransform(slidePercent: slidePercent),
-        ).createShader(bounds);
-      },
-      child: widget.child,
+    // 包裹 RepaintBoundary 隔离 shimmer 循环动画的重绘，避免父级连带重建。
+    return RepaintBoundary(
+      child: ShaderMask(
+        blendMode: BlendMode.srcATop,
+        shaderCallback: (bounds) {
+          return LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: [
+              baseColor,
+              baseColor,
+              highlightColor,
+              baseColor,
+              baseColor,
+            ],
+            // 高光带约占 40% 宽度（0.3~0.7），中央最亮。
+            const stops: [0.0, 0.3, 0.5, 0.7, 1.0],
+            tileMode: TileMode.clamp,
+            transform: _SlidingGradientTransform(slidePercent: slidePercent),
+          ).createShader(bounds);
+        },
+        child: widget.child,
+      ),
     );
   }
 }

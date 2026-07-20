@@ -244,18 +244,20 @@ class _TwinklingStarState extends State<_TwinklingStar>
       left: widget.left,
       right: widget.right,
       bottom: widget.bottom,
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, child) => Opacity(
-          opacity: _opacity.value,
-          child: Transform.scale(
-            scale: _scale.value,
-            child: child,
+      child: RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _controller,
+          builder: (context, child) => Opacity(
+            opacity: _opacity.value,
+            child: Transform.scale(
+              scale: _scale.value,
+              child: child,
+            ),
           ),
-        ),
-        child: CustomPaint(
-          size: Size(widget.size, widget.size),
-          painter: _StarPainter(color: widget.color),
+          child: CustomPaint(
+            size: Size(widget.size, widget.size),
+            painter: _StarPainter(color: widget.color),
+          ),
         ),
       ),
     );

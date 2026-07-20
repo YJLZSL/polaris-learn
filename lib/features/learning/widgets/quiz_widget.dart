@@ -503,25 +503,28 @@ class _QuizWidgetState extends ConsumerState<QuizWidget>
     final LinearGradient feedbackGradient;
     final Color accentColor;
     if (passed) {
+      // 通过：直接基于 [LingxiGradients.success] 复用其 begin/end，仅覆盖
+      // colors 为 15% 透明度，避免重复手写 LinearGradient 构造参数。
       final successGradient = gradients.success;
-      feedbackGradient = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
+      feedbackGradient = successGradient.copyWith(
         colors: successGradient.colors
             .map((c) => c.withValues(alpha: 0.15))
             .toList(),
       );
       accentColor = successGradient.colors.last;
     } else {
+      // 未通过：LingxiGradients 未定义 misconceptionRed 渐变，以
+      // [LingxiColors.misconceptionRed] 同色系不同透明度构造渐变。
+      final baseRed = colors.misconceptionRed;
       feedbackGradient = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          colors.misconceptionRed.withValues(alpha: 0.15),
-          const Color(0xFFC62828).withValues(alpha: 0.15),
+          baseRed.withValues(alpha: 0.15),
+          baseRed.withValues(alpha: 0.30),
         ],
       );
-      accentColor = colors.misconceptionRed;
+      accentColor = baseRed;
     }
 
     final icon = passed ? Icons.celebration : Icons.info;

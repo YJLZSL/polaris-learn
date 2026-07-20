@@ -913,7 +913,7 @@ class _CourseIconState extends State<_CourseIcon> {
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: widget.isCompleted
-                  ? [const Color(0xFF66BB6A), const Color(0xFF43A047)]
+                  ? context.lingxiGradients.success.colors
                   : widget.gradient,
             ),
             boxShadow: [
@@ -997,8 +997,9 @@ class _CheckmarkPopState extends State<_CheckmarkPop>
 
   @override
   Widget build(BuildContext context) {
+    final successGradient = context.lingxiGradients.success;
     if (AnimationUtils.reduceMotionOf(context)) {
-      return const Icon(Icons.check_circle, color: Color(0xFF43A047), size: 22);
+      return Icon(Icons.check_circle, color: successGradient.colors.last, size: 22);
     }
     return AnimatedBuilder(
       animation: _scale,
@@ -1007,9 +1008,7 @@ class _CheckmarkPopState extends State<_CheckmarkPop>
         child: child,
       ),
       child: ShaderMask(
-        shaderCallback: (bounds) => const LinearGradient(
-          colors: [Color(0xFF66BB6A), Color(0xFF43A047)],
-        ).createShader(bounds),
+        shaderCallback: (bounds) => successGradient.createShader(bounds),
         child: const Icon(
           Icons.check_circle,
           color: Colors.white,

@@ -199,14 +199,18 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
                         fgColor,
                         widget.progress.clamp(0.0, 1.0).toDouble(),
                       )
-                    : AnimatedBuilder(
-                        animation: Listenable.merge(
-                            [_progressController, _effectController]),
-                        builder: (context, _) => _buildPulseDot(
-                          totalWidth,
-                          fgColor,
-                          _progressAnimation.value.clamp(0.0, 1.0).toDouble(),
-                          _effectController.value,
+                    : RepaintBoundary(
+                        child: AnimatedBuilder(
+                          animation: Listenable.merge(
+                              [_progressController, _effectController]),
+                          builder: (context, _) => _buildPulseDot(
+                            totalWidth,
+                            fgColor,
+                            _progressAnimation.value
+                                .clamp(0.0, 1.0)
+                                .toDouble(),
+                            _effectController.value,
+                          ),
                         ),
                       ),
             ],
@@ -241,9 +245,10 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
     Color fgColor,
     BorderRadius radius,
   ) {
-    return AnimatedBuilder(
-      animation: _effectController,
-      builder: (context, _) {
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _effectController,
+        builder: (context, _) {
         // 光带宽度约为进度条的 30%，位置从 -30% 到 100% 循环
         final bandWidth = totalWidth * 0.3;
         final t = _effectController.value; // 0~1
@@ -284,6 +289,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
           ),
         );
       },
+      ),
     );
   }
 
@@ -524,43 +530,48 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
         ),
       );
     } else if (widget.indeterminate) {
-      painter = AnimatedBuilder(
-        animation: _effectController,
-        builder: (context, _) {
-          final t = _effectController.value;
-          return CustomPaint(
-            size: Size.square(widget.size),
-            painter: _CircularProgressPainter(
-              progress: 0.25,
-              backgroundColor: bgColor,
-              foregroundColor: fgColor,
-              gradient: widget.gradient,
-              strokeWidth: widget.strokeWidth,
-              strokeCapRound: widget.strokeCapRound,
-              rotationOffset: -math.pi / 2 + t * 2 * math.pi,
-            ),
-          );
-        },
+      painter = RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: _effectController,
+          builder: (context, _) {
+            final t = _effectController.value;
+            return CustomPaint(
+              size: Size.square(widget.size),
+              painter: _CircularProgressPainter(
+                progress: 0.25,
+                backgroundColor: bgColor,
+                foregroundColor: fgColor,
+                gradient: widget.gradient,
+                strokeWidth: widget.strokeWidth,
+                strokeCapRound: widget.strokeCapRound,
+                rotationOffset: -math.pi / 2 + t * 2 * math.pi,
+              ),
+            );
+          },
+        ),
       );
     } else {
-      painter = AnimatedBuilder(
-        animation: Listenable.merge([_progressController, _effectController]),
-        builder: (context, _) {
-          return CustomPaint(
-            size: Size.square(widget.size),
-            painter: _CircularProgressPainter(
-              progress:
-                  _progressAnimation.value.clamp(0.0, 1.0).toDouble(),
-              backgroundColor: bgColor,
-              foregroundColor: fgColor,
-              gradient: widget.gradient,
-              strokeWidth: widget.strokeWidth,
-              strokeCapRound: widget.strokeCapRound,
-              rotationOffset: -math.pi / 2,
-              pulseValue: widget.enablePulse ? _effectController.value : null,
-            ),
-          );
-        },
+      painter = RepaintBoundary(
+        child: AnimatedBuilder(
+          animation: Listenable.merge([_progressController, _effectController]),
+          builder: (context, _) {
+            return CustomPaint(
+              size: Size.square(widget.size),
+              painter: _CircularProgressPainter(
+                progress:
+                    _progressAnimation.value.clamp(0.0, 1.0).toDouble(),
+                backgroundColor: bgColor,
+                foregroundColor: fgColor,
+                gradient: widget.gradient,
+                strokeWidth: widget.strokeWidth,
+                strokeCapRound: widget.strokeCapRound,
+                rotationOffset: -math.pi / 2,
+                pulseValue:
+                    widget.enablePulse ? _effectController.value : null,
+              ),
+            );
+          },
+        ),
       );
     }
 
