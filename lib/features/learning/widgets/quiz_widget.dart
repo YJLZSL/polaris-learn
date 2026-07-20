@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lingxi_academy/core/constants/app_constants.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
+import 'package:lingxi_academy/core/theme/lingxi_colors.dart';
+import 'package:lingxi_academy/core/theme/lingxi_gradients.dart';
 import 'package:lingxi_academy/core/theme/shape_variants.dart';
 import 'package:lingxi_academy/data/models/course_content.dart';
 import 'package:lingxi_academy/features/progress/celebration_service.dart';
@@ -487,12 +489,41 @@ class _QuizWidgetState extends ConsumerState<QuizWidget>
   }
 
   /// 构建测验结果展示。
+  ///
+  /// 反馈卡片背景使用语义化渐变：
+  /// - 通过：[LingxiGradients.success]（绿 → 深绿）。
+  /// - 未通过：misconceptionRed 渐变（红 → 深红）。
+  /// 渐变颜色统一以 15% 透明度应用，保持文字对比度。
   Widget _buildResult(ThemeData theme) {
     final passed = _score >= kQuizPassThreshold;
-    final bgColor = passed
-        ? Colors.green.withValues(alpha: 0.1)
-        : Colors.orange.withValues(alpha: 0.1);
-    final borderColor = passed ? Colors.green : Colors.orange;
+    final gradients = context.lingxiGradients;
+    final colors = context.lingxiColors;
+
+    // 构建反馈渐变（半透明）与强调色。
+    final LinearGradient feedbackGradient;
+    final Color accentColor;
+    if (passed) {
+      final successGradient = gradients.success;
+      feedbackGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: successGradient.colors
+            .map((c) => c.withValues(alpha: 0.15))
+            .toList(),
+      );
+      accentColor = successGradient.colors.last;
+    } else {
+      feedbackGradient = LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [
+          colors.misconceptionRed.withValues(alpha: 0.15),
+          const Color(0xFFC62828).withValues(alpha: 0.15),
+        ],
+      );
+      accentColor = colors.misconceptionRed;
+    }
+
     final icon = passed ? Icons.celebration : Icons.info;
     final text = passed
         ? '恭喜通过！正确率 ${(_score * 100).toInt()}%'
@@ -507,13 +538,13 @@ class _QuizWidgetState extends ConsumerState<QuizWidget>
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: bgColor,
+          gradient: feedbackGradient,
           borderRadius: ShapeVariants.roundedMedium.borderRadius,
-          border: Border.all(color: borderColor.withValues(alpha: 0.4)),
+          border: Border.all(color: accentColor.withValues(alpha: 0.4)),
         ),
         child: Row(
           children: [
-            Icon(icon, color: borderColor),
+            Icon(icon, color: accentColor),
             const SizedBox(width: 8),
             Expanded(
               child: Text(text, style: theme.textTheme.bodyLarge),
@@ -744,7 +775,8 @@ class _QuizOptionButtonState extends State<_QuizOptionButton> {
     );
 
     // 使用 GestureDetector + Listener 统一处理按压缩放和点击
-    final scale = reduceMotion ? 1.0 : (_pressed ? 0.97 : 1.0);
+    // 按压时 scale 0.98，松开恢复 1.0；reduceMotion 时降级为无缩放。
+    final scale = reduceMotion ? 1.0 : (_pressed ? 0.98 : 1.0);
     return GestureDetector(
       onTap: widget.showFeedback ? null : widget.onTap,
       behavior: HitTestBehavior.opaque,

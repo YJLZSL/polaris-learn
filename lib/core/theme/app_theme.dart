@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'lingxi_colors.dart';
+import 'lingxi_elevations.dart';
 import 'lingxi_gradients.dart';
 import 'shape_variants.dart';
 
@@ -9,7 +10,7 @@ import 'shape_variants.dart';
 ///
 /// 以紫色调种子色生成动态配色，结合 Noto Sans SC（正文中文优先）与
 /// Quicksand（标题圆润字体）字体，并注册 [LingxiColors] 自定义颜色扩展、
-/// [LingxiGradients] 渐变扩展。
+/// [LingxiGradients] 渐变扩展、[LingxiElevations] 语义阴影扩展。
 class AppTheme {
   const AppTheme._();
 
@@ -112,7 +113,12 @@ class AppTheme {
       ),
       extensions: <ThemeExtension<dynamic>>[
         brightness == Brightness.dark ? LingxiColors.dark : LingxiColors.light,
-        LingxiGradients.light,
+        brightness == Brightness.dark
+            ? LingxiGradients.dark
+            : LingxiGradients.light,
+        brightness == Brightness.dark
+            ? LingxiElevations.dark
+            : LingxiElevations.light,
       ],
     );
   }

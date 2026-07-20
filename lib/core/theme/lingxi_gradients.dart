@@ -99,6 +99,66 @@ class LingxiGradients extends ThemeExtension<LingxiGradients> {
     ),
   );
 
+  /// 暗色模式渐变实例
+  ///
+  /// 所有渐变使用深色调适配暗色背景，提升对比度与视觉协调性：
+  /// - 紫色辉光加深（mascotHero / primarySurface）
+  /// - 火焰与金色加深（streakFire / achievementGold）
+  /// - 庆祝与成功色加深（celebration / success）
+  static const LingxiGradients dark = LingxiGradients(
+    mascotHero: RadialGradient(
+      center: Alignment.center,
+      radius: 0.8,
+      colors: <Color>[
+        Color(0x1F9D7CFF), // 紫色 12% 透明度（暗色下更显著）
+        Color(0x009D7CFF), // 透明
+      ],
+      stops: <double>[0.0, 1.0],
+    ),
+    streakFire: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xFFFF8A65), // 深橙（与 LingxiColors.dark.streakFire 对齐）
+        Color(0xFFD84315), // 深红
+      ],
+    ),
+    achievementGold: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xFFFFD54F), // 饱和金（与 LingxiColors.dark.achievementGold 对齐）
+        Color(0xFFFF8F00), // 深琥珀
+      ],
+    ),
+    primarySurface: LinearGradient(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+      colors: <Color>[
+        Color(0x1F6750A4), // 主色（种子紫）12% 透明度（暗色下更显著）
+        Color(0x006750A4), // 透明
+      ],
+    ),
+    celebration: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xFF9575CD), // 深紫
+        Color(0xFFE91E63), // 深粉
+        Color(0xFFFF8A65), // 深橙
+      ],
+      stops: <double>[0.0, 0.5, 1.0],
+    ),
+    success: LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: <Color>[
+        Color(0xFF81C784), // 浅绿
+        Color(0xFF2E7D32), // 深绿
+      ],
+    ),
+  );
+
   @override
   LingxiGradients copyWith({
     RadialGradient? mascotHero,

@@ -524,21 +524,21 @@ class _MessageBubbleState extends State<_MessageBubble>
   Widget build(BuildContext context) {
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
     final theme = Theme.of(context);
-    final borderRadius = ShapeVariants.roundedLarge.borderRadius;
 
-    // 根据角色定制气泡：用户圆角右下角更小（尾巴感），助手左上角更小。
+    // 统一气泡圆角：除"尾巴角"为 4px 外，其余三角均为 16px。
+    // 用户气泡尾巴在右下（指向自己），助手气泡尾巴在左下（指向 AI）。
     final bubbleBorderRadius = _isUser
-        ? BorderRadius.only(
-            topLeft: Radius.circular(borderRadius.topLeft.x),
-            topRight: Radius.circular(borderRadius.topRight.x),
-            bottomLeft: Radius.circular(borderRadius.bottomLeft.x),
-            bottomRight: const Radius.circular(4),
+        ? const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(16),
+            bottomRight: Radius.circular(4),
           )
-        : BorderRadius.only(
-            topLeft: const Radius.circular(4),
-            topRight: Radius.circular(borderRadius.topRight.x),
-            bottomLeft: Radius.circular(borderRadius.bottomLeft.x),
-            bottomRight: Radius.circular(borderRadius.bottomRight.x),
+        : const BorderRadius.only(
+            topLeft: Radius.circular(16),
+            topRight: Radius.circular(16),
+            bottomLeft: Radius.circular(4),
+            bottomRight: Radius.circular(16),
           );
 
     final bgColor = _isUser
@@ -679,10 +679,14 @@ class _MessageBubbleState extends State<_MessageBubble>
 }
 
 // ───────────────────────────────────────────────────────────────
-// 打字指示器（三点脉动）
+// 打字指示器（三段式波浪）
 // ───────────────────────────────────────────────────────────────
 
-/// 三点脉动打字指示器：三个圆点依次缩放/淡入淡出，每 0.2s 延迟，循环播放。
+/// 三段式波浪打字指示器：三个圆点以错峰相位上下波动，循环播放。
+///
+/// 总周期 1200ms，每个点完整波动一次（-4 → 4 → -4）。
+/// 三个点的起始相位错开 0ms / 200ms / 400ms，形成波浪推进效果。
+/// reduceMotion 时降级为静态三点指示器。
 class _TypingDots extends StatefulWidget {
   const _TypingDots({required this.color});
 
@@ -695,6 +699,11 @@ class _TypingDots extends StatefulWidget {
 class _TypingDotsState extends State<_TypingDots>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  late final Animation<double> _upAnim;
+  late final Animation<double> _downAnim;
+
+  /// 三个点的相位偏移（占总周期比例）：0、1/6、1/3，对应 0ms / 200ms / 400ms。
+  static const List<double> _phases = <double>[0.0, 200 / 1200, 400 / 1200];
 
   @override
   void initState() {
@@ -702,6 +711,20 @@ class _TypingDotsState extends State<_TypingDots>
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1200),
+    );
+    // 上半周期：t∈[0, 0.5] 时 offset 从 -4 → 4（easeOut）。
+    _upAnim = Tween<double>(begin: -4, end: 4).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
+    // 下半周期：t∈[0.5, 1.0] 时 offset 从 4 → -4（easeIn）。
+    _downAnim = Tween<double>(begin: 4, end: -4).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
+      ),
     );
     if (!AnimationUtils.platformReduceMotion) {
       _controller.repeat();
@@ -714,9 +737,24 @@ class _TypingDotsState extends State<_TypingDots>
     super.dispose();
   }
 
+  /// 计算指定索引点在当前时刻的 Y 轴偏移。
+  ///
+  /// 通过手动叠加 phase 计算"局部进度"，再用对应 Tween + Curve 求值，
+  /// 实现三个点错峰波动（AnimationController 本身不支持 phase 偏移）。
+  double _offsetFor(int index) {
+    final phase = _phases[index];
+    final t = (_controller.value + phase) % 1.0;
+    if (t < 0.5) {
+      // 上半周期：归一化到 [0, 1] 后应用 _upAnim 的 Tween + Curve。
+      return _upAnim.transform(Curves.easeOut.transform(t / 0.5));
+    }
+    return _downAnim.transform(Curves.easeIn.transform((t - 0.5) / 0.5));
+  }
+
   @override
   Widget build(BuildContext context) {
     if (AnimationUtils.reduceMotionOf(context)) {
+      // reduceMotion 降级：静态三点指示器。
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 4),
         child: Row(
@@ -736,35 +774,37 @@ class _TypingDotsState extends State<_TypingDots>
       builder: (context, _) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDot(0),
-              const SizedBox(width: 4),
-              _buildDot(1),
-              const SizedBox(width: 4),
-              _buildDot(2),
-            ],
+          child: SizedBox(
+            height: 16,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                _buildWaveDot(0),
+                const SizedBox(width: 4),
+                _buildWaveDot(1),
+                const SizedBox(width: 4),
+                _buildWaveDot(2),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildDot(int index) {
-    // 每个 dot 的动画周期 0.6s，三个 dot 起始相位差 0.2s。
-    final phase = (index * 0.2) % 1.0;
-    var t = (_controller.value - phase) % 1.0;
-    // 映射 t 到 0→1→0 的脉冲（前 60% 上升，后 40% 下降）。
-    double pulse;
-    if (t < 0.5) {
-      pulse = Curves.easeInOut.transform(t / 0.5);
-    } else {
-      pulse = Curves.easeInOut.transform((1.0 - t) / 0.5);
-    }
-    final scale = 0.6 + 0.4 * pulse; // 0.6 → 1.0
-    final opacity = 0.4 + 0.6 * pulse;
-    return _Dot(color: widget.color, scale: scale, opacity: opacity);
+  Widget _buildWaveDot(int index) {
+    return Transform.translate(
+      offset: Offset(0, _offsetFor(index)),
+      child: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: widget.color,
+          shape: BoxShape.circle,
+        ),
+      ),
+    );
   }
 }
 
@@ -972,12 +1012,27 @@ class _SocraticToggle extends StatelessWidget {
                 scale: value ? 1.1 : 1.0,
                 duration: SpringMotion.fastDuration,
                 curve: Curves.easeOutBack,
-                child: Icon(
-                  value ? Icons.psychology : Icons.psychology_outlined,
-                  size: 18,
-                  color: value
-                      ? lingxi.socraticBlue
-                      : theme.colorScheme.onSurfaceVariant,
+                child: AnimatedSwitcher(
+                  duration: SpringMotion.fastDuration,
+                  switchInCurve: Curves.easeOut,
+                  switchOutCurve: Curves.easeIn,
+                  transitionBuilder: (child, animation) {
+                    return FadeTransition(
+                      opacity: animation,
+                      child: ScaleTransition(
+                        scale: animation,
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Icon(
+                    value ? Icons.lightbulb : Icons.chat_bubble_outline,
+                    key: ValueKey<bool>(value),
+                    size: 18,
+                    color: value
+                        ? lingxi.socraticBlue
+                        : theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
               ),
               if (value) ...[

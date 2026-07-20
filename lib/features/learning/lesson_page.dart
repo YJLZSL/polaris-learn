@@ -203,7 +203,6 @@ class _LessonPageState extends ConsumerState<LessonPage> {
             onPageChanged: (index) => setState(() => _currentIndex = index),
             itemBuilder: (context, index) => _KnowledgePointPageWrapper(
               key: ValueKey('kp_page_${kps[index].id}'),
-              index: index,
               knowledgePoint: kps[index],
               courseId: widget.courseId,
               lessonId: widget.lessonId,
@@ -214,7 +213,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
         ),
         // 底部进度条（使用 AnimatedProgressBar）
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
           decoration: BoxDecoration(
             color: theme.colorScheme.surfaceContainerLow,
             border: Border(
@@ -341,90 +340,55 @@ class _LessonPageState extends ConsumerState<LessonPage> {
   }
 }
 
-/// 知识点页面切换包装器：提供淡入 + 轻微缩放的切换动画。
-class _KnowledgePointPageWrapper extends StatefulWidget {
+/// 知识点页面切换包装器：使用 [TweenAnimationBuilder] 提供淡入 + 轻微缩放。
+///
+/// PageView 滑动切换时，新页面的 itemBuilder 触发本 build，动画自动从
+/// 0→1 播放，无需手动管理 [AnimationController]。reduceMotion 下直接
+/// 返回子组件，即时切换。
+class _KnowledgePointPageWrapper extends StatelessWidget {
   const _KnowledgePointPageWrapper({
     super.key,
-    required this.index,
     required this.knowledgePoint,
     required this.courseId,
     required this.lessonId,
     required this.onCompleted,
   });
 
-  final int index;
   final KnowledgePoint knowledgePoint;
   final String courseId;
   final String lessonId;
   final void Function(double score) onCompleted;
 
   @override
-  State<_KnowledgePointPageWrapper> createState() =>
-      _KnowledgePointPageWrapperState();
-}
-
-class _KnowledgePointPageWrapperState
-    extends State<_KnowledgePointPageWrapper>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _fade;
-  late Animation<double> _scale;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: SpringMotion.defaultDuration,
-    );
-    final curve = CurvedAnimation(
-      parent: _controller,
-      curve: SpringMotion.entranceCurve,
-    );
-    _fade = Tween<double>(begin: 0.0, end: 1.0).animate(curve);
-    _scale = Tween<double>(begin: 0.98, end: 1.0).animate(curve);
-
-    if (AnimationUtils.platformReduceMotion) {
-      _controller.value = 1.0;
-    } else {
-      final delayMs = 80 + widget.index * 30;
-      Future.delayed(Duration(milliseconds: delayMs), () {
-        if (mounted) _controller.forward();
-      });
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final learner = _KnowledgePointLearner(
+      knowledgePoint: knowledgePoint,
+      courseId: courseId,
+      lessonId: lessonId,
+      onCompleted: onCompleted,
+    );
+
+    // reduceMotion：降级为即时切换，不带过渡动画。
     if (AnimationUtils.reduceMotionOf(context)) {
-      return _KnowledgePointLearner(
-        knowledgePoint: widget.knowledgePoint,
-        courseId: widget.courseId,
-        lessonId: widget.lessonId,
-        onCompleted: widget.onCompleted,
-      );
+      return learner;
     }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => Opacity(
-        opacity: _fade.value,
-        child: Transform.scale(
-          scale: _scale.value,
-          child: child,
-        ),
-      ),
-      child: _KnowledgePointLearner(
-        knowledgePoint: widget.knowledgePoint,
-        courseId: widget.courseId,
-        lessonId: widget.lessonId,
-        onCompleted: widget.onCompleted,
-      ),
+
+    // 使用 TweenAnimationBuilder 实现淡入 + 轻微缩放：
+    // duration / curve 取自 SpringMotion，与全局动效规范一致。
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: 0.0, end: 1.0),
+      duration: SpringMotion.defaultDuration,
+      curve: SpringMotion.defaultCurve,
+      builder: (context, value, child) {
+        return Opacity(
+          opacity: value,
+          child: Transform.scale(
+            scale: 0.98 + 0.02 * value,
+            child: child,
+          ),
+        );
+      },
+      child: learner,
     );
   }
 }
@@ -673,16 +637,14 @@ class _FadeInSectionState extends State<_FadeInSection>
     if (AnimationUtils.reduceMotionOf(context)) {
       return widget.child;
     }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) => Opacity(
-        opacity: _fade.value,
-        child: SlideTransition(
-          position: _slide,
-          child: child,
-        ),
+    // 使用 FadeTransition + SlideTransition 显式过渡组件：
+    // 避免在 AnimatedBuilder 内嵌套 SlideTransition 的冗余写法。
+    return FadeTransition(
+      opacity: _fade,
+      child: SlideTransition(
+        position: _slide,
+        child: widget.child,
       ),
-      child: widget.child,
     );
   }
 }

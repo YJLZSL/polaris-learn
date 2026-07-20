@@ -64,7 +64,7 @@ class LingxiPageTransitions {
       transitionsBuilder: _buildModalTransition,
       transitionDuration: SpringMotion.gentleDuration,
       reverseTransitionDuration: SpringMotion.defaultDuration,
-    ];
+    );
   }
 
   // ── 私有转场构建器 ──────────────────────────────────────

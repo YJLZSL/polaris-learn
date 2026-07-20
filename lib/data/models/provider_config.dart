@@ -3,19 +3,52 @@
 /// 每个枚举值包含：
 /// - [value]：持久化存储用的字符串标识（如 `openai_compatible`）
 /// - [displayName]：UI 展示名称（中文）
+/// - [defaultBaseUrl]：该服务商默认 baseUrl
+/// - [defaultModel]：该服务商默认模型
 enum ProviderType {
-  openaiCompatible('openai_compatible', 'OpenAI 兼容'),
-  anthropic('anthropic', 'Anthropic Claude'),
-  gemini('gemini', 'Google Gemini'),
-  ollama('ollama', 'Ollama 本地');
+  openaiCompatible(
+    'openai',
+    'OpenAI Compatible',
+    'https://api.openai.com/v1',
+    'gpt-4o-mini',
+  ),
+  anthropic(
+    'anthropic',
+    'Anthropic',
+    'https://api.anthropic.com',
+    'claude-3-5-sonnet-20241022',
+  ),
+  gemini(
+    'gemini',
+    'Gemini',
+    'https://generativelanguage.googleapis.com',
+    'gemini-1.5-flash',
+  ),
+  ollama(
+    'ollama',
+    'Ollama',
+    'http://localhost:11434',
+    'llama3.2',
+  );
 
-  const ProviderType(this.value, this.displayName);
+  const ProviderType(
+    this.value,
+    this.displayName,
+    this.defaultBaseUrl,
+    this.defaultModel,
+  );
 
   /// 持久化存储用的字符串标识。
   final String value;
 
   /// UI 展示名称。
   final String displayName;
+
+  /// 该服务商默认 baseUrl。
+  final String defaultBaseUrl;
+
+  /// 该服务商默认模型。
+  final String defaultModel;
 
   /// 根据字符串值反查枚举，未匹配时回退到 [openaiCompatible]。
   static ProviderType fromValue(String value) {
@@ -35,9 +68,9 @@ class ProviderConfig {
   factory ProviderConfig.defaultFor(ProviderType type) {
     return ProviderConfig(
       providerType: type,
-      baseUrl: _defaultBaseUrl[type]!,
+      baseUrl: type.defaultBaseUrl,
       apiKey: '',
-      model: _defaultModel[type]!,
+      model: type.defaultModel,
     );
   }
 
@@ -50,22 +83,6 @@ class ProviderConfig {
     this.maxTokens = 2048,
     this.enabled = true,
   });
-
-  /// 各服务商默认 baseUrl。
-  static const Map<ProviderType, String> _defaultBaseUrl = {
-    ProviderType.openaiCompatible: 'https://api.openai.com/v1',
-    ProviderType.anthropic: 'https://api.anthropic.com',
-    ProviderType.gemini: 'https://generativelanguage.googleapis.com',
-    ProviderType.ollama: 'http://localhost:11434',
-  };
-
-  /// 各服务商默认模型。
-  static const Map<ProviderType, String> _defaultModel = {
-    ProviderType.openaiCompatible: 'gpt-4o-mini',
-    ProviderType.anthropic: 'claude-3-5-sonnet-20241022',
-    ProviderType.gemini: 'gemini-1.5-flash',
-    ProviderType.ollama: 'llama3.2',
-  };
 
   final ProviderType providerType;
   final String baseUrl;

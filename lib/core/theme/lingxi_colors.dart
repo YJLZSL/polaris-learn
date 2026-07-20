@@ -43,11 +43,15 @@ class LingxiColors extends ThemeExtension<LingxiColors> {
   );
 
   /// 暗色模式实例
+  ///
+  /// 在暗色背景（典型 #1C1B1F / #141218）下：
+  /// - streakFire 使用更亮的深橙 `0xFFFF8A65` 以提升对比度
+  /// - achievementGold 使用更饱和的金色 `0xFFFFD54F` 以提升对比度
   static const LingxiColors dark = LingxiColors(
     mascotPrimary: Color(0xFF9D7CFF),
     mascotSecondary: Color(0xFFFFCC80),
-    streakFire: Color(0xFFFF7043),
-    achievementGold: Color(0xFFFFE082),
+    streakFire: Color(0xFFFF8A65),
+    achievementGold: Color(0xFFFFD54F),
     socraticBlue: Color(0xFF64B5F6),
     misconceptionRed: Color(0xFFEF9A9A),
   );

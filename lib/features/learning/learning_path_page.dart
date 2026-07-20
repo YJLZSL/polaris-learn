@@ -4,11 +4,14 @@ import 'package:go_router/go_router.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
 import 'package:lingxi_academy/core/router/route_names.dart';
+import 'package:lingxi_academy/core/theme/lingxi_colors.dart';
+import 'package:lingxi_academy/core/theme/lingxi_gradients.dart';
 import 'package:lingxi_academy/core/theme/shape_variants.dart';
 import 'package:lingxi_academy/data/models/course_content.dart';
 import 'package:lingxi_academy/data/providers/course_providers.dart';
 import 'package:lingxi_academy/data/providers/db_providers.dart';
 import 'package:lingxi_academy/data/repositories/progress_repository.dart';
+import 'package:lingxi_academy/features/learning/course_level_extensions.dart';
 import 'package:lingxi_academy/features/mascot/mascot_widget.dart';
 import 'package:lingxi_academy/shared/utils/responsive.dart';
 import 'package:lingxi_academy/shared/widgets/animated_progress_bar.dart';
@@ -196,8 +199,9 @@ class _LearningPathPageState extends ConsumerState<LearningPathPage> {
       };
 }
 
-/// 交错动画路径列表：使用自定义 SliverList + AnimatedBuilder 实现
-/// 每个级别区块以 50ms 延迟依次出现。
+/// 交错动画路径列表：使用单个 [AnimationController] 驱动每个级别区块的
+/// [Interval] 子动画，每个区块延迟 50ms，单项时长 200ms（SpringMotion
+/// 默认时长），曲线使用 [SpringMotion.defaultCurve]。
 class _StaggeredPathList extends StatefulWidget {
   const _StaggeredPathList({
     required this.levels,
@@ -215,17 +219,31 @@ class _StaggeredPathList extends StatefulWidget {
   State<_StaggeredPathList> createState() => _StaggeredPathListState();
 }
 
-class _StaggeredPathListState extends State<_StaggeredPathList> {
-  bool _visible = false;
+class _StaggeredPathListState extends State<_StaggeredPathList>
+    with SingleTickerProviderStateMixin {
+  /// 交错入场动画控制器：驱动每个级别区块的 Interval 子动画。
+  late final AnimationController _staggerController;
+
+  /// 交错项延迟（ms）：第 i 项的延迟为 i * [_staggerDelayMs]。
+  static const int _staggerDelayMs = 50;
+
+  /// 单项入场时长（ms），取自 [SpringMotion.defaultDuration]。
+  static const int _itemDurationMs =
+      SpringMotion.defaultDuration.inMilliseconds;
 
   @override
   void initState() {
     super.initState();
+    _staggerController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: _computeTotalMs()),
+    );
     if (AnimationUtils.platformReduceMotion) {
-      _visible = true;
+      _staggerController.value = 1.0;
     } else {
+      // 延迟一帧再启动，确保 layout 完成
       Future.delayed(const Duration(milliseconds: 30), () {
-        if (mounted) setState(() => _visible = true);
+        if (mounted) _staggerController.forward();
       });
     }
   }
@@ -233,15 +251,44 @@ class _StaggeredPathListState extends State<_StaggeredPathList> {
   @override
   void didUpdateWidget(covariant _StaggeredPathList oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // 筛选切换时重播入场动画
-    if (oldWidget.selectedLevel != widget.selectedLevel) {
-      if (!AnimationUtils.platformReduceMotion) {
-        setState(() => _visible = false);
-        Future.delayed(const Duration(milliseconds: 30), () {
-          if (mounted) setState(() => _visible = true);
-        });
+    // 筛选切换时重置时长并重播入场动画
+    if (oldWidget.selectedLevel != widget.selectedLevel ||
+        oldWidget.levels.length != widget.levels.length) {
+      _staggerController.duration =
+          Duration(milliseconds: _computeTotalMs());
+      if (AnimationUtils.platformReduceMotion) {
+        _staggerController.value = 1.0;
+      } else {
+        _staggerController.forward(from: 0.0);
       }
     }
+  }
+
+  @override
+  void dispose() {
+    _staggerController.dispose();
+    super.dispose();
+  }
+
+  /// 计算控制器总时长： (count - 1) * 50 + 200 = 最后一项的延迟 + 单项时长。
+  int _computeTotalMs() {
+    if (widget.levels.isEmpty) return _itemDurationMs;
+    return (widget.levels.length - 1) * _staggerDelayMs + _itemDurationMs;
+  }
+
+  /// 计算指定 index 的 Interval：begin = i*50/total, end = (i*50+200)/total。
+  Interval _intervalFor(int index) {
+    final totalMs = _computeTotalMs();
+    if (totalMs <= 0) {
+      return const Interval(0.0, 1.0, curve: SpringMotion.defaultCurve);
+    }
+    final begin = (index * _staggerDelayMs) / totalMs;
+    final end = (index * _staggerDelayMs + _itemDurationMs) / totalMs;
+    return Interval(
+      begin.clamp(0.0, 1.0).toDouble(),
+      end.clamp(0.0, 1.0).toDouble(),
+      curve: SpringMotion.defaultCurve,
+    );
   }
 
   @override
@@ -254,10 +301,14 @@ class _StaggeredPathListState extends State<_StaggeredPathList> {
         final levelCourses = widget.byLevel[level] ?? <Course>[];
         final isLast = index == widget.levels.length - 1;
 
+        // 通过 CurveTween(Interval) 派生子动画，无需手动 dispose。
+        final animation = _staggerController.drive(
+          CurveTween(curve: _intervalFor(index)),
+        );
+
         return _AnimatedLevelSection(
           key: ValueKey('level_${level.value}_$index'),
-          index: index,
-          visible: _visible,
+          animation: animation,
           child: _LevelSection(
             level: level,
             courses: levelCourses,
@@ -270,52 +321,41 @@ class _StaggeredPathListState extends State<_StaggeredPathList> {
   }
 }
 
-/// 单个级别区块的交错入场包装。
+/// 单个级别区块的交错入场包装：[FadeTransition] + [SlideTransition]。
+///
+/// 入场效果：opacity 0→1 + translate y(16px → 0)，duration 为
+/// [SpringMotion.defaultDuration]（200ms），curve 为
+/// [SpringMotion.defaultCurve]。reduceMotion 下直接返回 child。
 class _AnimatedLevelSection extends StatelessWidget {
   const _AnimatedLevelSection({
     super.key,
-    required this.index,
-    required this.visible,
+    required this.animation,
     required this.child,
   });
 
-  final int index;
-  final bool visible;
-  final Widget child;
+  /// 父级 [AnimationController] 经 Interval 过滤后的子动画（0→1）。
+  final Animation<double> animation;
 
-  /// 交错项延迟 50ms（规则 2）。
-  static const Duration _staggerDelay = Duration(milliseconds: 50);
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
     if (reduceMotion) return child;
 
-    final delay = Duration(milliseconds: _staggerDelay.inMilliseconds * index);
-    final totalDelay = delay;
+    // SlideTransition 使用相对偏移，0.05 ≈ 16px（典型卡片高度 ≈ 320px）。
+    final slideAnimation = animation.drive(
+      Tween<Offset>(
+        begin: const Offset(0, 0.05),
+        end: Offset.zero,
+      ),
+    );
 
-    return AnimatedOpacity(
-      opacity: visible ? 1.0 : 0.0,
-      duration: SpringMotion.gentleDuration,
-      curve: SpringMotion.entranceCurve,
-      child: AnimatedSlide(
-        offset: visible ? Offset.zero : const Offset(0, 0.08),
-        duration: SpringMotion.gentleDuration,
-        curve: Interval(
-          (totalDelay.inMilliseconds / 600).clamp(0.0, 1.0).toDouble(),
-          1.0,
-          curve: SpringMotion.entranceCurve,
-        ),
-        child: AnimatedScale(
-          scale: visible ? 1.0 : 0.96,
-          duration: SpringMotion.gentleDuration,
-          curve: Interval(
-            (totalDelay.inMilliseconds / 600).clamp(0.0, 1.0).toDouble(),
-            1.0,
-            curve: SpringMotion.entranceCurve,
-          ),
-          child: child,
-        ),
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: slideAnimation,
+        child: child,
       ),
     );
   }
@@ -483,7 +523,11 @@ class _LevelSection extends StatelessWidget {
   }
 }
 
-/// 连接线（从当前级别圆点延伸到下一个），带渐变。
+/// 连接线（从当前级别圆点延伸到下一个），带渐变与流光虚线动画。
+///
+/// 入场时高度从 0 弹性增长到 [widget.height]；入场完成后启动 2 秒循环的
+/// 流光动画，通过 [_FlowingDashedLinePainter] 沿垂直路径绘制带 dashOffset
+/// 偏移的虚线段，形成"光流向下"的视觉。reduceMotion 下降级为静态连接线。
 class _LevelConnector extends StatefulWidget {
   const _LevelConnector({
     required this.gradient,
@@ -497,25 +541,44 @@ class _LevelConnector extends StatefulWidget {
   State<_LevelConnector> createState() => _LevelConnectorState();
 }
 
-class _LevelConnectorState extends State<_LevelConnector> {
+class _LevelConnectorState extends State<_LevelConnector>
+    with SingleTickerProviderStateMixin {
   bool _visible = false;
+
+  /// 流光动画控制器：2 秒一周期，repeat 驱动虚线 dashOffset。
+  late final AnimationController _flowController;
 
   @override
   void initState() {
     super.initState();
+    _flowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    );
     if (AnimationUtils.platformReduceMotion) {
       _visible = true;
     } else {
       Future.delayed(const Duration(milliseconds: 200), () {
-        if (mounted) setState(() => _visible = true);
+        if (mounted) {
+          setState(() => _visible = true);
+          _flowController.repeat();
+        }
       });
     }
   }
 
   @override
+  void dispose() {
+    _flowController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
-    final height = reduceMotion ? widget.height : (_visible ? widget.height : 0.0);
+    final height = reduceMotion
+        ? widget.height
+        : (_visible ? widget.height : 0.0);
     return AnimatedContainer(
       duration: SpringMotion.slowDuration,
       curve: SpringMotion.entranceCurve,
@@ -532,7 +595,81 @@ class _LevelConnectorState extends State<_LevelConnector> {
           ],
         ),
       ),
+      // reduceMotion 下不叠加流光，保持静态渐变连接线。
+      child: reduceMotion
+          ? null
+          : AnimatedBuilder(
+              animation: _flowController,
+              builder: (context, _) {
+                return CustomPaint(
+                  painter: _FlowingDashedLinePainter(
+                    color: widget.gradient.first,
+                    progress: _flowController.value,
+                  ),
+                );
+              },
+            ),
     );
+  }
+}
+
+/// 流光虚线绘制器：沿垂直路径绘制流动的虚线段，形成流光效果。
+///
+/// 使用 [PathMetric] 计算路径长度并按 [progress] 偏移虚线起点，
+/// 实现 dashOffset 动画。虚线颜色叠加在背景渐变之上形成"光流"观感。
+class _FlowingDashedLinePainter extends CustomPainter {
+  _FlowingDashedLinePainter({
+    required this.color,
+    required this.progress,
+  });
+
+  /// 虚线颜色（通常取级别渐变中较亮的一端）。
+  final Color color;
+
+  /// 动画进度 [0, 1]，驱动虚线起点偏移。
+  final double progress;
+
+  static const double _dashLength = 6.0;
+  static const double _gapLength = 4.0;
+  static const double _cycle = _dashLength + _gapLength;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final pathLength = size.height;
+    if (pathLength <= 0) return;
+
+    final centerX = size.width / 2;
+    final path = Path()
+      ..moveTo(centerX, 0)
+      ..lineTo(centerX, pathLength);
+
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = size.width
+      ..strokeCap = StrokeCap.round;
+
+    // dashOffset：progress 0→1 对应一个周期的偏移，使虚线视觉上向下流动。
+    final offset = (progress * _cycle) % _cycle;
+    final metrics = path.computeMetrics();
+    for (final metric in metrics) {
+      var start = -offset;
+      while (start < metric.length) {
+        final end = start + _dashLength;
+        final clippedStart = start.clamp(0.0, metric.length);
+        final clippedEnd = end.clamp(0.0, metric.length);
+        if (clippedEnd > clippedStart) {
+          final dashPath = metric.extractPath(clippedStart, clippedEnd);
+          canvas.drawPath(dashPath, paint);
+        }
+        start += _cycle;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _FlowingDashedLinePainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.color != color;
   }
 }
 
@@ -594,103 +731,138 @@ class _CourseCardState extends ConsumerState<_CourseCard> {
     final theme = Theme.of(context);
     final total = _totalKnowledgePoints;
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
+    // 级别色条颜色：按 CourseLevel 映射到 LingxiColors 语义色。
+    final levelColor =
+        widget.course.level.levelColor(context.lingxiColors);
+    // 进度条渐变统一使用主题成功色（绿 → 深绿）。
+    final successGradient = context.lingxiGradients.success;
 
     return LingxiCard(
       animateEntrance: !reduceMotion,
       entranceDelay: Duration(milliseconds: 40 + widget.indexInLevel * 50),
+      padding: EdgeInsets.zero,
       onTap: () {
         final lessonId = _firstLessonId;
         if (lessonId == null) return;
         AnimationUtils.hapticMedium();
         context.go('${RouteNames.learningPath}/${widget.course.id}/$lessonId');
       },
-      child: FutureBuilder<List<ProgressEntry>>(
-        future: ref.read(progressRepositoryProvider).getProgress(widget.course.id),
-        builder: (context, snapshot) {
-          final completed = snapshot.data
-                  ?.where((entry) => entry.status == 'completed')
-                  .length ??
-              0;
-          final progress = total > 0 ? completed / total : 0.0;
-          final isCompleted = progress >= 1.0 && total > 0;
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 4px 级别色条（垂直），带左上/左下圆角贴合卡片圆角。
+            Container(
+              width: 4,
+              decoration: BoxDecoration(
+                color: levelColor,
+                borderRadius: BorderRadius.only(
+                  topLeft:
+                      ShapeVariants.roundedLarge.borderRadius.topLeft,
+                  bottomLeft:
+                      ShapeVariants.roundedLarge.borderRadius.bottomLeft,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: FutureBuilder<List<ProgressEntry>>(
+                  future: ref
+                      .read(progressRepositoryProvider)
+                      .getProgress(widget.course.id),
+                  builder: (context, snapshot) {
+                    final completed = snapshot.data
+                            ?.where((entry) => entry.status == 'completed')
+                            .length ??
+                        0;
+                    final progress = total > 0 ? completed / total : 0.0;
+                    final isCompleted = progress >= 1.0 && total > 0;
 
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // 渐变圆形图标
-                  _CourseIcon(
-                    icon: widget.course.icon,
-                    gradient: widget.gradient,
-                    isCompleted: isCompleted,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
+                    return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
+                            // 渐变圆形图标
+                            _CourseIcon(
+                              icon: widget.course.icon,
+                              gradient: widget.gradient,
+                              isCompleted: isCompleted,
+                            ),
+                            const SizedBox(width: 12),
                             Expanded(
-                              child: Text(
-                                widget.course.title,
-                                style: theme.textTheme.titleMedium?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          widget.course.title,
+                                          style: theme.textTheme.titleMedium
+                                              ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      if (isCompleted)
+                                        _CheckmarkPop(
+                                            visible: _initiallyVisible),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    widget.course.description,
+                                    style: theme.textTheme.bodySmall?.copyWith(
+                                      color:
+                                          theme.colorScheme.onSurfaceVariant,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
-                            if (isCompleted)
-                              _CheckmarkPop(visible: _initiallyVisible),
                           ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.course.description,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
+                        const SizedBox(height: 12),
+                        // 动画进度条：使用 LingxiGradients.success 渐变。
+                        AnimatedProgressBar(
+                          progress: progress,
+                          height: 8,
+                          gradient: successGradient,
+                          enablePulse: progress > 0 && progress < 1.0,
+                          borderRadius: ShapeVariants
+                              .roundedSmall.borderRadius.topLeft.x,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Text(
+                              '$completed / $total 知识点',
+                              style: theme.textTheme.bodySmall,
+                            ),
+                            const Spacer(),
+                            if (progress > 0 && progress < 1.0)
+                              Text(
+                                '${(progress * 100).toInt()}%',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: widget.gradient.last,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              // 动画进度条（替代 LinearProgressIndicator）
-              AnimatedProgressBar(
-                progress: progress,
-                height: 8,
-                gradient: LinearGradient(
-                  colors: widget.gradient,
+                    );
+                  },
                 ),
-                enablePulse: progress > 0 && progress < 1.0,
-                borderRadius: ShapeVariants.roundedSmall.borderRadius.topLeft.x,
               ),
-              const SizedBox(height: 6),
-              Row(
-                children: [
-                  Text(
-                    '$completed / $total 知识点',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                  const Spacer(),
-                  if (progress > 0 && progress < 1.0)
-                    Text(
-                      '${(progress * 100).toInt()}%',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: widget.gradient.last,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                ],
-              ),
-            ],
-          );
-        },
+            ),
+          ],
+        ),
       ),
     );
   }

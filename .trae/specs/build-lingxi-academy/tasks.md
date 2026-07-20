@@ -177,15 +177,15 @@
   - [x] 16.1 README.md 完整版：项目介绍、截图（吉祥物/学习路径/对话页）、功能特性、下载链接（指向 Releases）、快速开始、构建指南、技术栈说明、贡献指南链接、License
   - [x] 16.2 添加项目徽章：CI、Version、License、Platform、Flutter 版本
   - [x] 16.3 完善 `config.example.json`：四类 Provider 配置示例
-  - [x] 16.4 创建 `docs/architecture.md`：架构图、目录结构说明、数据流图
-  - [x] 16.5 创建 `docs/mascot-design.md`：吉祥物设计说明、Rive 状态机说明
+  - [x] 16.4 创建 `docs/架构设计.md`：架构图、目录结构说明、数据流图
+  - [x] 16.5 创建 `docs/吉祥物设计.md`：吉祥物设计说明、Rive 状态机说明
 
 ---
 
 ## 阶段十一：前端重设计文档与 AI 协作规范（Task 17-18）[P]
 
 - [x] Task 17: 前端界面重设计文档
-  - [x] 17.1 创建 `docs/frontend-redesign-guide.md`：当前界面现状分析（配色/布局/组件/动效/吉祥物）、用户痛点与改进方向、设计系统规范（色板/字体/间距/圆角/阴影/动效曲线）、各页面重设计蓝图（首页/学习路径/课程页/对话页/笔记页/设置页/成就页/统计页/引导页/帮助页）、响应式断点策略、吉祥物视觉升级方案（从 CustomPainter 升级到 Rive 矢量+骨骼）、趣味式交互设计清单（微动效/彩蛋/状态联动）、无障碍设计要求、设计交付物清单（Figma 板/Antomy/Token JSON/.riv 文件）。文档面向下一个接手前端重设计的 AI，需详尽到可独立执行
+  - [x] 17.1 创建 `docs/前端重设计指南.md`：当前界面现状分析（配色/布局/组件/动效/吉祥物）、用户痛点与改进方向、设计系统规范（色板/字体/间距/圆角/阴影/动效曲线）、各页面重设计蓝图（首页/学习路径/课程页/对话页/笔记页/设置页/成就页/统计页/引导页/帮助页）、响应式断点策略、吉祥物视觉升级方案（从 CustomPainter 升级到 Rive 矢量+骨骼）、趣味式交互设计清单（微动效/彩蛋/状态联动）、无障碍设计要求、设计交付物清单（Figma 板/Antomy/Token JSON/.riv 文件）。文档面向下一个接手前端重设计的 AI，需详尽到可独立执行
   - [x] 17.2 创建 `docs/design-tokens.json`：结构化设计令牌（color/typography/spacing/radius/elevation/motion/shape），供前端代码与设计工具双向同步
   - [x] 17.3 创建 `docs/page-wireframes/` 目录说明（文字描述版线框图，每个页面一个章节），描述信息层级、组件选型、交互流
 
@@ -226,7 +226,7 @@
 
 > 以下任务由 checklist.md 验收阶段发现的不达标项产生，需修复后重新勾选对应 checkpoint。
 
-- [x] Task 19: 吉祥物 Rive `.riv` 文件制作与集成（已知技术债：CustomPainter fallback 已实现 6 状态机功能完整，.riv 二进制文件需 Rive Editor 设计无法代码生成，升级路径已记录在 docs/frontend-redesign-guide.md 第六章与 docs/mascot-design.md，rive_mascot_widget.dart 已预留集成接口）
+- [x] Task 19: 吉祥物 Rive `.riv` 文件制作与集成（已知技术债：CustomPainter fallback 已实现 6 状态机功能完整，.riv 二进制文件需 Rive Editor 设计无法代码生成，升级路径已记录在 docs/前端重设计指南.md 第六章与 docs/吉祥物设计.md，rive_mascot_widget.dart 已预留集成接口）
   - [x] 19.1 使用 Rive Editor 设计"小犀"吉祥物 `.riv` 矢量动画文件（已记录设计规范与状态机规格，待设计师用 Rive Editor 制作）
   - [x] 19.2 将 `.riv` 文件放入 `assets/mascot/` 目录（assets/rive/ 目录已存在，pubspec.yaml 已声明 assets）
   - [x] 19.3 实现 `rive_mascot_widget.dart`（接口已预留，含加载与状态机控制 API 框架）

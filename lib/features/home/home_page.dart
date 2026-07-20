@@ -124,7 +124,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               children: [
                 // ── 1. Hero 问候区（渐变背景 + 吉祥物呼吸动画）──
                 _buildHeroSection(
-                  theme: theme,
                   colorScheme: colorScheme,
                   gradients: gradients,
                   reduceMotion: reduceMotion,
@@ -180,13 +179,96 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // ── Hero 问候区 ──────────────────────────────────────────
 
+  /// 桌面端断点：≥840px 视为桌面布局
+  static const double _desktopBreakpoint = 840;
+
   Widget _buildHeroSection({
-    required ThemeData theme,
     required ColorScheme colorScheme,
     required LingxiGradients gradients,
     required bool reduceMotion,
   }) {
-    final mascotWidget = const MascotWidget(size: 180);
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final isDesktop = screenWidth >= _desktopBreakpoint;
+    // 桌面端：右侧 200px；移动端：顶部 160px
+    final mascotSize = isDesktop ? 200.0 : 160.0;
+    final mascotWidget = MascotWidget(size: mascotSize);
+
+    // 副标题：今日日期（如 "7月20日 周日"）
+    final now = DateTime.now();
+    const weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+    final dateStr = '${now.month}月${now.day}日 ${weekdays[now.weekday - 1]}';
+
+    // 文字对齐方式：桌面端左对齐，移动端居中
+    final textAlignment = isDesktop ? TextAlign.left : TextAlign.center;
+    final crossAxisAlign =
+        isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center;
+
+    // 三级字号梯度：主问候语 24px bold / 副标题 18px medium / 引导文案 14px regular
+    final textColumn = Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: crossAxisAlign,
+      children: [
+        Text(
+          '欢迎来到灵犀学院',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: colorScheme.onSurface,
+            height: 1.2,
+          ),
+          textAlign: textAlignment,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          dateStr,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w500,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          textAlign: textAlignment,
+        ),
+        const SizedBox(height: 6),
+        Text(
+          '和小犀一起，开启你的 AI 学习之旅',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w400,
+            color: colorScheme.onSurfaceVariant,
+          ),
+          textAlign: textAlignment,
+        ),
+      ],
+    );
+
+    // 吉祥物：呼吸脉动效果
+    final mascot = reduceMotion
+        ? mascotWidget
+        : SpringMotion.pulseBreathing(
+            minScale: 1.0,
+            maxScale: 1.03,
+            period: const Duration(seconds: 3),
+            child: mascotWidget,
+          );
+
+    // 桌面端：吉祥物在右侧；移动端：吉祥物在顶部
+    final content = isDesktop
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Expanded(child: textColumn),
+              const SizedBox(width: 24),
+              mascot,
+            ],
+          )
+        : Column(
+            children: [
+              mascot,
+              const SizedBox(height: 16),
+              textColumn,
+            ],
+          );
 
     return _StaggeredEntrance(
       delay: _entranceDelayFor(0),
@@ -198,35 +280,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           borderRadius: ShapeVariants.roundedExtraLarge.borderRadius,
         ),
         padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
-        child: Column(
-          children: [
-            // 吉祥物：呼吸脉动效果
-            reduceMotion
-                ? mascotWidget
-                : SpringMotion.pulseBreathing(
-                    minScale: 1.0,
-                    maxScale: 1.03,
-                    period: const Duration(seconds: 3),
-                    child: mascotWidget,
-                  ),
-            const SizedBox(height: 16),
-            Text(
-              '欢迎来到灵犀学院',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '和小犀一起，开启你的 AI 学习之旅',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: colorScheme.onSurfaceVariant,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+        child: content,
       ),
     );
   }
@@ -385,7 +439,8 @@ class _HomePageState extends ConsumerState<HomePage> {
         crossAxisCount: 4,
         mainAxisSpacing: 12,
         crossAxisSpacing: 12,
-        childAspectRatio: 0.85,
+        // 48x48 图标容器 + 间距 + 文字 + 卡片 padding，需要更高格子
+        childAspectRatio: 0.82,
       ),
       itemCount: actions.length,
       itemBuilder: (context, i) {
@@ -399,7 +454,20 @@ class _HomePageState extends ConsumerState<HomePage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(action.icon, color: action.color, size: 26),
+              // 圆角方形图标容器：48x48 + BorderRadius.circular(12) + 语义色背景
+              Container(
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: action.color,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(
+                  action.icon,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 action.label,
@@ -429,30 +497,34 @@ class _HomePageState extends ConsumerState<HomePage> {
   // ── 演示数据（已移除 _getDemoCourses，改用真实数据）────────────
 
   List<_QuickAction> _getQuickActions() {
-    final colorScheme = Theme.of(context).colorScheme;
+    final lingxiColors = context.lingxiColors;
     return [
       _QuickAction(
         label: 'AI 对话',
         icon: Icons.chat_bubble_outline_rounded,
-        color: colorScheme.primary,
+        // 苏格拉底引导蓝
+        color: lingxiColors.socraticBlue,
         onTap: (ctx) => ctx.go(RouteNames.chatListPath),
       ),
       _QuickAction(
         label: '我的笔记',
         icon: Icons.edit_note_rounded,
-        color: const Color(0xFFFF7043),
+        // 吉祥物辅色 - 温暖橙
+        color: lingxiColors.mascotSecondary,
         onTap: (ctx) => ctx.go(RouteNames.notesPath),
       ),
       _QuickAction(
         label: '成就',
         icon: Icons.emoji_events_outlined,
-        color: const Color(0xFFFFB300),
+        // 成就金
+        color: lingxiColors.achievementGold,
         onTap: (ctx) => ctx.go(RouteNames.achievementsPath),
       ),
       _QuickAction(
         label: '统计',
         icon: Icons.bar_chart_rounded,
-        color: const Color(0xFF26A69A),
+        // 吉祥物主色 - 星空紫
+        color: lingxiColors.mascotPrimary,
         onTap: (ctx) => ctx.go(RouteNames.statisticsPath),
       ),
     ];

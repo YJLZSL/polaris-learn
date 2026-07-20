@@ -30,7 +30,10 @@ class ChatControllerState {
   /// 是否正在接收流式响应。
   final bool isStreaming;
 
-  /// 当前流式响应的累计文本（流式过程中持续更新，50ms 节流）。
+  /// 当前流式响应的累计文本（流式过程中持续更新，动态节流）。
+  ///
+  /// 节流策略：首 token 立即刷新，后续每 50ms 至多刷新一次，
+  /// 流式结束时强制刷新剩余缓冲。
   final String currentAssistantText;
 
   /// 当前对话 id，null 表示尚未创建。
@@ -72,15 +75,19 @@ class ChatControllerState {
 
 /// 对话控制器：管理消息收发、流式渲染、持久化与吉祥物联动。
 ///
-/// 流式响应采用 50ms 节流刷新 UI，避免高频 delta 导致卡顿。
-/// 用户与助手消息均落盘到 [MessageRepository]，对话首次发送时自动
-/// 创建 [Conversations] 记录。
+/// 流式响应采用动态节流刷新 UI：首 token 立即刷新以降低首屏延迟，
+/// 后续每 50ms 至多刷新一次避免高频 delta 卡顿，流式结束时强制刷新
+/// 剩余缓冲确保最终内容完整。用户与助手消息均落盘到
+/// [MessageRepository]，对话首次发送时自动创建 [Conversations] 记录。
 class ChatController extends StateNotifier<ChatControllerState> {
   ChatController(this._ref) : super(const ChatControllerState());
 
   final Ref _ref;
 
-  /// 流式响应节流计时器（50ms）。
+  /// 动态节流间隔（首 token 后续每 50ms 至多刷新一次）。
+  static const Duration _throttleInterval = Duration(milliseconds: 50);
+
+  /// 流式响应节流计时器（动态 50ms）。
   Timer? _flushTimer;
 
   /// 已刷新到状态中的流式文本。
@@ -88,6 +95,12 @@ class ChatController extends StateNotifier<ChatControllerState> {
 
   /// 待刷新的流式文本缓冲。
   final StringBuffer _pending = StringBuffer();
+
+  /// 是否为本次流式的首个 token（首 token 立即刷新）。
+  bool _isFirstToken = true;
+
+  /// 最近一次刷新时间（用于动态节流判断）。
+  DateTime? _lastFlushTime;
 
   /// 当前流式订阅，用于停止与清理。
   StreamSubscription<AiStreamEvent>? _streamSub;
@@ -161,6 +174,8 @@ class ChatController extends StateNotifier<ChatControllerState> {
     _flushed.clear();
     _pending.clear();
     _lastUsageTokens = 0;
+    _isFirstToken = true;
+    _lastFlushTime = null;
     state = state.copyWith(
       isStreaming: true,
       currentAssistantText: '',
@@ -207,8 +222,7 @@ class ChatController extends StateNotifier<ChatControllerState> {
     switch (event) {
       case TextDeltaEvent(:final delta):
         _pending.write(delta);
-        _flushTimer?.cancel();
-        _flushTimer = Timer(const Duration(milliseconds: 50), _flush);
+        _scheduleFlush();
       case UsageEvent(:final totalTokens):
         _lastUsageTokens = totalTokens;
         state = state.copyWith(
@@ -221,12 +235,49 @@ class ChatController extends StateNotifier<ChatControllerState> {
     }
   }
 
-  /// 将缓冲区文本刷新到状态（50ms 节流）。
-  void _flush() {
+  /// 调度流式刷新：首 token 立即刷新，后续 50ms 节流。
+  ///
+  /// - 首 token：立即刷新，记录 `_lastFlushTime`，降低首屏延迟。
+  /// - 后续且距上次刷新 ≥ 50ms：立即刷新。
+  /// - 后续且距上次刷新 < 50ms：调度 `_throttleInterval` 剩余时间后刷新
+  ///   （真正节流，不随 delta 重置 timer，确保 50ms 边界稳定刷新）。
+  void _scheduleFlush() {
+    // 首 token 立即刷新，避免首屏延迟。
+    if (_isFirstToken) {
+      _isFirstToken = false;
+      _flushNow();
+      return;
+    }
+
+    // 已有调度中的 timer，等待其触发即可（避免重复调度导致 debounce）。
+    if (_flushTimer != null && _flushTimer!.isActive) {
+      return;
+    }
+
+    final now = DateTime.now();
+    final lastFlush = _lastFlushTime;
+    if (lastFlush == null || now.difference(lastFlush) >= _throttleInterval) {
+      // 已超过节流间隔，立即刷新。
+      _flushNow();
+      return;
+    }
+
+    // 在节流窗口内，调度剩余时间后刷新（真正节流，不随 delta 重置）。
+    final remaining = _throttleInterval - now.difference(lastFlush);
+    _flushTimer = Timer(remaining, _flushNow);
+  }
+
+  /// 立即刷新缓冲区到状态，并记录刷新时间。
+  ///
+  /// 由 [_scheduleFlush] 或节流 timer 调用；timer 回调中需检查
+  /// [mounted]，避免 Controller 已销毁后修改状态。
+  void _flushNow() {
     _flushTimer = null;
+    if (!mounted) return;
     if (_pending.isEmpty) return;
     _flushed.write(_pending);
     _pending.clear();
+    _lastFlushTime = DateTime.now();
     state = state.copyWith(currentAssistantText: _flushed.toString());
   }
 
@@ -382,8 +433,11 @@ class ChatController extends StateNotifier<ChatControllerState> {
   void reset() {
     _streamSub?.cancel();
     _flushTimer?.cancel();
+    _flushTimer = null;
     _flushed.clear();
     _pending.clear();
+    _isFirstToken = true;
+    _lastFlushTime = null;
     _lastUsageTokens = 0;
     state = const ChatControllerState();
   }

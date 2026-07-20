@@ -47,11 +47,9 @@
 | 依赖 | 版本 | 用途 |
 |------|------|------|
 | `flutter_riverpod` | ^2.5.1 | 状态管理（主框架） |
-| `riverpod_annotation` | ^2.3.5 | Riverpod 代码生成注解 |
 | `go_router` | ^14.2.0 | 声明式路由 |
 | `drift` | ^2.18.0 | 类型安全 SQLite ORM |
 | `sqlite3_flutter_libs` | ^0.5.24 | 桌面端 SQLite FFI |
-| `sqlcipher_flutter_libs` | ^0.6.4 | 加密 SQLite（预留） |
 | `path_provider` | ^2.1.3 | 跨端文件路径 |
 | `path` | ^1.9.0 | 路径处理 |
 | `sqflite` | ^2.3.3+1 | Android 端 SQLite |
@@ -59,16 +57,11 @@
 | `flutter_secure_storage` | ^9.2.2 | API Key 加密存储 |
 | `dio` | ^5.4.3+1 | HTTP 客户端 |
 | `rive` | ^0.13.13 | 吉祥物动画（目标方案） |
-| `lottie` | ^3.1.2 | 备用动画 |
-| `flutter_svg` | ^2.0.10+1 | SVG 渲染 |
 | `flutter_markdown` | ^0.7.2+1 | Markdown 渲染 |
-| `flutter_highlight` | ^0.7.0 | 代码高亮 |
 | `flutter_math_fork` | ^0.7.2 | 数学公式渲染 |
 | `markdown` | ^7.2.0 | Markdown 解析 |
 | `google_fonts` | ^6.2.1 | 字体（Noto Sans SC + Quicksand） |
-| `intl` | ^0.20.2 | 国际化工具 |
 | `shared_preferences` | ^2.2.3 | KV 偏好存储 |
-| `cupertino_icons` | ^1.0.8 | iOS 风格图标 |
 | `flutter_localizations` | sdk | 本地化委托 |
 
 ### 开发依赖（dev_dependencies）
@@ -78,7 +71,6 @@
 | `flutter_lints` | ^4.0.0 | Lint 规则集 |
 | `build_runner` | ^2.4.11 | 代码生成运行器 |
 | `drift_dev` | ^2.18.0 | Drift 代码生成 |
-| `riverpod_generator` | ^2.4.0 | Riverpod 代码生成 |
 | `json_serializable` | ^6.8.0 | JSON 序列化代码生成 |
 | `flutter_launcher_icons` | ^0.13.1 | 应用图标生成 |
 | `flutter_native_splash` | ^2.4.1 | 启动屏生成 |
@@ -104,7 +96,7 @@ lib/
 │   ├── motion/                   #   动画曲线（spring_motion.dart）
 │   ├── providers/                #   全局 Provider（app_providers.dart）
 │   ├── router/                   #   路由（app_router.dart, route_names.dart）
-│   └── theme/                    #   主题（app_theme.dart, lingxi_colors.dart, shape_variants.dart）
+│   └── theme/                    #   主题（app_theme.dart, lingxi_colors.dart, lingxi_gradients.dart, lingxi_elevations.dart, shape_variants.dart）
 ├── data/                         # 数据层：本地持久化与数据模型
 │   ├── db/                       #   Drift 数据库（database.dart, connection.dart, secure_database.dart）
 │   ├── models/                   #   纯数据模型（provider_config.dart, course_content.dart）
@@ -118,7 +110,7 @@ lib/
 │   ├── help/                     #   帮助中心
 │   ├── home/                     #   首页（含 empty_states 子目录）
 │   ├── learning/                 #   学习路径与课时（含 widgets 子目录）
-│   ├── mascot/                   #   吉祥物（controller, state, painter, widget, overlay, rive）
+│   ├── mascot/                   #   吉祥物（controller, state, widget, overlay, rive）
 │   ├── notes/                    #   笔记列表与编辑
 │   ├── onboarding/               #   引导与 API 配置向导
 │   ├── progress/                 #   进度统计、成就服务、连续学习服务
@@ -145,6 +137,55 @@ lib/
 - **新路由**：`lib/core/router/route_names.dart` 加常量 + `lib/core/router/app_router.dart` 加 GoRoute
 - **新通用组件**：`lib/shared/widgets/`
 - **新工具函数**：`lib/shared/utils/`
+
+### 主题系统约定
+
+`lib/core/theme/` 由 5 个文件协同构成完整的双主题（light/dark）系统，所有视觉令牌（颜色 / 渐变 / 阴影 / 形状）均通过 `ThemeExtension` 注入 `ThemeData.extensions`，UI 层统一通过 `BuildContext` 扩展获取，**禁止**硬编码颜色值。
+
+#### 文件职责
+
+| 文件 | 职责 |
+|------|------|
+| `app_theme.dart` | `AppTheme` 静态类，提供 `lightTheme` / `darkTheme`，注册 `LingxiColors` / `LingxiGradients` / `LingxiElevations` 三组 ThemeExtension（按 `brightness` 三元切换 light/dark 实例） |
+| `lingxi_colors.dart` | `LingxiColors extends ThemeExtension<LingxiColors>`，6 个语义色（mascotPrimary 星空紫 / streakFire 火焰红 / achievementGold 成就金 / misconceptionRed 误解红 / successGreen 成功绿 / infoBlue 信息蓝），light/dark 双实例，dark 实例校准 streakFire（0xFFFF7043→0xFFFF8A65）与 achievementGold（0xFFFFE082→0xFFFFD54F）以满足 WCAG AA 对比度 |
+| `lingxi_gradients.dart` | `LingxiGradients extends ThemeExtension<LingxiGradients>`，6 个语义渐变（mascotHero 吉祥物主光 / streakFire 火焰 / achievementGold 成就金 / primarySurface 主色面 / celebration 庆祝 / success 成功），light/dark 双实例 |
+| `lingxi_elevations.dart` | `LingxiElevations extends ThemeExtension<LingxiElevations>`，3 档语义阴影 `subtle` / `elevated` / `highlighted`（light/dark 双实例），同时保留 `level0`~`level4` 兼容旧调用 |
+| `shape_variants.dart` | 形状变体定义 |
+
+#### 使用方式
+
+```dart
+// ✅ 正确：通过 context 扩展获取
+final colors = context.lingxiColors;
+final gradients = context.lingxiGradients;
+final elevations = context.lingxiElevations;
+
+// ❌ 错误：硬编码颜色
+Container(color: Color(0xFF6750A4));
+
+// ❌ 错误：直接引用静态实例（不随主题切换）
+LingxiColors.light.mascotPrimary;
+```
+
+#### LingxiCard elevation 映射
+
+`lib/shared/widgets/lingxi_card.dart` 的 `elevation` 参数映射到 `LingxiElevations`：
+
+| elevation 值 | 对应阴影 | 场景 |
+|--------------|----------|------|
+| 0 | `subtle` | 默认卡片 |
+| 1 | `elevated` | 浮起卡片（hover / 选中） |
+| 2 | `highlighted` | 高亮卡片（hero 区） |
+
+实现上移除 `AnimatedPhysicalModel`，改用 `BoxDecoration.boxShadow` 以确保圆角与阴影在 Web/桌面端一致。
+
+#### 新增主题令牌步骤
+
+1. 在对应 `ThemeExtension` 类（`LingxiColors` / `LingxiGradients` / `LingxiElevations`）添加字段。
+2. 同时更新 `light` 与 `dark` 两个静态实例，**dark 实例必须满足 WCAG AA 对比度**（与背景对比度 ≥ 4.5:1）。
+3. 在 `lerp` 与 `copyWith` 中处理新字段。
+4. 如需 `BuildContext` 扩展，在对应文件底部添加 `extension on BuildContext`。
+5. **不要**在业务代码中硬编码颜色值，统一走 ThemeExtension。
 
 ---
 
@@ -291,7 +332,7 @@ Table（database.dart）  →  Repository（repositories/）  →  Provider（db
 - **Repository**：每个表对应一个 Repository 类，构造函数接收 `LingxiDatabase`，**只暴露业务语义化方法**，不直接暴露 `db.select/update`。
 - **Provider**：在 `lib/data/providers/db_providers.dart` 注册，依赖 `databaseProvider` 单例。
 
-### 当前表清单（schemaVersion = 1）
+### 当前表清单（schemaVersion = 3，以 `database.dart` 实际值为准）
 
 | 表 | 用途 |
 |----|------|
@@ -318,14 +359,14 @@ Table（database.dart）  →  Repository（repositories/）  →  Provider（db
 
 ```dart
 @override
-int get schemaVersion => 1;  // 每次表结构变更递增
+int get schemaVersion => 3;  // 每次表结构变更递增（以 database.dart 实际值为准）
 
 @override
 MigrationStrategy get migration => MigrationStrategy(
   onCreate: (m) async => await m.createAll(),
   onUpgrade: (m, from, to) async {
     // 示例：if (from < 2) { await m.addColumn(...); }
-    // 当前仅 v1，无迁移步骤
+    // 当前 v3，按版本号顺序执行迁移
   },
   beforeOpen: (details) async {
     await customStatement('PRAGMA foreign_keys = ON');
@@ -387,9 +428,14 @@ factory LingxiDatabase.forTesting(QueryExecutor e) => LingxiDatabase(e);
 
 2. **在 `ProviderType` 枚举添加类型**（`lib/data/models/provider_config.dart`）：
    ```dart
-   deepseek('deepseek', 'DeepSeek'),
+   deepseek(
+     'deepseek',
+     'DeepSeek',
+     'https://api.deepseek.com/v1',
+     'deepseek-chat',
+   ),
    ```
-   同步更新 `_defaultBaseUrl` 与 `_defaultModel` 映射。
+   枚举已通过 enhanced enum 持有 `defaultBaseUrl` 与 `defaultModel` 属性，无需额外维护静态 Map。
 
 3. **在 `AiProviderRegistry._createProvider` 注册**（`lib/features/ai/ai_provider_registry.dart`）：
    ```dart
@@ -439,7 +485,7 @@ factory LingxiDatabase.forTesting(QueryExecutor e) => LingxiDatabase(e);
 
 ### 新页面集成吉祥物的步骤
 
-1. 在页面顶部或合适位置嵌入 `MascotWidget`（或 `RiveMascotWidget` / `MascotOverlay`）。
+1. 在页面顶部或合适位置嵌入 `MascotWidget`（或 `MascotOverlay`）。
 2. 通过 `ref.watch(mascotControllerProvider)` 订阅状态。
 3. 通过 `ref.read(mascotControllerProvider.notifier).setMood(...)` 切换情绪。
 4. **不要**在页面内自行管理吉祥物状态，统一走 `mascotControllerProvider`。
@@ -712,13 +758,12 @@ test(mascot): 补充 MascotController 彩蛋触发测试
 
 | 项 | 现状 | 待优化方向 |
 |----|------|------------|
-| 吉祥物动画 | `MascotPainter`（CustomPainter）作为 fallback，`RiveMascotWidget` 为目标方案，目前双轨并存 | 待 Rive `.riv` 资源完善后移除 CustomPainter fallback，统一走 Rive |
+| 吉祥物动画 | `MascotWidget` 已统一入口，`_MascotPainter` 作为内部 fallback | 待 Rive `.riv` 资源完善后移除 `_MascotPainter` |
 | 图表 | `fl_chart` 未引入，统计页图表用 `CustomPainter` 手绘 | 待引入 `fl_chart`，重写统计页图表 |
 | 国际化 | UI 文案大量硬编码中文，仅 `app.dart` 配置了 `supportedLocales` 与 delegates | 待抽取 `intl` ARB 文件，启用 `flutter gen-l10n` |
 | 课程内容 | 仅 L0 Python 示例课程，`assets/courses/` 内容单薄 | 待扩充更多课程（L1/L2、其他语言） |
 | 数据导出 | `file_picker` / `share_plus` 未引入，导出仅写入应用文档目录返回路径 | 待引入 `share_plus` 支持系统分享，或 `file_picker` 支持自定义保存位置 |
 | Riverpod 代码生成 | 已引入 `riverpod_generator` 但未广泛使用 `@riverpod` 注解，仍以手写 Provider 为主 | 待逐步迁移到代码生成风格 |
-| ProviderType 扩展 | 枚举与 `_defaultBaseUrl`/`_defaultModel` 分离，新增类型需改多处 | 可考虑用枚举增强属性封装 |
 | iOS / Linux | 不支持 | 当前不计划支持，PR 不要引入 iOS/Linux 专属依赖 |
 
 ---

@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
+import 'package:lingxi_academy/core/theme/lingxi_elevations.dart';
 import 'package:lingxi_academy/core/theme/shape_variants.dart';
 
 /// 卡片变体
@@ -36,6 +37,7 @@ class LingxiCard extends StatefulWidget {
     this.entranceDelay = Duration.zero,
     this.backgroundGradient,
     this.borderColor,
+    this.elevation = 1,
   });
 
   /// 子内容
@@ -67,6 +69,17 @@ class LingxiCard extends StatefulWidget {
 
   /// 边框颜色
   final Color? borderColor;
+
+  /// 卡片阴影档位
+  ///
+  /// 映射到 [LingxiElevations] 的 3 档语义阴影：
+  /// - 0 → [LingxiElevations.subtle]：平铺卡片
+  /// - 1 → [LingxiElevations.elevated]：悬浮卡片（默认）
+  /// - 2 → [LingxiElevations.highlighted]：强调卡片/对话框
+  ///
+  /// 可交互卡片在 hover 时会自动升级到 [LingxiElevations.highlighted]，
+  /// press 时降级到 [LingxiElevations.subtle]，以提供视觉反馈。
+  final int elevation;
 
   @override
   State<LingxiCard> createState() => _LingxiCardState();
@@ -104,6 +117,43 @@ class _LingxiCardState extends State<LingxiCard> {
     };
   }
 
+  /// 解析当前应使用的阴影列表
+  ///
+  /// 基础阴影来自 [widget.elevation] 映射到 [LingxiElevations] 的 3 档语义阴影
+  /// （0→subtle, 1→elevated, 2→highlighted）。
+  /// 当卡片可交互且未启用 reduceMotion 时：
+  /// - hover 状态升级到 [LingxiElevations.highlighted]
+  /// - press 状态降级到 [LingxiElevations.subtle]
+  /// 以提供视觉反馈。
+  List<BoxShadow> _resolveShadows(
+    BuildContext context,
+    bool clickable,
+    bool reduceMotion,
+  ) {
+    final elevations = Theme.of(context).extension<LingxiElevations>() ??
+        LingxiElevations.light;
+
+    // 基础阴影：根据 widget.elevation 选择档位
+    final List<BoxShadow> base = switch (widget.elevation) {
+      0 => elevations.subtle,
+      2 => elevations.highlighted,
+      _ => elevations.elevated,
+    };
+
+    if (!clickable || reduceMotion) {
+      return base;
+    }
+
+    // 交互态：hover → highlighted，press → subtle
+    if (_pressed) {
+      return elevations.subtle;
+    }
+    if (_hovering) {
+      return elevations.highlighted;
+    }
+    return base;
+  }
+
   void _handleTap() {
     AnimationUtils.hapticLight();
     widget.onTap?.call();
@@ -118,16 +168,16 @@ class _LingxiCardState extends State<LingxiCard> {
 
     // 动画值
     double scale = 1.0;
-    double elevation = 0;
     if (clickable && !reduceMotion) {
       if (_pressed) {
         scale = 0.98;
-        elevation = 0;
       } else if (_hovering) {
         scale = 1.015;
-        elevation = 1;
       }
     }
+
+    // 解析当前阴影（基础档位 + 交互态切换）
+    final shadows = _resolveShadows(context, clickable, reduceMotion);
 
     Widget content = Padding(
       padding: widget.padding ?? const EdgeInsets.all(16),
@@ -140,6 +190,7 @@ class _LingxiCardState extends State<LingxiCard> {
       borderRadius: borderRadius,
       clickable: clickable,
       content: content,
+      shadows: shadows,
     );
 
     // 毛玻璃
@@ -170,16 +221,7 @@ class _LingxiCardState extends State<LingxiCard> {
             scale: scale,
             duration: SpringMotion.fastDuration,
             curve: SpringMotion.fastCurve,
-            child: AnimatedPhysicalModel(
-              duration: SpringMotion.fastDuration,
-              curve: SpringMotion.fastCurve,
-              elevation: elevation,
-              color: Colors.transparent,
-              shadowColor: Colors.black.withValues(alpha: 0.12),
-              borderRadius: borderRadius,
-              shape: BoxShape.rectangle,
-              child: card,
-            ),
+            child: card,
           ),
         ),
       );
@@ -217,6 +259,7 @@ class _LingxiCardState extends State<LingxiCard> {
     required BorderRadius borderRadius,
     required bool clickable,
     required Widget content,
+    required List<BoxShadow> shadows,
   }) {
     final hasBorder = widget.borderColor != null;
     final hasGradient = widget.backgroundGradient != null;
@@ -229,6 +272,7 @@ class _LingxiCardState extends State<LingxiCard> {
           gradient: widget.backgroundGradient,
           borderRadius: borderRadius,
           border: hasBorder ? Border.all(color: widget.borderColor!) : null,
+          boxShadow: shadows,
         ),
         child: clickable
             ? InkWell(

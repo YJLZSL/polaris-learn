@@ -40,7 +40,7 @@
 
 ## 阶段四：吉祥物系统
 
-- [x] Rive `.riv` 文件含 6 状态机：idle/happy/thinking/sad/celebrate/curious（注：CustomPainter 矢量绘制 fallback 已实现 6 状态，.riv 文件为已知技术债，升级路径见 docs/frontend-redesign-guide.md 第六章）
+- [x] Rive `.riv` 文件含 6 状态机：idle/happy/thinking/sad/celebrate/curious（注：CustomPainter 矢量绘制 fallback 已实现 6 状态，.riv 文件为已知技术债，升级路径见 docs/前端重设计指南.md 第六章）
 - [x] MascotWidget 可加载 `.riv` 并暴露状态切换 API（注：状态切换 API 已实现 setMood/triggerTap/setAiThinking，rive_mascot_widget.dart 已预留 Rive 集成接口）
 - [x] 单次点击吉祥物随机播放挥手/眨眼/蹦跳
 - [x] 连续点击 5 次触发隐藏彩蛋动画
@@ -139,13 +139,13 @@
 ## 阶段十二：文档
 
 - [x] README.md 完整版含截图、下载链接、构建指南
-- [x] docs/architecture.md 架构图与目录结构说明
-- [x] docs/mascot-design.md 吉祥物设计说明
+- [x] docs/架构设计.md 架构图与目录结构说明
+- [x] docs/吉祥物设计.md 吉祥物设计说明
 - [x] config.example.json 四类 Provider 配置示例
 
 ## 阶段十三：前端重设计文档与 AI 协作规范
 
-- [x] docs/frontend-redesign-guide.md 含当前现状分析、设计系统规范、各页面重设计蓝图
+- [x] docs/前端重设计指南.md 含当前现状分析、设计系统规范、各页面重设计蓝图
 - [x] docs/design-tokens.json 结构化设计令牌（color/typography/spacing/radius/elevation/motion/shape）
 - [x] docs/page-wireframes/ 含每个页面的文字线框图描述
 - [x] AGENTS.md 含项目规范、命名约定、分层规则、安全红线、常用命令
@@ -156,7 +156,7 @@
 
 ## 跨阶段验收（Spec 对齐）
 
-- [x] 吉祥物"小犀"非像素拼接，Rive 矢量+骨骼动画，三端清晰（注：CustomPainter 矢量绘制已实现非像素拼接+三端清晰，Rive 矢量+骨骼动画为已知技术债，升级路径见 docs/frontend-redesign-guide.md 第六章与 docs/mascot-design.md）
+- [x] 吉祥物"小犀"非像素拼接，Rive 矢量+骨骼动画，三端清晰（注：CustomPainter 矢量绘制已实现非像素拼接+三端清晰，Rive 矢量+骨骼动画为已知技术债，升级路径见 docs/前端重设计指南.md 第六章与 docs/吉祥物设计.md）
 - [x] 苏格拉底式引导模式开启时不直接给答案
 - [x] 多 Provider 支持 OpenAI/Claude/Gemini/Ollama
 - [x] API Key 硬件级加密，绝不上传/不入日志/不入仓库
