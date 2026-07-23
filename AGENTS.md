@@ -14,7 +14,7 @@
 - **核心理念**：
   - **非商业化**：项目不以盈利为目的，不内置任何付费墙或广告。
   - **用户自备 API**：应用本身不分发 AI 服务，用户需自行在设置中配置自己的 API Key（OpenAI 兼容 / Anthropic / Gemini / Ollama）。API Key 仅本地加密存储，绝不上传。
-- **三端支持**：Android + Windows + macOS。**不包含 iOS 与 Linux**，提交 PR 时请不要引入仅 iOS/Linux 可用的依赖或插件。
+- **双端支持**：Android + Windows。**不包含 iOS / Linux / macOS**，提交 PR 时请不要引入仅 iOS/Linux/macOS 可用的依赖或插件。
 
 ---
 
@@ -39,7 +39,6 @@
 | 开发工具 | Trae / VS Code / Android Studio（任选其一，需安装 Flutter 与 Dart 插件） |
 | Android | minSdkVersion 24（见 `pubspec.yaml` 中 `flutter_launcher_icons.min_sdk_android`） |
 | Windows | Windows 10 及以上，需启用开发者模式 |
-| macOS | 11.0 及以上，需 Xcode 命令行工具 |
 
 ### Flutter SDK 路径
 
@@ -126,6 +125,7 @@ lib/
 │   ├── notes/                    #   笔记列表与编辑
 │   ├── onboarding/               #   引导与 API 配置向导
 │   ├── progress/                 #   进度统计、成就服务、连续学习服务
+│   ├── recommendation/           #   学习推荐引擎（基于学习历史与进度）
 │   └── settings/                 #   设置、API 设置、数据导出、Provider 编辑
 └── shared/                       # 共享层：跨 feature 复用
     ├── utils/                    #   工具（responsive.dart, misconception_parser.dart）
@@ -326,7 +326,7 @@ Widget build(BuildContext context, WidgetRef ref) {
 ### ShellRoute 嵌套路由
 
 - 主导航页面（首页、学习、对话、笔记、成就、统计、设置、API 设置、帮助）嵌套在 `ShellRoute` 下，由 `_AppShell` 提供导航壳。
-- `_AppShell` 根据屏幕宽度（≥840）切换 `NavigationRail`（桌面）与 `NavigationBar`（移动）。
+- `_AppShell` 根据屏幕宽度（≥1024）切换 `NavigationRail`（桌面）与 `NavigationBar`（移动）。
 - onboarding 与 api-setup 不在 ShellRoute 内，无导航壳。
 
 ---
@@ -406,7 +406,7 @@ DriftDatabaseOptions get options =>
 
 - 数据库文件：`getApplicationDocumentsDirectory()/lingxi_academy.db`
 - **Android**：使用 `sqflite`；旧版本（<7.0）调用 `applyWorkaroundToOpenSqlite3OnOldAndroidVersions()`。
-- **桌面（Windows/macOS）**：使用 `sqlite3_flutter_libs` 提供的 FFI。
+- **桌面（Windows）**：使用 `sqlite3_flutter_libs` 提供的 FFI。
 - 通过 `NativeDatabase.createInBackground` 在后台 isolate 打开，避免阻塞 UI。
 - **生产环境关闭 SQL 日志**（`logStatements: false`）。
 
@@ -806,7 +806,6 @@ flutter test --coverage                               # 生成覆盖率（covera
 # 构建（release）
 flutter build apk --release                           # Android
 flutter build windows --release                       # Windows
-flutter build macos --release                         # macOS
 
 # 图标与启动屏
 flutter pub run flutter_launcher_icons                # 生成应用图标
@@ -818,7 +817,6 @@ flutter pub run flutter_native_splash:create          # 生成启动屏
 ```bash
 flutter run -d <device-id>                            # 指定设备运行
 flutter run -d windows                                # Windows 桌面
-flutter run -d macos                                  # macOS 桌面
 flutter run -d <android-device-id>                    # Android 设备
 flutter devices                                       # 列出可用设备
 ```
@@ -846,7 +844,7 @@ flutter devices                                       # 列出可用设备
    - `ProviderConfig.toJson` 的字段过滤
    - `DataExportService` 的 apiKey 断言
    - `database.dart` 的 `storeDateTimeAsText`
-8. **不引入新依赖**：除非任务明确要求，不要在 `pubspec.yaml` 添加新包。如确需添加，先确认是否支持 Android + Windows + macOS 三端。
+8. **不引入新依赖**：除非任务明确要求，不要在 `pubspec.yaml` 添加新包。如确需添加，先确认是否支持 Android + Windows 双端。
 
 ### 修改后
 
@@ -861,7 +859,7 @@ flutter devices                                       # 列出可用设备
 - ❌ 不要在代码中硬编码真实 API Key（即使是测试用）。
 - ❌ 不要 `print` 请求/响应内容（用 `debugPrint` + `SecureLogInterceptor`）。
 - ❌ 不要绕过 `analysis_options.yaml` 的 lint 规则（除非有充分理由并注释说明）。
-- ❌ 不要引入仅 iOS/Linux 可用的依赖。
+- ❌ 不要引入仅 iOS/Linux/macOS 可用的依赖。
 - ❌ 不要直接 push 到 `main` 分支。
 - ❌ 不要在未阅读相关代码的情况下"凭直觉"修改。
 

@@ -136,12 +136,13 @@
   - **执行结果**: 三处版本号同步升级至 0.3.0
   - **依赖**: Task 15
 
-- [ ] Task 17: 创建 GitHub Release v0.3.0
-  - [ ] SubTask 17.1: 通过 `RequestAuthorization` 请求 GitHub 插件访问权限（若未授权）
-  - [ ] SubTask 17.2: 准备中文 Release notes，总结 4 大方向优化（版本治理 / 美术打磨 / 动画丝滑 / 测试补全）
-  - [ ] SubTask 17.3: 创建 `v0.3.0` tag 并 push 到 origin
-  - [ ] SubTask 17.4: 使用 `trae-remote-official:github` 插件创建 GitHub Release v0.3.0（仅源代码，不附带构建产物）
-  - [ ] SubTask 17.5: 验证 Release 已创建，URL 可访问
+- [x] Task 17: 创建 GitHub Release v0.3.0
+  - [x] SubTask 17.1: 通过 `RequestAuthorization` 请求 GitHub 插件访问权限（若未授权） — gh CLI 已认证，无需额外授权
+  - [x] SubTask 17.2: 准备中文 Release notes，总结 4 大方向优化（版本治理 / 美术打磨 / 动画丝滑 / 测试补全）
+  - [x] SubTask 17.3: 创建 `v0.3.0` tag 并 push 到 origin — tag v0.3.0 已 push
+  - [x] SubTask 17.4: 使用 `trae-remote-official:github` 插件创建 GitHub Release v0.3.0（仅源代码，不附带构建产物） — 通过 gh CLI 创建
+  - [x] SubTask 17.5: 验证 Release 已创建，URL 可访问 — https://github.com/YJLZSL/polaris-learn/releases/tag/v0.3.0
+  - **执行结果**: GitHub Release v0.3.0 已创建，Latest 指向 v0.3.0，GitHub Releases 现仅剩 v0.2.0 / v0.3.0
   - **依赖**: Task 1-16 全部完成
 
 ---
@@ -167,4 +168,11 @@
 
 # 执行结果
 
-（待执行后填充）
+✅ 全部 17 个任务完成
+✅ GitHub Release v0.3.0 已创建：https://github.com/YJLZSL/polaris-learn/releases/tag/v0.3.0
+✅ commit hash: 5187355
+✅ tag: v0.3.0（Latest）
+✅ GitHub Releases 现仅剩 v0.2.0 / v0.3.0（清理了 5 个 fork 前遗留 Release）
+✅ 新增 10 个测试文件，149 个测试用例
+✅ 安全红线全部未触碰
+✅ checklist 全部 `[x]` 满足（59 项）

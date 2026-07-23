@@ -2,7 +2,7 @@ name: lingxi_academy
 description: 灵犀学院 - 引导式 AI 学习应用
 publish_to: 'none'
 
-version: 0.3.0+1
+version: 0.4.0+1
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -73,7 +73,6 @@ flutter:
 flutter_launcher_icons:
   android: true
   windows: true
-  macos: true
   image_path: "assets/images/app_icon.png"
   min_sdk_android: 24
 

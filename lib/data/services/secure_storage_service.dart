@@ -5,8 +5,6 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 /// 基于 `flutter_secure_storage` 封装，利用平台级安全存储：
 /// - Android：Android Keystore
 /// - Windows：DPAPI
-/// - macOS：Keychain
-/// - iOS：Keychain
 ///
 /// 命名规范：所有 API Key 以 `api_key_<providerType>` 作为存储键，
 /// 例如 `api_key_openai_compatible`。

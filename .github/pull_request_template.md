@@ -42,7 +42,7 @@
 - [ ] 不含 API Key 或敏感信息
 - [ ] 不含 `print()` 调用（使用 `debugPrint`）
 - [ ] Drift 表变更已递增 `schemaVersion` 并添加 migration
-- [ ] 新增依赖已确认支持 Android + Windows + macOS 三端
+- [ ] 新增依赖已确认支持 Android + Windows 双端
 - [ ] 已更新 `AGENTS.md` 中对应的依赖表（如修改了 pubspec）
 
 ## 相关 Issue

@@ -136,7 +136,7 @@ class ApiSetupWizardPage extends StatelessWidget {
       steps: [
         _SetupStep(
           title: '步骤 1：下载 Ollama',
-          description: '访问 Ollama 官网，根据你的操作系统（Windows / macOS / Linux）下载对应安装包。',
+          description: '访问 Ollama 官网，根据你的操作系统下载对应安装包。',
           url: 'ollama.com',
         ),
         _SetupStep(

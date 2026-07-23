@@ -16,8 +16,8 @@ class LingxiPageTransitions {
 
   /// 统一的 slide + fade 过渡构建器。
   ///
-  /// 作为 [CustomTransitionPage.transitionsBuilder] 使用，三端（Android /
-  /// Windows / macOS）共享同一曲线与时长，确保视觉一致。
+  /// 作为 [CustomTransitionPage.transitionsBuilder] 使用，双端（Android /
+  /// Windows）共享同一曲线与时长，确保视觉一致。
   ///
   /// - 入场曲线：[SpringMotion.entranceCurve]（easeOutCubic）
   /// - 位移：从下方 5% 滑入（[Offset] `(0.0, 0.05)` → `Offset.zero`）

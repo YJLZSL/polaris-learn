@@ -123,7 +123,7 @@ class HelpCenterPage extends StatelessWidget {
 
 你的 API Key 使用 **AES 加密**存储在本地，永不上传到任何服务器。
 
-- **存储方式**：通过平台原生安全存储（Android Keystore / Windows DPAPI / macOS Keychain）
+- **存储方式**：通过平台原生安全存储（Android Keystore / Windows DPAPI）
 - **访问范围**：仅灵犀学院应用本身可读取
 - **网络传输**：Key 仅在调用 AI API 时直接发送给对应服务商
 
@@ -148,7 +148,7 @@ class HelpCenterPage extends StatelessWidget {
 | **Ctrl + N** | 新建对话 |
 | **Ctrl + S** | 保存笔记 |
 
-> 快捷键在桌面端（Windows / macOS）有效。macOS 用户请将 Ctrl 替换为 Cmd。
+> 快捷键在桌面端（Windows）有效。
 ''',
     ),
     _HelpCategory(

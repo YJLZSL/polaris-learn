@@ -179,77 +179,11 @@ jobs:
           if-no-files-found: ignore
 
   # ===========================================================================
-  # 15.6 macOS 构建 job
-  # ===========================================================================
-  build-macos:
-    name: Build macOS
-    needs: quality
-    runs-on: macos-latest
-    timeout-minutes: 30
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.4'
-          cache: true
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Build macOS
-        run: flutter build macos --release
-
-      - name: Create DMG installer
-        continue-on-error: true
-        shell: bash
-        run: |
-          VERSION="${{ github.ref_name }}"
-          APP_PATH="build/macos/Build/Products/Release/lingxi_academy.app"
-          DMG_NAME="lingxi-academy-${VERSION}-macos.dmg"
-          rm -f "$DMG_NAME"
-          brew install create-dmg
-          create-dmg \
-            --volname "灵犀学院" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --app-drop-link 425 200 \
-            "$DMG_NAME" \
-            "$APP_PATH" \
-            || hdiutil create -volname "灵犀学院" -srcfolder "$APP_PATH" -ov -format UDZO "$DMG_NAME"
-
-      - name: Zip macOS build
-        run: |
-          VERSION="${{ github.ref_name }}"
-          cd build/macos/Build/Products/Release
-          ditto -c -k --keepParent lingxi_academy.app "lingxi-academy-${VERSION}-macos.zip"
-
-      - name: Upload macOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-artifacts
-          path: build/macos/Build/Products/Release/lingxi-academy-*-macos.zip
-          retention-days: 30
-
-      - name: Upload macOS DMG
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-dmg
-          path: lingxi-academy-*-macos.dmg
-          retention-days: 30
-          if-no-files-found: ignore
-
-  # ===========================================================================
   # 15.7 发布 job
   # ===========================================================================
   release:
     name: Publish Release
-    needs: [build-android, build-windows, build-macos]
+    needs: [build-android, build-windows]
     runs-on: ubuntu-latest
     timeout-minutes: 10
 

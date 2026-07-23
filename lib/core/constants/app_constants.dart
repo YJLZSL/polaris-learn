@@ -1,6 +1,6 @@
 /// 应用级常量定义
 const String kAppName = '灵犀学院';
-const String kAppVersion = '0.3.0';
+const String kAppVersion = '0.4.0';
 
 /// 列表默认每页数量
 const int kDefaultPageSize = 20;

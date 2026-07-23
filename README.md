@@ -3,11 +3,21 @@
 > 引导式 AI 学习应用 —— 让每个人都能在 AI 时代学会学习
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20macOS-blue)](#)
+[![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows-blue)](#)
 [![Flutter](https://img.shields.io/badge/Flutter-3.44.4-02569B?logo=flutter)](https://flutter.dev)
-[![Version](https://img.shields.io/badge/Version-v0.3.0-6750A4)](#)
+[![Version](https://img.shields.io/badge/Version-v0.4.0-6750A4)](#)
 
 灵犀学院是一款开源的引导式 AI 学习应用，以**苏格拉底式对话**为核心教学方式——通过引导式提问而非直接给答案，培养批判性思维与自主学习能力。
+
+## 项目状态
+
+| 项 | 状态 |
+|----|------|
+| 当前版本 | v0.4.0（双端专注版） |
+| 支持平台 | Android + Windows |
+| CI 状态 | GitHub Actions（质量门禁 + 双端构建发布） |
+| 测试覆盖 | 149+ 测试用例 |
+| 开源协议 | MIT |
 
 ## 核心理念
 
@@ -40,7 +50,7 @@
 - 🔥 **Streak 打卡** —— 连续学习天数追踪 + 成就徽章系统
 - 🔍 **分级探索** —— 简化 / 深入 / 图示三按钮，按需调整回复详略
 - 🔒 **数据安全** —— API Key 硬件级加密存储，日志自动脱敏
-- 🖥️ **三端支持** —— Android + Windows + macOS
+- 🖥️ **双端支持** —— Android + Windows
 - 📝 **富文本渲染** —— Markdown + LaTeX 数学公式 + 代码高亮
 
 ## 动画亮点
@@ -60,7 +70,6 @@ v0.3.0 在动画与性能体验上全面打磨，目标 60fps 无丢帧：
 
 - **Android**：下载 `.apk` 直接安装
 - **Windows**：下载 `.zip` 解压后运行
-- **macOS**：下载 `.dmg` 拖入 Applications
 
 > 首次启动后会进入引导页，带领完成 API 配置。
 
@@ -81,7 +90,6 @@ v0.3.0 在动画与性能体验上全面打磨，目标 60fps 无丢帧：
 | Dart SDK | 3.12.2（随 Flutter 自带） |
 | Android | minSdkVersion 24 |
 | Windows | Windows 10+，需 Visual Studio C++ build tools |
-| macOS | 11.0+，需 Xcode 命令行工具 |
 
 ### 从源码构建
 
@@ -93,7 +101,6 @@ flutter pub run build_runner build --delete-conflicting-outputs
 flutter run                          # 开发模式
 flutter build apk --release          # Android
 flutter build windows --release      # Windows
-flutter build macos --release        # macOS
 ```
 
 ## 技术栈

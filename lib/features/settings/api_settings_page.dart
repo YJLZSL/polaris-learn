@@ -148,7 +148,7 @@ class ApiSettingsPage extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         '用户自备 API Key，密钥通过平台安全存储'
-                        '（Android Keystore / Windows DPAPI / macOS Keychain）'
+                        '（Android Keystore / Windows DPAPI）'
                         '本地加密保存，不会上传至任何服务器。',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: theme.colorScheme.onSecondaryContainer,

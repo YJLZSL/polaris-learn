@@ -3,7 +3,7 @@
   "$description": "灵犀学院（Lingxi Academy）结构化设计令牌。基于现有 lib/core/theme 下的 AppTheme、LingxiColors、ShapeVariants、SpringMotion 提炼，并补充重设计所需的新增令牌。",
   "meta": {
     "project": "灵犀学院 Lingxi Academy",
-    "platform": ["android", "windows", "macos"],
+    "platform": ["android", "windows"],
     "flutter": "3.44.4",
     "dart": "3.12.2",
     "materialVersion": "Material 3 Expressive",
