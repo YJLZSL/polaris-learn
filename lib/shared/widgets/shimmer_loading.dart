@@ -150,7 +150,7 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
               baseColor,
             ],
             // 高光带约占 40% 宽度（0.3~0.7），中央最亮。
-            const stops: [0.0, 0.3, 0.5, 0.7, 1.0],
+            stops: const [0.0, 0.3, 0.5, 0.7, 1.0],
             tileMode: TileMode.clamp,
             transform: _SlidingGradientTransform(slidePercent: slidePercent),
           ).createShader(bounds);

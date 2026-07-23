@@ -3,6 +3,7 @@ import 'package:lingxi_academy/data/db/database.dart';
 import 'package:lingxi_academy/data/repositories/achievement_repository.dart';
 import 'package:lingxi_academy/data/repositories/conversation_repository.dart';
 import 'package:lingxi_academy/data/repositories/learner_profile_repository.dart';
+import 'package:lingxi_academy/data/repositories/learning_event_repository.dart';
 import 'package:lingxi_academy/data/repositories/message_repository.dart';
 import 'package:lingxi_academy/data/repositories/note_repository.dart';
 import 'package:lingxi_academy/data/repositories/progress_repository.dart';

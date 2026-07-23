@@ -1,9 +1,7 @@
 import 'dart:convert';
 
 import 'package:drift/drift.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lingxi_academy/data/db/database.dart';
-import 'package:lingxi_academy/data/providers/db_providers.dart';
 
 /// 学习事件类型常量。
 abstract class LearningEventType {
@@ -90,9 +88,3 @@ class LearningEventRepository {
     return results.length;
   }
 }
-
-/// 学习事件仓库 Provider。
-final learningEventRepositoryProvider =
-    Provider<LearningEventRepository>((ref) {
-  return LearningEventRepository(ref.watch(databaseProvider));
-});

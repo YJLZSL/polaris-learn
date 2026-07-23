@@ -18,10 +18,10 @@ import 'api_settings_page.dart' show providerConfigsProvider;
 import 'data_export_service.dart';
 
 /// 应用版本号（与 pubspec.yaml 保持一致）。
-const kAppVersion = '0.1.0';
+const kAppVersion = '0.4.0';
 
 /// GitHub 仓库地址。
-const kRepoUrl = 'https://github.com/lingxiacademy/lingxi-academy';
+const kRepoUrl = 'https://github.com/YJLZSL/polaris-learn';
 
 /// 设置页。
 ///
