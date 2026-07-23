@@ -35,6 +35,9 @@ jobs:
       - name: Flutter pub get
         run: flutter pub get
 
+      - name: Generate code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
+
       - name: Flutter analyze
         run: flutter analyze
 
@@ -139,6 +142,9 @@ jobs:
 
       - name: Flutter pub get
         run: flutter pub get
+
+      - name: Generate code (build_runner)
+        run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Windows
         run: flutter build windows --release

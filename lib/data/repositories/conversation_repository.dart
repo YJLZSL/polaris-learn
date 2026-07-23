@@ -44,10 +44,9 @@ class ConversationRepository {
   /// 统计对话总数。
   Future<int> count() async {
     final countExpr = _db.conversations.id.count();
-    final result = await _db
-        .selectOnly(_db.conversations)
-        .addColumns([countExpr])
-        .getSingle();
+    final query = _db.selectOnly(_db.conversations)
+      ..addColumns([countExpr]);
+    final result = await query.getSingle();
     return result.read(countExpr) ?? 0;
   }
 

@@ -66,7 +66,7 @@ class SpringMotion {
   static const Curve fastCurve = Curves.easeOut;
 
   /// 慢速曲线（M3 强调减速）
-  static const Curve slowCurve = Curves.easeInOutCubicEmphasized;
+  static const Curve slowCurve = Easing.emphasized;
 
   /// 入场曲线：快速起步，缓慢到达
   static const Curve entranceCurve = Curves.easeOutCubic;
@@ -75,7 +75,7 @@ class SpringMotion {
   static const Curve exitCurve = Curves.easeInCubic;
 
   /// 大元素强调减速曲线
-  static const Curve emphasizedDecelerate = Curves.easeOutCubicEmphasized;
+  static const Curve emphasizedDecelerate = Easing.emphasizedDecelerate;
 
   /// 弹性曲线（用于 bouncy 回弹效果）
   static const Curve bouncyCurve = _BouncyCurve();
