@@ -101,9 +101,10 @@ class LingxiGradients extends ThemeExtension<LingxiGradients> {
 
   /// 暗色模式渐变实例
   ///
-  /// 所有渐变使用深色调适配暗色背景，提升对比度与视觉协调性：
-  /// - 紫色辉光加深（mascotHero / primarySurface）
-  /// - 火焰与金色加深（streakFire / achievementGold）
+  /// 所有渐变使用深色调适配 OLED trueBlack 背景（`0xFF000000`），
+  /// 提升对比度与视觉协调性：
+  /// - 紫色辉光在纯黑上更显著（mascotHero / primarySurface 12% 透明度）
+  /// - 火焰与金色加深以衬托纯黑（streakFire / achievementGold）
   /// - 庆祝与成功色加深（celebration / success）
   static const LingxiGradients dark = LingxiGradients(
     mascotHero: RadialGradient(

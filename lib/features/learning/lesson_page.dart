@@ -201,6 +201,11 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           child: PageView.builder(
             controller: _pageController,
             itemCount: kps.length,
+            // reduceMotion：禁用滑动手势，改用底部翻页按钮切换；
+            // 正常模式使用 BouncingScrollPhysics（iOS 风格回弹，三端统一）。
+            physics: reduceMotion
+                ? const NeverScrollableScrollPhysics()
+                : const BouncingScrollPhysics(),
             onPageChanged: (index) => setState(() => _currentIndex = index),
             itemBuilder: (context, index) => _KnowledgePointPageWrapper(
               key: ValueKey('kp_page_${kps[index].id}'),
@@ -223,6 +228,18 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           ),
           child: Row(
             children: [
+              // reduceMotion：PageView 滑动被禁用，提供显式翻页按钮替代。
+              if (reduceMotion)
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  tooltip: '上一个知识点',
+                  onPressed: _currentIndex > 0
+                      ? () => _pageController.previousPage(
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeInOut,
+                          )
+                      : null,
+                ),
               SpringMotion.slideFadeTransition(
                 direction: AxisDirection.left,
                 duration: reduceMotion
@@ -249,6 +266,18 @@ class _LessonPageState extends ConsumerState<LessonPage> {
                   ),
                 ),
               ),
+              // reduceMotion：下一页按钮（与左侧对称，到达末页时禁用）。
+              if (reduceMotion)
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  tooltip: '下一个知识点',
+                  onPressed: _currentIndex < kps.length - 1
+                      ? () => _pageController.nextPage(
+                            duration: const Duration(milliseconds: 150),
+                            curve: Curves.easeInOut,
+                          )
+                      : null,
+                ),
             ],
           ),
         ),

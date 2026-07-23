@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
+import 'package:lingxi_academy/core/motion/page_transitions.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
 import 'package:lingxi_academy/core/router/route_names.dart';
 import 'package:lingxi_academy/core/theme/lingxi_colors.dart';
@@ -48,10 +49,12 @@ class _LearningPathPageState extends ConsumerState<LearningPathPage> {
             Text('🦏', style: TextStyle(fontSize: 20)),
           ],
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 16),
-            child: MascotWidget(size: 40),
+            padding: const EdgeInsets.only(right: 16),
+            child: MascotHero(
+              child: const MascotWidget(size: 40),
+            ),
           ),
         ],
       ),
@@ -295,6 +298,7 @@ class _StaggeredPathListState extends State<_StaggeredPathList>
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
+      cacheExtent: 500,
       itemCount: widget.levels.length,
       itemBuilder: (context, index) {
         final level = widget.levels[index];
@@ -474,10 +478,12 @@ class _LevelSection extends StatelessWidget {
                       for (var i = 0; i < courses.length; i++)
                         SizedBox(
                           width: isDesktop ? 360 : double.infinity,
-                          child: _CourseCard(
-                            course: courses[i],
-                            indexInLevel: i,
-                            gradient: gradient,
+                          child: RepaintBoundary(
+                            child: _CourseCard(
+                              course: courses[i],
+                              indexInLevel: i,
+                              gradient: gradient,
+                            ),
                           ),
                         ),
                     ],

@@ -22,12 +22,12 @@ class SpringMotion {
   static const physics.SpringDescription microSpeed =
       physics.SpringDescription(mass: 1, stiffness: 1000, damping: 80);
 
-  /// 快速弹簧：小元素、Chip 选中（≈150ms）
+  /// 快速弹簧：小元素、Chip 选中（≈148ms）
   ///
-  /// 略过阻尼（ζ≈1.19），无超调，适合小元素的快速切换。
-  /// 估算 settle time T_s ≈ 8/53 ≈ 151ms。
+  /// 略过阻尼（ζ≈1.21），无超调，适合小元素的快速切换。
+  /// 估算 settle time T_s ≈ 8/54 ≈ 148ms（≤ 150ms 目标）。
   static const physics.SpringDescription fastSpeed =
-      physics.SpringDescription(mass: 1, stiffness: 500, damping: 53);
+      physics.SpringDescription(mass: 1, stiffness: 500, damping: 54);
 
   /// 默认（中等）弹簧：常规过渡（≈200ms）
   ///

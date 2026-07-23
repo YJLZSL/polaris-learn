@@ -2,7 +2,7 @@ name: lingxi_academy
 description: 灵犀学院 - 引导式 AI 学习应用
 publish_to: 'none'
 
-version: 0.2.0+1
+version: 0.3.0+1
 
 environment:
   sdk: '>=3.10.0 <4.0.0'
@@ -88,7 +88,7 @@ msix_config:
   display_name: 灵犀学院
   publisher_display_name: Lingxi Academy
   identity_name: com.lingxiacademy.lingxiacademy
-  msix_version: 0.2.0.0
+  msix_version: 0.3.0.0
   logo_path: assets/images/app_icon.png
   capabilities: internetClient
   architecture: x64

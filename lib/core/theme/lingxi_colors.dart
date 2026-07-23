@@ -44,9 +44,11 @@ class LingxiColors extends ThemeExtension<LingxiColors> {
 
   /// 暗色模式实例
   ///
-  /// 在暗色背景（典型 #1C1B1F / #141218）下：
+  /// 在 OLED trueBlack 背景（`0xFF000000`，参见 [AppTheme.darkTrueBlack]）下，
+  /// 配合 Material 3 自动生成的深紫灰 surface（典型 #141218）：
   /// - streakFire 使用更亮的深橙 `0xFFFF8A65` 以提升对比度
   /// - achievementGold 使用更饱和的金色 `0xFFFFD54F` 以提升对比度
+  /// - mascotPrimary / socraticBlue 均为高亮色调，在纯黑背景上具备良好可读性
   static const LingxiColors dark = LingxiColors(
     mascotPrimary: Color(0xFF9D7CFF),
     mascotSecondary: Color(0xFFFFCC80),

@@ -18,6 +18,18 @@
 
 ---
 
+## 版本演进历史
+
+> 本节记录各版本的核心交付，新增 PR 时请避免重复实现已交付的能力。
+
+| 版本 | 发布日期 | 核心交付 |
+|------|----------|----------|
+| **v0.1.0** | 2026-07-15 | 初始版本：基础功能闭环（课程学习、自由对话、笔记、成就与连续学习激励），完成项目骨架搭建 |
+| **v0.2.0** | 2026-07-20 | 美术与动画全面优化：`LingxiGradients.dark` 双主题渐变对齐、`_MascotPainter` 6 状态精细化绘制、`SpringMotion` 6 档弹簧参数对齐 Material 3 规范、`ChatController` 流式 50ms 动态节流 |
+| **v0.3.0** | 2026-07-23 | 打磨·测试·发布：Hero 共享元素动画（`MascotHero` + `mascotHeroFlightShuttleBuilder`）、按压微交互（`LingxiButton` scale 0.96 / `LingxiCard` scale 0.99 / `LingxiChip` `AnimatedSwitcher`）、`SpringMotion.fastSpeed` 时长修复（151ms → 148ms ≤ 150ms）、列表滚动优化（`cacheExtent: 500` + `RepaintBoundary`）、PageView 手感升级（`BouncingScrollPhysics` + `reduceMotion` 按钮降级）、GoRouter 过渡统一（`slideFadeTransitionBuilder` + `SpringMotion.entranceCurve`）、新增 149 个测试用例 |
+
+---
+
 ## 环境要求
 
 | 项 | 要求 |
@@ -758,7 +770,7 @@ test(mascot): 补充 MascotController 彩蛋触发测试
 
 | 项 | 现状 | 待优化方向 |
 |----|------|------------|
-| 吉祥物动画 | `MascotWidget` 已统一入口，`_MascotPainter` 作为内部 fallback | 待 Rive `.riv` 资源完善后移除 `_MascotPainter` |
+| 吉祥物动画 | v0.2.0 已完成 `_MascotPainter` 6 状态精细化绘制（径向渐变身体 / 角部高光 / 瞳孔高光 / 6 情绪差异化），v0.3.0 已完成 Hero 共享元素动画接入；Rive `.riv` 资源仍未就绪 | Rive 动画资源待完善：待美术产出 `assets/rive/lingxi_mascot.riv` 后，在 `RiveMascotWidget` 中完成状态机映射，并保留 `MascotWidget` 作为加载失败 fallback |
 | 图表 | `fl_chart` 未引入，统计页图表用 `CustomPainter` 手绘 | 待引入 `fl_chart`，重写统计页图表 |
 | 国际化 | UI 文案大量硬编码中文，仅 `app.dart` 配置了 `supportedLocales` 与 delegates | 待抽取 `intl` ARB 文件，启用 `flutter gen-l10n` |
 | 课程内容 | 仅 L0 Python 示例课程，`assets/courses/` 内容单薄 | 待扩充更多课程（L1/L2、其他语言） |
@@ -986,3 +998,20 @@ flutter devices                                       # 列出可用设备
 - 图片使用适当分辨率，避免过大资源
 - 长列表使用 `ListView.builder` 懒加载
 - 减少动效模式（`MediaQuery.disableAnimations`）时跳过所有动画
+
+### 60fps 监控方法
+
+> 60fps 是动画与滚动的硬指标。以下方法用于开发期与回归期验证帧率不丢帧。
+
+| 方法 | 用途 | 使用说明 |
+|------|------|----------|
+| `PerformanceOverlay` | debug 模式实时帧率查看 | `MaterialApp(showPerformanceOverlay: true)` 或 `MediaQuery.of(context).copyWith(...)`，**不出现红条**即达标；release 模式下无效 |
+| `debugProfileBuildsEnabled` | 开启 build 阶段分析 | 在 `main()` 中置 `debugProfileBuildsEnabled = true`，配合 Dart DevTools 的 Timeline 定位非必要 `build()` 调用 |
+| `RepaintBoundary` | 隔离持续动画的重绘范围 | 包裹 `_AuraGlow` / `CelebrationOverlay` / `AnimatedProgressBar` / `ShimmerLoading` / `_ParticleField` / `MascotWidget` 等持续动画节点，避免父级 rebuild 时连带重绘 |
+| `itemExtent` / `cacheExtent` | 优化列表滚动 | 项高固定时使用 `itemExtent` 跳过测量；项高不固定时使用 `cacheExtent: 500` 预渲染后续项，避免滚动时即时 build 抖动 |
+| `reduceMotion` 无障碍降级 | 全覆盖验证 | 在系统设置开启"移除动画"后，所有动画应降级为即时切换或静态态；项目通过 `SpringMotion.reduceMotionOf(context)` / `MediaQuery.disableAnimationsOf(context)` 统一判断 |
+
+**回归验收标准**：
+- `PerformanceOverlay` 在首页、学习路径、对话列表、笔记列表、课时页滑动过程中均不出现红条
+- `flutter run --profile` 模式下使用 Dart DevTools Timeline 录制，UI 线程帧时间 ≤ 16ms
+- 开启系统"移除动画"后，所有页面交互保持可用，无卡顿或缺失关键反馈

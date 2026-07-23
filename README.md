@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Platform](https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20macOS-blue)](#)
 [![Flutter](https://img.shields.io/badge/Flutter-3.44.4-02569B?logo=flutter)](https://flutter.dev)
-[![Version](https://img.shields.io/badge/Version-v0.2.0-6750A4)](#)
+[![Version](https://img.shields.io/badge/Version-v0.3.0-6750A4)](#)
 
 灵犀学院是一款开源的引导式 AI 学习应用，以**苏格拉底式对话**为核心教学方式——通过引导式提问而非直接给答案，培养批判性思维与自主学习能力。
 
@@ -42,6 +42,17 @@
 - 🔒 **数据安全** —— API Key 硬件级加密存储，日志自动脱敏
 - 🖥️ **三端支持** —— Android + Windows + macOS
 - 📝 **富文本渲染** —— Markdown + LaTeX 数学公式 + 代码高亮
+
+## 动画亮点
+
+v0.3.0 在动画与性能体验上全面打磨，目标 60fps 无丢帧：
+
+- 🎭 **Hero 共享元素动画** —— 吉祥物在首页 / 学习路径 / 对话页之间视觉延续，自定义 `flightShuttleBuilder` 使用 `SpringMotion.gentleSpeed` 曲线
+- 🎨 **微交互反馈** —— 按压（`LingxiButton` scale 0.96 / `LingxiCard` scale 0.99）、选中（`LingxiChip` `AnimatedSwitcher`）、过渡均有弹性动画
+- 🌊 **流式响应节流** —— 首 token 立即渲染，后续 50ms 节流刷新，流式结束强制刷新，兼顾即时反馈与性能
+- 🎭 **6 状态吉祥物** —— idle / happy / thinking / sad / celebrate / curious 差异化矢量绘制（径向渐变身体 / 角部高光 / 瞳孔高光）
+- ♿ **无障碍降级** —— `reduceMotion` 全覆盖，开启系统"移除动画"后所有动画降级为即时切换或按钮切换
+- 📊 **性能预算** —— 60fps 目标，`RepaintBoundary` 隔离持续动画，`cacheExtent` 优化列表滚动，`PerformanceOverlay` 静态审查无红条
 
 ## 下载安装
 

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
+import 'package:lingxi_academy/core/motion/page_transitions.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
 import 'package:lingxi_academy/core/router/route_names.dart';
 import 'package:lingxi_academy/core/theme/lingxi_colors.dart';
@@ -242,14 +243,17 @@ class _HomePageState extends ConsumerState<HomePage> {
       ],
     );
 
-    // 吉祥物：呼吸脉动效果
+    // 吉祥物：呼吸脉动效果 + Hero 共享元素过渡
+    // MascotHero 内部判断 reduceMotion 并降级为即时切换
     final mascot = reduceMotion
-        ? mascotWidget
-        : SpringMotion.pulseBreathing(
-            minScale: 1.0,
-            maxScale: 1.03,
-            period: const Duration(seconds: 3),
-            child: mascotWidget,
+        ? MascotHero(child: mascotWidget)
+        : MascotHero(
+            child: SpringMotion.pulseBreathing(
+              minScale: 1.0,
+              maxScale: 1.03,
+              period: const Duration(seconds: 3),
+              child: mascotWidget,
+            ),
           );
 
     // 桌面端：吉祥物在右侧；移动端：吉祥物在顶部

@@ -17,6 +17,13 @@ class AppTheme {
   /// 主题种子色 - 紫色调，契合"灵犀"意境（Material 3 默认种子色）
   static const Color seedColor = Color(0xFF6750A4);
 
+  /// 暗色模式 OLED trueBlack 背景
+  ///
+  /// 在 OLED 屏幕上使用纯黑（0xFF000000）作为 scaffold 背景可关闭像素发光，
+  /// 提升对比度并降低功耗。配合 Material 3 自动生成的 surface（#141218 系列）
+  /// 形成"纯黑底 + 深紫灰卡片"的视觉层级。
+  static const Color darkTrueBlack = Color(0xFF000000);
+
   /// 亮色主题
   static ThemeData get lightTheme => _buildTheme(Brightness.light);
 
@@ -40,11 +47,17 @@ class AppTheme {
     final inputRadius = ShapeVariants.roundedLarge.borderRadius;
     final dialogRadius = ShapeVariants.roundedExtraLarge.borderRadius;
 
+    // 暗色模式使用 OLED trueBlack 作为 scaffold 背景，提升对比度与降低功耗；
+    // colorScheme.surface 等仍由 Material 3 自动生成，保持卡片与背景的层级关系。
+    final scaffoldColor = brightness == Brightness.dark
+        ? darkTrueBlack
+        : colorScheme.surface;
+
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
       textTheme: textTheme,
-      scaffoldBackgroundColor: colorScheme.surface,
+      scaffoldBackgroundColor: scaffoldColor,
       appBarTheme: AppBarThemeData(
         centerTitle: true,
         backgroundColor: colorScheme.surface,

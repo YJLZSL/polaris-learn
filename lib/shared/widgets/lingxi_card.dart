@@ -170,7 +170,7 @@ class _LingxiCardState extends State<LingxiCard> {
     double scale = 1.0;
     if (clickable && !reduceMotion) {
       if (_pressed) {
-        scale = 0.98;
+        scale = 0.99;
       } else if (_hovering) {
         scale = 1.015;
       }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
+import 'package:lingxi_academy/core/theme/lingxi_elevations.dart';
 import 'package:lingxi_academy/core/theme/shape_variants.dart';
 
 /// 按钮变体
@@ -203,13 +204,26 @@ class _LingxiButtonState extends State<LingxiButton> {
         ),
     };
 
-    // 按压缩放
+    // 按压阴影抬升（subtle → elevated）+ 弹性缩放 0.96
+    // 仅在动画启用时生效；reduceMotion 下跳过，按钮保持默认外观
     if (!reduceMotion) {
-      button = AnimatedScale(
-        scale: scale,
-        duration: SpringMotion.microDuration,
+      final elevations = context.lingxiElevations;
+      final shadows = _pressed && !disabled
+          ? elevations.elevated
+          : elevations.subtle;
+      button = AnimatedContainer(
+        duration: SpringMotion.fastDuration,
         curve: SpringMotion.fastCurve,
-        child: button,
+        decoration: BoxDecoration(
+          borderRadius: ShapeVariants.roundedLarge.borderRadius,
+          boxShadow: shadows,
+        ),
+        child: AnimatedScale(
+          scale: scale,
+          duration: SpringMotion.fastDuration,
+          curve: SpringMotion.fastCurve,
+          child: button,
+        ),
       );
     }
 

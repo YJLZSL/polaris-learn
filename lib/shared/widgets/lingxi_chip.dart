@@ -89,13 +89,13 @@ class _LingxiChipState extends State<LingxiChip>
   void initState() {
     super.initState();
 
-    // 弹性缩放动画：0.9 -> 1.0，使用 easeOutBack 曲线自带过冲弹跳效果
+    // 弹性缩放动画：0.95 -> 1.0，使用 easeOutBack 曲线自带过冲弹跳效果
     _bounceController = AnimationController(
       vsync: this,
       duration: _kAnimationDuration,
       value: 1.0, // 初始静止状态为 1.0
     );
-    _bounceAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+    _bounceAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(
         parent: _bounceController,
         curve: Curves.easeOutBack,
