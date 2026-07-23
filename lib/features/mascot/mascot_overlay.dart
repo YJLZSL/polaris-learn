@@ -89,30 +89,32 @@ class _FloatingMascotState extends State<_FloatingMascot>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _float,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, -4 * _float.value),
-          child: child,
-        );
-      },
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.08),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: MascotWidget(
-          size: 72,
-          mood: widget.mood,
-          enableTapInteraction: true,
-          showAura: true,
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _float,
+        builder: (context, child) {
+          return Transform.translate(
+            offset: Offset(0, -4 * _float.value),
+            child: child,
+          );
+        },
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.08),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: MascotWidget(
+            size: 72,
+            mood: widget.mood,
+            enableTapInteraction: true,
+            showAura: true,
+          ),
         ),
       ),
     );

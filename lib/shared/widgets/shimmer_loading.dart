@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../core/motion/animation_utils.dart';
+
 /// 通用骨架屏（Shimmer）加载容器。
 ///
 /// 通过 [ShaderMask] + 横向滑动的 [LinearGradient] 实现高光从左到右扫过的动画，
@@ -68,6 +70,7 @@ class _ShimmerLoadingState extends State<ShimmerLoading>
   }
 
   void _startRepeat() {
+    if (AnimationUtils.platformReduceMotion) return;
     _controller.repeat(
       min: 0.0,
       max: 1.0,

@@ -242,6 +242,8 @@ class _ProviderEditDialogState extends ConsumerState<ProviderEditDialog> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                     ),
+                    tooltip:
+                        _obscureApiKey ? '显示 API Key' : '隐藏 API Key',
                     onPressed: () => setState(
                         () => _obscureApiKey = !_obscureApiKey),
                   ),

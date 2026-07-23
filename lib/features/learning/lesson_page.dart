@@ -150,6 +150,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: '返回',
           onPressed: () => context.pop(),
         ),
         title: courseAsync.maybeWhen(
@@ -305,6 +306,7 @@ class _LessonPageState extends ConsumerState<LessonPage> {
           child: SpringMotion.pulseBreathing(
             child: FloatingActionButton(
               heroTag: 'continue_learning_fab',
+              tooltip: '继续探索',
               onPressed: () {
                 AnimationUtils.hapticLight();
                 ContinueLearningSidebar.showAsBottomSheet(

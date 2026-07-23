@@ -181,8 +181,8 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   // ── Hero 问候区 ──────────────────────────────────────────
 
-  /// 桌面端断点：≥840px 视为桌面布局
-  static const double _desktopBreakpoint = 840;
+  /// 桌面端断点：≥1024px 视为桌面布局（与全局 Responsive.isDesktop 一致）
+  static const double _desktopBreakpoint = 1024;
 
   Widget _buildHeroSection({
     required ColorScheme colorScheme,

@@ -775,27 +775,29 @@ class _TypingDotsState extends State<_TypingDots>
         ),
       );
     }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: SizedBox(
-            height: 16,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildWaveDot(0),
-                const SizedBox(width: 4),
-                _buildWaveDot(1),
-                const SizedBox(width: 4),
-                _buildWaveDot(2),
-              ],
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: SizedBox(
+              height: 16,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  _buildWaveDot(0),
+                  const SizedBox(width: 4),
+                  _buildWaveDot(1),
+                  const SizedBox(width: 4),
+                  _buildWaveDot(2),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -876,22 +878,24 @@ class _StreamingPulseState extends State<_StreamingPulse>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        return Opacity(
-          opacity: 0.4 + 0.6 * _controller.value,
-          child: Container(
-            width: 6,
-            height: 12,
-            margin: const EdgeInsets.only(left: 2, top: 4),
-            decoration: BoxDecoration(
-              color: widget.color,
-              borderRadius: BorderRadius.circular(1),
+    return RepaintBoundary(
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) {
+          return Opacity(
+            opacity: 0.4 + 0.6 * _controller.value,
+            child: Container(
+              width: 6,
+              height: 12,
+              margin: const EdgeInsets.only(left: 2, top: 4),
+              decoration: BoxDecoration(
+                color: widget.color,
+                borderRadius: BorderRadius.circular(1),
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

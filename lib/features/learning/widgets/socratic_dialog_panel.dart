@@ -292,6 +292,7 @@ class _SocraticDialogPanelState extends ConsumerState<SocraticDialogPanel> {
                     ? null
                     : () => _send(_inputController.text),
                 icon: const Icon(Icons.send),
+                tooltip: '发送',
               ),
             ],
           ),

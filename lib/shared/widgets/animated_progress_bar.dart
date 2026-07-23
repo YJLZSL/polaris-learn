@@ -2,6 +2,8 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
+import '../../core/motion/animation_utils.dart';
+
 /// 线性动画进度条组件
 ///
 /// 提供平滑的弹簧式（easeOutCubic）进度动画，支持渐变填充、
@@ -123,7 +125,9 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
 
   void _syncEffectController() {
     final needEffect = widget.indeterminate || widget.enablePulse;
-    if (needEffect && !_effectController.isAnimating) {
+    if (needEffect &&
+        !_effectController.isAnimating &&
+        !AnimationUtils.platformReduceMotion) {
       _effectController.repeat(
         reverse: widget.enablePulse && !widget.indeterminate,
       );
@@ -485,7 +489,9 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
 
   void _syncEffectController() {
     final needEffect = widget.indeterminate || widget.enablePulse;
-    if (needEffect && !_effectController.isAnimating) {
+    if (needEffect &&
+        !_effectController.isAnimating &&
+        !AnimationUtils.platformReduceMotion) {
       _effectController.repeat();
       // 注：环形不确定状态持续旋转不 reverse，脉冲呼吸用 sin 插值实现
     } else if (!needEffect && _effectController.isAnimating) {

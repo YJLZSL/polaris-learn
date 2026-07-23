@@ -82,7 +82,10 @@ class _MascotWidgetState extends ConsumerState<MascotWidget>
     _controller = AnimationController(
       vsync: this,
       duration: _durationFor(_currentMood),
-    )..repeat();
+    );
+    if (!AnimationUtils.platformReduceMotion) {
+      _controller.repeat();
+    }
   }
 
   @override

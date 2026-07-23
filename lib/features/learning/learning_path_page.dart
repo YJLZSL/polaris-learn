@@ -604,16 +604,18 @@ class _LevelConnectorState extends State<_LevelConnector>
       // reduceMotion 下不叠加流光，保持静态渐变连接线。
       child: reduceMotion
           ? null
-          : AnimatedBuilder(
-              animation: _flowController,
-              builder: (context, _) {
-                return CustomPaint(
-                  painter: _FlowingDashedLinePainter(
-                    color: widget.gradient.first,
-                    progress: _flowController.value,
-                  ),
-                );
-              },
+          : RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: _flowController,
+                builder: (context, _) {
+                  return CustomPaint(
+                    painter: _FlowingDashedLinePainter(
+                      color: widget.gradient.first,
+                      progress: _flowController.value,
+                    ),
+                  );
+                },
+              ),
             ),
     );
   }

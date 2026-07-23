@@ -51,7 +51,9 @@ class _MisconceptionStickerState extends State<MisconceptionSticker>
       TweenSequenceItem(tween: Tween(begin: -0.05, end: 0.0).chain(CurveTween(curve: Curves.easeInOut)), weight: 5),
       TweenSequenceItem(tween: ConstantTween(0.0), weight: 80),
     ]).animate(_wiggleController);
-    _wiggleController.repeat();
+    if (!AnimationUtils.platformReduceMotion) {
+      _wiggleController.repeat();
+    }
   }
 
   @override
@@ -101,16 +103,18 @@ class _MisconceptionStickerState extends State<MisconceptionSticker>
                             size: 20,
                           )
                         else
-                          AnimatedBuilder(
-                            animation: _wiggle,
-                            builder: (context, child) => Transform.rotate(
-                              angle: _wiggle.value,
-                              child: child,
-                            ),
-                            child: Icon(
-                              Icons.warning_amber_rounded,
-                              color: redColor,
-                              size: 20,
+                          RepaintBoundary(
+                            child: AnimatedBuilder(
+                              animation: _wiggle,
+                              builder: (context, child) => Transform.rotate(
+                                angle: _wiggle.value,
+                                child: child,
+                              ),
+                              child: Icon(
+                                Icons.warning_amber_rounded,
+                                color: redColor,
+                                size: 20,
+                              ),
                             ),
                           ),
                         const SizedBox(width: 8),
