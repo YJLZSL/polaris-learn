@@ -372,10 +372,10 @@ class _BadgeCardState extends State<_BadgeCard> {
             : theme.colorScheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(16),
         border: unlocked
-            ? BorderSide(
+            ? Border.fromBorderSide(BorderSide(
                 color: gold,
                 width: widget.newlyUnlocked ? 2.5 : 2,
-              )
+              ))
             : null,
         boxShadow: unlocked && widget.newlyUnlocked
             ? [

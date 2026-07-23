@@ -56,3 +56,9 @@ final learnerProfileRepositoryProvider =
     Provider<LearnerProfileRepository>((ref) {
   return LearnerProfileRepository(ref.watch(databaseProvider));
 });
+
+/// 学习事件仓库 Provider。
+final learningEventRepositoryProvider =
+    Provider<LearningEventRepository>((ref) {
+  return LearningEventRepository(ref.watch(databaseProvider));
+});

@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart' as physics;
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 
 /// 弹簧物理动效工具类
 ///
@@ -66,7 +67,7 @@ class SpringMotion {
   static const Curve fastCurve = Curves.easeOut;
 
   /// 慢速曲线（M3 强调减速）
-  static const Curve slowCurve = Easing.emphasized;
+  static const Curve slowCurve = Curves.easeInOutCubic;
 
   /// 入场曲线：快速起步，缓慢到达
   static const Curve entranceCurve = Curves.easeOutCubic;
@@ -197,7 +198,8 @@ class SpringMotion {
   ///
   /// 包裹任意可点击组件，提供物理按压反馈。
   static Widget scalePressFeedback(
-    {required Widget child,
+    {Key? key,
+    required Widget child,
     VoidCallback? onTap,
     double pressedScale = 0.96,
     Duration duration = fastDuration,
@@ -205,6 +207,7 @@ class SpringMotion {
     bool enableHaptic = true,
   }) {
     return _ScalePressFeedback(
+      key: key,
       onTap: onTap,
       pressedScale: pressedScale,
       duration: duration,

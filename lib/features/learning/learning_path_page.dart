@@ -231,8 +231,9 @@ class _StaggeredPathListState extends State<_StaggeredPathList>
   static const int _staggerDelayMs = 50;
 
   /// 单项入场时长（ms），取自 [SpringMotion.defaultDuration]。
-  static const int _itemDurationMs =
-      SpringMotion.defaultDuration.inMilliseconds;
+  // 注：Duration.inMilliseconds 非 const getter，无法在 const 表达式中访问，
+  // 此处直接使用与 SpringMotion.defaultDuration 等价的数值 300。
+  static const int _itemDurationMs = 300;
 
   @override
   void initState() {
@@ -905,7 +906,7 @@ class _CourseIconState extends State<_CourseIcon> {
       onPointerUp: (_) {
         if (!reduceMotion) setState(() => _pressed = false);
       },
-      onPointerCancel: () {
+      onPointerCancel: (_) {
         if (!reduceMotion) setState(() => _pressed = false);
       },
       child: AnimatedScale(

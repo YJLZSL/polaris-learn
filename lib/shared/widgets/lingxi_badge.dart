@@ -263,7 +263,7 @@ class _LingxiBadgeState extends State<LingxiBadge>
     } else if (widget.unlocked) {
       // 已解锁：呼吸光效
       animatedBadge = SpringMotion.pulseBreathing(
-        badgeBody,
+        child: badgeBody,
         minScale: 0.98,
         maxScale: 1.02,
         period: const Duration(seconds: 3),

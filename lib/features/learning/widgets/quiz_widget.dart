@@ -504,12 +504,15 @@ class _QuizWidgetState extends ConsumerState<QuizWidget>
     final Color accentColor;
     if (passed) {
       // 通过：直接基于 [LingxiGradients.success] 复用其 begin/end，仅覆盖
-      // colors 为 15% 透明度，避免重复手写 LinearGradient 构造参数。
+      // colors 为 15% 透明度。LinearGradient 未提供 copyWith，手动重建。
       final successGradient = gradients.success;
-      feedbackGradient = successGradient.copyWith(
+      feedbackGradient = LinearGradient(
+        begin: successGradient.begin,
+        end: successGradient.end,
         colors: successGradient.colors
             .map((c) => c.withValues(alpha: 0.15))
             .toList(),
+        tileMode: successGradient.tileMode,
       );
       accentColor = successGradient.colors.last;
     } else {

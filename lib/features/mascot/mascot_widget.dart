@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/motion/animation_utils.dart';
 import '../../core/motion/spring_motion.dart';
+import '../../core/theme/lingxi_gradients.dart';
 import 'mascot_controller.dart';
 import 'mascot_state.dart';
 

@@ -705,8 +705,8 @@ class _TypingDots extends StatefulWidget {
 class _TypingDotsState extends State<_TypingDots>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
-  late final Animation<double> _upAnim;
-  late final Animation<double> _downAnim;
+  late final Tween<double> _upTween;
+  late final Tween<double> _downTween;
 
   /// 三个点的相位偏移（占总周期比例）：0、1/6、1/3，对应 0ms / 200ms / 400ms。
   static const List<double> _phases = <double>[0.0, 200 / 1200, 400 / 1200];
@@ -718,20 +718,8 @@ class _TypingDotsState extends State<_TypingDots>
       vsync: this,
       duration: const Duration(milliseconds: 1200),
     );
-    // 上半周期：t∈[0, 0.5] 时 offset 从 -4 → 4（easeOut）。
-    _upAnim = Tween<double>(begin: -4, end: 4).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-      ),
-    );
-    // 下半周期：t∈[0.5, 1.0] 时 offset 从 4 → -4（easeIn）。
-    _downAnim = Tween<double>(begin: 4, end: -4).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
-      ),
-    );
+    _upTween = Tween<double>(begin: -4, end: 4);
+    _downTween = Tween<double>(begin: 4, end: -4);
     if (!AnimationUtils.platformReduceMotion) {
       _controller.repeat();
     }

@@ -206,30 +206,29 @@ class _LingxiAppBarState extends State<LingxiAppBar> {
             : null,
       );
     } else {
-      appBar = AnimatedContainer(
-        duration: SpringMotion.fastDuration,
-        curve: SpringMotion.fastCurve,
-        foregroundDecoration: _scrolled
-            ? BoxDecoration(
-                border: Border(
-                  bottom: BorderSide(
-                    color: colorScheme.outlineVariant.withValues(alpha: 0.3),
-                    width: 0.5,
-                  ),
-                ),
-              )
-            : null,
-        child: AppBar(
-          title: title,
-          centerTitle: widget.centerTitle,
-          actions: actions,
-          leading: leading,
-          backgroundColor: effectiveBg,
-          foregroundColor: widget.foregroundColor ?? theme.appBarTheme.foregroundColor,
-          elevation: widget.elevation,
-          scrolledUnderElevation: widget.scrolledUnderElevation,
-          bottom: widget.bottom,
-        ),
+      // 滚动联动底部边框：通过 AppBar.shape 参数实现，避免用 AnimatedContainer
+      // 包装 AppBar 导致类型不匹配 PreferredSizeWidget。
+      // 注：AppBar 自身的 scrolledUnderElevation 已处理滚动抬升，此处仅补充视觉分隔线。
+      final bottomBorder = _scrolled
+          ? Border(
+              bottom: BorderSide(
+                color: colorScheme.outlineVariant.withValues(alpha: 0.3),
+                width: 0.5,
+              ),
+            )
+          : null;
+      appBar = AppBar(
+        title: title,
+        centerTitle: widget.centerTitle,
+        actions: actions,
+        leading: leading,
+        backgroundColor: effectiveBg,
+        foregroundColor:
+            widget.foregroundColor ?? theme.appBarTheme.foregroundColor,
+        elevation: widget.elevation,
+        scrolledUnderElevation: widget.scrolledUnderElevation,
+        bottom: widget.bottom,
+        shape: bottomBorder,
       );
     }
 

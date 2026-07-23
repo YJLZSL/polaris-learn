@@ -106,10 +106,11 @@ enum ShapeVariants {
   /// 返回对应的 [BorderRadius]（圆形系列退化为 0）
   BorderRadius get borderRadius => BorderRadius.circular(_radiusValue);
 
-  /// 返回对应的 [ShapeBorder]
+  /// 返回对应的 [OutlinedBorder]
   ///
   /// 圆形系列返回 [CircleBorder]，其余返回带对应圆角的 [RoundedRectangleBorder]。
-  ShapeBorder toShapeBorder() {
+  /// 两者均为 [OutlinedBorder] 子类，可直接用于 Material 按钮/Chip 的 shape 参数。
+  OutlinedBorder toShapeBorder() {
     if (_isCircle) {
       return const CircleBorder();
     }
