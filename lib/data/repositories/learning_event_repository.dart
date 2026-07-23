@@ -42,7 +42,7 @@ class LearningEventRepository {
   }
 
   /// 查询指定知识点的最近完成事件（用于遗忘曲线）。
-  Future<LearningEventData?> getLastCompletionEvent(
+  Future<LearningEvent?> getLastCompletionEvent(
     String knowledgePointId,
   ) async {
     final query = _db.select(_db.learningEvents)
@@ -66,7 +66,7 @@ class LearningEventRepository {
   }
 
   /// 查询指定时间范围内的事件（用于统计）。
-  Future<List<LearningEventData>> getEventsBetween(
+  Future<List<LearningEvent>> getEventsBetween(
     DateTime start,
     DateTime end,
   ) async {

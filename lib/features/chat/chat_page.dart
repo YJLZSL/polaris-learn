@@ -752,9 +752,9 @@ class _TypingDotsState extends State<_TypingDots>
     final t = (_controller.value + phase) % 1.0;
     if (t < 0.5) {
       // 上半周期：归一化到 [0, 1] 后应用 _upAnim 的 Tween + Curve。
-      return _upAnim.transform(Curves.easeOut.transform(t / 0.5));
+      return _upTween.transform(Curves.easeOut.transform(t / 0.5));
     }
-    return _downAnim.transform(Curves.easeIn.transform((t - 0.5) / 0.5));
+    return _downTween.transform(Curves.easeIn.transform((t - 0.5) / 0.5));
   }
 
   @override

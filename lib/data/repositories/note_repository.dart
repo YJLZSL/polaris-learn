@@ -47,10 +47,9 @@ class NoteRepository {
   /// 统计笔记总数。
   Future<int> count() async {
     final countExpr = _db.notes.id.count();
-    final result = await _db
-        .selectOnly(_db.notes)
-        .addColumns([countExpr])
-        .getSingle();
+    final query = _db.selectOnly(_db.notes)
+      ..addColumns([countExpr]);
+    final result = await query.getSingle();
     return result.read(countExpr) ?? 0;
   }
 

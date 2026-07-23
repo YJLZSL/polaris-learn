@@ -2,7 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:lingxi_academy/data/db/database.dart';
 
 /// 学习者画像数据别名。
-typedef LearnerProfileEntry = LearnerProfileData;
+typedef LearnerProfileEntry = LearnerProfile;
 
 /// 学习者画像仓库：管理用户的学习偏好和个人资料。
 ///

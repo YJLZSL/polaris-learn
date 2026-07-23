@@ -131,7 +131,7 @@ class SpringMotion {
   /// 子部件挂载时弹性出现，适用于卡片、徽章等入场过渡。
   /// 自动检测 reduceMotion 并降级为简单淡入。
   static Widget springTransition(
-    Widget child, {
+    {required Widget child,
     Curve curve = defaultCurve,
     Duration duration = defaultDuration,
     double beginScale = 0.92,
@@ -150,7 +150,7 @@ class SpringMotion {
 
   /// 方向滑入 + 淡入过渡
   static Widget slideFadeTransition(
-    Widget child, {
+    {required Widget child,
     AxisDirection direction = AxisDirection.up,
     Curve curve = entranceCurve,
     Duration duration = defaultDuration,
@@ -178,7 +178,7 @@ class SpringMotion {
   /// 用于 CTA 按钮、进行中指示器等需要轻柔引导注意力的元素。
   /// reduceMotion 下直接返回 child（不循环）。
   static Widget pulseBreathing(
-    Widget child, {
+    {required Widget child,
     double minScale = 0.97,
     double maxScale = 1.03,
     Duration period = const Duration(seconds: 3),
@@ -197,7 +197,7 @@ class SpringMotion {
   ///
   /// 包裹任意可点击组件，提供物理按压反馈。
   static Widget scalePressFeedback(
-    Widget child, {
+    {required Widget child,
     VoidCallback? onTap,
     double pressedScale = 0.96,
     Duration duration = fastDuration,
@@ -218,7 +218,7 @@ class SpringMotion {
   ///
   /// 仅在桌面端（有鼠标）生效，移动端无效果。
   static Widget hoverLift(
-    Widget child, {
+    {required Widget child,
     double hoverScale = 1.015,
     Duration duration = fastDuration,
     Curve curve = fastCurve,
@@ -236,7 +236,7 @@ class SpringMotion {
   /// 为子组件添加周期性的高光扫过动画，用于 streak 火焰徽章、
   /// 活跃状态指示等需要持续微光提示的元素。
   static Widget shimmerGlow(
-    Widget child, {
+    {required Widget child,
     Color? glowColor,
     Duration period = const Duration(seconds: 2),
     bool? forceReduceMotion,
