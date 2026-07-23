@@ -227,7 +227,20 @@ class _MascotWidgetState extends ConsumerState<MascotWidget>
       );
     }
 
-    return customPaint;
+    // 无障碍：为屏幕阅读器提供吉祥物语义标签
+    final moodLabel = switch (_currentMood) {
+      MascotMood.idle => '待机中',
+      MascotMood.happy => '开心',
+      MascotMood.thinking => '思考中',
+      MascotMood.sad => '难过',
+      MascotMood.celebrate => '庆祝',
+      MascotMood.curious => '好奇',
+    };
+    return Semantics(
+      label: '灵犀吉祥物，当前状态：$moodLabel',
+      button: widget.enableTapInteraction,
+      child: customPaint,
+    );
   }
 }
 

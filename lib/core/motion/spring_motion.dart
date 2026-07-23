@@ -455,6 +455,7 @@ class _PulseBreathingState extends State<_PulseBreathing>
 /// 按下缩放反馈
 class _ScalePressFeedback extends StatefulWidget {
   const _ScalePressFeedback({
+    super.key,
     required this.child,
     required this.onTap,
     required this.pressedScale,
