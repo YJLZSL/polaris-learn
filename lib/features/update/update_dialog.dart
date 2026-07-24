@@ -451,7 +451,6 @@ class _AvailableBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final info = state.releaseInfo!;
 
     return Column(
@@ -744,7 +743,6 @@ class _ReleaseNotesCard extends StatelessWidget {
             h1: theme.textTheme.titleSmall,
             h2: theme.textTheme.titleSmall,
             h3: theme.textTheme.titleSmall,
-            li: theme.textTheme.bodySmall,
             code: theme.textTheme.bodySmall?.copyWith(
               fontFamily: 'monospace',
               backgroundColor: theme.colorScheme.surfaceContainerHigh,
