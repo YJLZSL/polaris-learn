@@ -37,7 +37,7 @@ dependencies:
 
   # 自动更新（版本检查 / 下载 / 安装）
   package_info_plus: ^8.0.0
-  open_filex: ^3.5.0
+  open_filex: ^4.7.0
   archive: ^3.6.1
 
   # 动画与图形
