@@ -55,6 +55,9 @@ add_subdirectory("runner")
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
+# 抑制 rive_common 内嵌 harfbuzz 的 nontrivial-memcall 警告（-Werror 触发的编译错误），
+# 该警告源于第三方 C++ 库代码，非项目可控范围。
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nontrivial-memcall")
 include(flutter/generated_plugins.cmake)
 
 
