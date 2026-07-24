@@ -299,7 +299,7 @@ class _StaggeredPathListState extends State<_StaggeredPathList>
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      scrollCacheExtent: 500,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(500),
       itemCount: widget.levels.length,
       itemBuilder: (context, index) {
         final level = widget.levels[index];

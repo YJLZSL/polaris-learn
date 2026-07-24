@@ -229,7 +229,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      scrollCacheExtent: 500,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(500),
       itemCount: notes.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) => _buildCard(context, notes[index], index),

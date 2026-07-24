@@ -126,7 +126,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      scrollCacheExtent: 500,
+      scrollCacheExtent: const ScrollCacheExtent.pixels(500),
       itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
       itemBuilder: (context, index) => _buildTile(context, list[index], index),
