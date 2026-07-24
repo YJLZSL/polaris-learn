@@ -119,7 +119,7 @@ jobs:
           mv app-release.aab "lingxi-academy-${VERSION}-android.aab"
 
       - name: Upload Android artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-artifacts
           path: |
@@ -175,7 +175,7 @@ jobs:
           7z a -tzip "../../../../../lingxi-academy-${VERSION}-windows-x64.zip" .
 
       - name: Upload Windows artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-artifacts
           path: lingxi-academy-*-windows-x64.zip
@@ -183,7 +183,7 @@ jobs:
 
       - name: Upload Windows MSIX
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: windows-msix
           path: lingxi-academy-*-windows.msix
