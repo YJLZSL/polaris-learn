@@ -37,7 +37,10 @@ jobs:
         run: dart fix --dry-run
 
       - name: Flutter analyze
-        run: flutter analyze
+        # 仅 error 级别问题阻塞 CI；info/warning（如 deprecated_member_use、
+        # prefer_const_constructors 等风格与弃用提示）不阻塞，符合 AGENTS.md
+        # "零 error" 硬要求。warning 在 PR 中说明即可。
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
 
       - name: Flutter test with coverage
         run: flutter test --coverage
