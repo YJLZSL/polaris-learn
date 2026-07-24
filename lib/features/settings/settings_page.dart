@@ -410,20 +410,20 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
         child: Column(
           children: [
             SpringMotion.scalePressFeedback(
-              child: ListTile(
+              child: const ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.info_outline),
-                title: const Text('版本'),
+                leading: Icon(Icons.info_outline),
+                title: Text('版本'),
                 trailing: Text(kAppVersion),
               ),
             ),
             SpringMotion.scalePressFeedback(
               onTap: () => _copyRepoUrl(context),
-              child: ListTile(
+              child: const ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.code_outlined),
-                title: const Text('GitHub 仓库'),
-                trailing: const Icon(Icons.copy_outlined, size: 18),
+                leading: Icon(Icons.code_outlined),
+                title: Text('GitHub 仓库'),
+                trailing: Icon(Icons.copy_outlined, size: 18),
               ),
             ),
             SpringMotion.scalePressFeedback(
@@ -469,7 +469,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       ),
     ];
 
-    Widget list = ListView(
+    final list = ListView(
       padding: const EdgeInsets.all(16),
       children: sections,
     );
@@ -500,9 +500,8 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
 /// 分组标题（带淡入上移动画）。
 class _SectionTitle extends StatelessWidget {
-  const _SectionTitle(this.text, {this.index = 0});
+  const _SectionTitle(this.text);
   final String text;
-  final int index;
 
   @override
   Widget build(BuildContext context) {

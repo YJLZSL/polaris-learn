@@ -39,7 +39,10 @@ add_definitions(-DUNICODE -D_UNICODE)
 # of modifying this function.
 function(APPLY_STANDARD_SETTINGS TARGET)
   target_compile_features(${TARGET} PUBLIC cxx_std_17)
-  target_compile_options(${TARGET} PRIVATE /W4 /WX /wd"4100")
+  # /W4 启用最高级别警告；不使用 /WX（警告视为错误）以避免第三方插件
+  # （如 rive_common 内嵌 harfbuzz）的不可控警告阻塞构建。
+  # 项目自身代码的 warning 通过 flutter analyze 在 CI 中把控。
+  target_compile_options(${TARGET} PRIVATE /W4 /wd"4100")
   target_compile_options(${TARGET} PRIVATE /EHsc)
   target_compile_definitions(${TARGET} PRIVATE "_HAS_EXCEPTIONS=0")
   target_compile_definitions(${TARGET} PRIVATE "$<$<CONFIG:Debug>:_DEBUG>")
@@ -55,9 +58,6 @@ add_subdirectory("runner")
 
 # Generated plugin build rules, which manage building the plugins and adding
 # them to the application.
-# 抑制 rive_common 内嵌 harfbuzz 的 nontrivial-memcall 警告（-Werror 触发的编译错误），
-# 该警告源于第三方 C++ 库代码，非项目可控范围。
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-nontrivial-memcall")
 include(flutter/generated_plugins.cmake)
 
 

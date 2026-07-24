@@ -212,8 +212,8 @@ class _LingxiBadgeState extends State<LingxiBadge>
 
     final badgeSize = widget.size;
     // 光环 / 进度弧 预留的外圈边距
-    const _ringPadding = 8.0;
-    final ringSize = badgeSize + _ringPadding * 2;
+    const ringPadding = 8.0;
+    final ringSize = badgeSize + ringPadding * 2;
 
     final showProgress = !widget.unlocked &&
         widget.progress != null &&
@@ -222,14 +222,14 @@ class _LingxiBadgeState extends State<LingxiBadge>
     // ── 徽章图标 / 锁 ─────────────────────────────────────
     final iconSize =
         widget.unlocked ? badgeSize * 0.5 : badgeSize * 0.4;
-    Widget badgeContent = IconTheme(
+    final badgeContent = IconTheme(
       data: IconThemeData(color: iconColor, size: iconSize),
       child: widget.unlocked ? widget.icon : const Icon(Icons.lock_outline),
     );
 
     // ── 徽章主体：Material + InkWell 提供水波纹 ──────────
     final shapeBorder = _shapeBorderFor(widget.shape);
-    Widget badgeBody = Material(
+    final badgeBody = Material(
       color: bgColor,
       shape: shapeBorder,
       clipBehavior: Clip.antiAlias,
@@ -273,7 +273,7 @@ class _LingxiBadgeState extends State<LingxiBadge>
     }
 
     // ── 组装：Stack 叠放（光环 / 进度弧 / 徽章） ──────────
-    Widget badgeArea = SizedBox(
+    final badgeArea = SizedBox(
       width: ringSize,
       height: ringSize,
       child: Stack(

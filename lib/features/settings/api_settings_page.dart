@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/models/provider_config.dart';
 import '../../data/providers/storage_providers.dart';
-import '../ai/ai_provider_registry.dart';
 import '../ai/ai_providers.dart';
 import '../mascot/mascot_widget.dart';
 import '../../shared/widgets/lingxi_app_bar.dart';

@@ -301,7 +301,7 @@ class _StatCard extends StatelessWidget {
       );
     }
 
-    Widget card = LingxiCard(
+    final card = LingxiCard(
       animateEntrance: !reduceMotion,
       entranceDelay: Duration(milliseconds: 50 * index),
       padding: const EdgeInsets.all(16),

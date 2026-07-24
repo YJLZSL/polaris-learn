@@ -428,7 +428,6 @@ class _KnowledgePointPageWrapper extends StatelessWidget {
 /// 否则直接完成。
 class _KnowledgePointLearner extends ConsumerStatefulWidget {
   const _KnowledgePointLearner({
-    super.key,
     required this.knowledgePoint,
     required this.courseId,
     required this.lessonId,

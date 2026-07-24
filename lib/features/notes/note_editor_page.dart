@@ -211,7 +211,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
     final theme = Theme.of(context);
 
-    Widget form = SingleChildScrollView(
+    final form = SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -282,7 +282,7 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
     TextStyle? style,
   }) {
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
-    Widget field = TextField(
+    final field = TextField(
       controller: controller,
       focusNode: focusNode,
       decoration: InputDecoration(
@@ -308,8 +308,8 @@ class _NoteEditorPageState extends ConsumerState<NoteEditorPage> {
         return AnimatedContainer(
           duration: SpringMotion.fastDuration,
           curve: SpringMotion.fastCurve,
-          transform: Matrix4.identity()
-            ..translate(0.0, focused && isTitle ? -1.0 : 0.0),
+          transform: Matrix4.translationValues(
+              0.0, focused && isTitle ? -1.0 : 0.0, 0.0),
           child: AnimatedScale(
             scale: focused && isTitle ? 1.005 : 1.0,
             duration: SpringMotion.fastDuration,

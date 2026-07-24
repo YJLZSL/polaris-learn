@@ -40,7 +40,7 @@ class OnboardingPage extends ConsumerStatefulWidget {
   ConsumerState<OnboardingPage> createState() => _OnboardingPageState();
 
   /// 5 步引导内容
-  static const List<_OnboardingStep> steps = [
+  static const List<_OnboardingStep> _steps = [
     _OnboardingStep(
       mood: MascotMood.happy,
       title: '欢迎来到灵犀学院',
@@ -87,7 +87,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref
           .read(mascotControllerProvider.notifier)
-          .setMood(OnboardingPage.steps.first.mood);
+          .setMood(OnboardingPage._steps.first.mood);
     });
   }
 
@@ -99,7 +99,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   /// 跳转到指定页，使用弹簧物理曲线
   void _goToPage(int index) {
-    if (index < 0 || index >= OnboardingPage.steps.length) return;
+    if (index < 0 || index >= OnboardingPage._steps.length) return;
     _pageController.animateToPage(
       index,
       duration: SpringMotion.defaultDuration,
@@ -112,7 +112,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     setState(() => _currentPage = index);
     ref
         .read(mascotControllerProvider.notifier)
-        .setMood(OnboardingPage.steps[index].mood);
+        .setMood(OnboardingPage._steps[index].mood);
   }
 
   /// 完成引导：写入 SharedPreferences 并更新 provider。
@@ -151,7 +151,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
         break;
       default:
         // "下一步" → 下一页
-        if (index < OnboardingPage.steps.length - 1) {
+        if (index < OnboardingPage._steps.length - 1) {
           _goToPage(index + 1);
         }
     }
@@ -174,16 +174,16 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
               child: PageView.builder(
                 controller: _pageController,
                 onPageChanged: _onPageChanged,
-                itemCount: OnboardingPage.steps.length,
+                itemCount: OnboardingPage._steps.length,
                 itemBuilder: (context, index) {
                   return _OnboardingStepView(
                     key: ValueKey('onboarding_step_$index'),
-                    step: OnboardingPage.steps[index],
+                    step: OnboardingPage._steps[index],
                     isDesktop: isDesktop,
                     isActive: index == _currentPage,
                     reduceMotion: reduceMotion,
                     onCta: () =>
-                        _onCtaTapped(OnboardingPage.steps[index]),
+                        _onCtaTapped(OnboardingPage._steps[index]),
                   );
                 },
               ),
@@ -212,7 +212,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
 
   /// 底部：PageIndicator + 上一页/下一页按钮
   Widget _buildBottomBar(ThemeData theme, bool reduceMotion) {
-    final isLast = _currentPage == OnboardingPage.steps.length - 1;
+    final isLast = _currentPage == OnboardingPage._steps.length - 1;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
       child: Row(
@@ -231,7 +231,7 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
           // 页面指示器（5 个圆点，当前页放大）
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(OnboardingPage.steps.length, (i) {
+            children: List.generate(OnboardingPage._steps.length, (i) {
               final isActive = i == _currentPage;
               final dot = AnimatedContainer(
                 duration: SpringMotion.defaultDuration,

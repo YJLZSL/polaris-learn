@@ -125,7 +125,7 @@ class ParticlePainter extends CustomPainter {
       canvas.rotate(p.rotation);
 
       final paint = Paint()
-        ..color = p.color.withOpacity(p.opacity.clamp(0.0, 1.0))
+        ..color = p.color.withValues(alpha: p.opacity.clamp(0.0, 1.0))
         ..style = PaintingStyle.fill
         ..isAntiAlias = true;
 
@@ -264,7 +264,7 @@ class _ParticleSystemState extends State<ParticleSystem>
           final spread = widget.type == ParticleEffect.firework
               ? math.pi * 0.9
               : math.pi * 0.7;
-          final baseAngle = -math.pi / 2;
+          const baseAngle = -math.pi / 2;
           final angle = baseAngle + (_random.nextDouble() - 0.5) * spread;
           vx = math.cos(angle) * speed;
           vy = math.sin(angle) * speed;

@@ -101,7 +101,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
 
   /// FAB 带弹簧缩放入场。
   Widget _buildFab(bool reduceMotion) {
-    Widget fab = FloatingActionButton.extended(
+    final fab = FloatingActionButton.extended(
       onPressed: () => context.go('${RouteNames.notesPath}/new'),
       icon: const Icon(Icons.add),
       label: const Text('新建笔记'),
@@ -154,7 +154,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
   }
 
   Widget _buildTagChip(String t, int index, double? animValue) {
-    Widget chip = LingxiChip(
+    final chip = LingxiChip(
       label: Text(t),
       variant: LingxiChipVariant.filter,
       selected: _selectedTags.contains(t),
@@ -229,7 +229,7 @@ class _NotesPageState extends ConsumerState<NotesPage> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      cacheExtent: 500,
+      scrollCacheExtent: 500,
       itemCount: notes.length,
       separatorBuilder: (_, __) => const SizedBox(height: 8),
       itemBuilder: (context, index) => _buildCard(context, notes[index], index),

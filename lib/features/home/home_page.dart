@@ -691,7 +691,6 @@ class _StaggeredEntrance extends StatefulWidget {
     required this.duration,
     required this.reduceMotion,
     this.beginOffset = const Offset(0, 0.06),
-    this.beginScale = 0.96,
   });
 
   final Widget child;
@@ -699,7 +698,6 @@ class _StaggeredEntrance extends StatefulWidget {
   final Duration duration;
   final bool reduceMotion;
   final Offset beginOffset;
-  final double beginScale;
 
   @override
   State<_StaggeredEntrance> createState() => _StaggeredEntranceState();
@@ -734,7 +732,7 @@ class _StaggeredEntranceState extends State<_StaggeredEntrance> {
         duration: widget.duration,
         curve: SpringMotion.entranceCurve,
         child: AnimatedScale(
-          scale: _visible ? 1.0 : widget.beginScale,
+          scale: _visible ? 1.0 : 0.96,
           duration: widget.duration,
           curve: SpringMotion.entranceCurve,
           child: widget.child,

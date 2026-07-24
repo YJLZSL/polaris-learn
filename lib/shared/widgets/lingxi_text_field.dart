@@ -71,24 +71,24 @@ class LingxiTextField extends StatelessWidget {
         filled: true,
         fillColor: colorScheme.surfaceContainerLow,
         border: OutlineInputBorder(
-          borderRadius: ShapeVariants.roundedLarge.borderRadius!,
+          borderRadius: ShapeVariants.roundedLarge.borderRadius,
           borderSide: BorderSide.none,
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: ShapeVariants.roundedLarge.borderRadius!,
+          borderRadius: ShapeVariants.roundedLarge.borderRadius,
           borderSide: BorderSide(
             color: colorScheme.outlineVariant.withValues(alpha: 0.5),
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: ShapeVariants.roundedLarge.borderRadius!,
+          borderRadius: ShapeVariants.roundedLarge.borderRadius,
           borderSide: BorderSide(
             color: colorScheme.primary,
             width: 2,
           ),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: ShapeVariants.roundedLarge.borderRadius!,
+          borderRadius: ShapeVariants.roundedLarge.borderRadius,
           borderSide: BorderSide(
             color: colorScheme.error,
           ),

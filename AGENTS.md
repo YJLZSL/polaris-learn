@@ -86,6 +86,7 @@
 | `flutter_launcher_icons` | ^0.13.1 | 应用图标生成 |
 | `flutter_native_splash` | ^2.4.1 | 启动屏生成 |
 | `http_mock_adapter` | ^0.6.1 | Dio HTTP mock（测试用） |
+| `fake_async` | ^1.3.1 | 测试用虚拟时间（fake_async） |
 
 ### 版本锁定策略
 

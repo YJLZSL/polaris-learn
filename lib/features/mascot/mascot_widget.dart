@@ -73,9 +73,6 @@ class _MascotWidgetState extends ConsumerState<MascotWidget>
   /// 临时情绪恢复计时器
   Timer? _restoreTimer;
 
-  /// 情绪切换过渡进度（0→1，使用弹簧曲线）
-  double _moodTransition = 1.0;
-
   @override
   void initState() {
     super.initState();

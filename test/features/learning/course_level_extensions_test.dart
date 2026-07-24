@@ -8,7 +8,7 @@ import 'package:lingxi_academy/features/learning/course_level_extensions.dart';
 
 void main() {
   group('CourseLevel.levelColor light 实例映射', () {
-    final colors = LingxiColors.light;
+    const colors = LingxiColors.light;
 
     test('L0 → mascotSecondary（温暖橙，入门）', () {
       expect(CourseLevel.l0.levelColor(colors), colors.mascotSecondary);
@@ -32,7 +32,7 @@ void main() {
   });
 
   group('CourseLevel.levelColor dark 实例映射', () {
-    final colors = LingxiColors.dark;
+    const colors = LingxiColors.dark;
 
     test('L0 → mascotSecondary', () {
       expect(CourseLevel.l0.levelColor(colors), colors.mascotSecondary);
@@ -57,7 +57,7 @@ void main() {
 
   group('CourseLevel.levelColor 语义色对应', () {
     test('每个级别在 light 下映射到不同语义色', () {
-      final colors = LingxiColors.light;
+      const colors = LingxiColors.light;
       final mapped = <CourseLevel, Color>{
         for (final level in CourseLevel.values)
           level: level.levelColor(colors),
@@ -68,7 +68,7 @@ void main() {
     });
 
     test('每个级别在 dark 下映射到不同语义色', () {
-      final colors = LingxiColors.dark;
+      const colors = LingxiColors.dark;
       final mapped = <CourseLevel, Color>{
         for (final level in CourseLevel.values)
           level: level.levelColor(colors),
@@ -79,7 +79,7 @@ void main() {
     });
 
     test('L0-L4 顺序与文档约定一致', () {
-      final colors = LingxiColors.light;
+      const colors = LingxiColors.light;
       expect(CourseLevel.l0.levelColor(colors), colors.mascotSecondary);
       expect(CourseLevel.l1.levelColor(colors), colors.socraticBlue);
       expect(CourseLevel.l2.levelColor(colors), colors.mascotPrimary);
@@ -88,7 +88,7 @@ void main() {
     });
 
     test('全部 5 个级别遍历均可正确返回颜色', () {
-      final colors = LingxiColors.light;
+      const colors = LingxiColors.light;
       for (final level in CourseLevel.values) {
         final color = level.levelColor(colors);
         expect(color, isNotNull);

@@ -251,7 +251,7 @@ class LingxiElevations extends ThemeExtension<LingxiElevations> {
     return shadows
         .map(
           (BoxShadow s) => BoxShadow(
-            color: Colors.white.withOpacity(darkOpacity),
+            color: Colors.white.withValues(alpha: darkOpacity),
             blurRadius: s.blurRadius,
             spreadRadius: s.spreadRadius,
             offset: s.offset,

@@ -286,14 +286,14 @@ class _ChatPageState extends ConsumerState<ChatPage> {
       '推荐 AI 学习路线',
     ];
 
-    Widget child = Center(
+    final child = Center(
       child: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            MascotHero(
-              child: const MascotWidget(
+            const MascotHero(
+              child: MascotWidget(
                 size: 160,
                 enableTapInteraction: false,
               ),
@@ -553,7 +553,7 @@ class _MessageBubbleState extends State<_MessageBubble>
     final fgColor =
         _isUser ? theme.colorScheme.onPrimary : theme.colorScheme.onSurface;
 
-    Widget bubbleContent = Container(
+    final bubbleContent = Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       constraints: BoxConstraints(
@@ -1190,13 +1190,13 @@ class _AnimatedInputFieldState extends State<_AnimatedInputField> {
         maxLines: 5,
         textInputAction: TextInputAction.newline,
         onChanged: (_) => widget.onChanged(),
-        decoration: InputDecoration(
+        decoration: const InputDecoration(
           hintText: '输入你的问题…（桌面端 Ctrl+Enter 发送）',
           border: InputBorder.none,
           enabledBorder: InputBorder.none,
           focusedBorder: InputBorder.none,
           disabledBorder: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(
+          contentPadding: EdgeInsets.symmetric(
             horizontal: 16,
             vertical: 12,
           ),

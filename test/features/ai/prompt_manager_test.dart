@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -11,7 +10,7 @@ import 'package:lingxi_academy/features/ai/prompt_manager.dart';
 /// [assets] 为 asset 路径 → 内容的映射。未在映射中的路径返回 null，
 /// 模拟 `rootBundle.loadString` 抛 `FlutterError` 的情况。
 void setMockAssets(Map<String, String> assets) {
-  ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
+  TestWidgetsFlutterBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
     'flutter/assets',
     (ByteData? message) async {
       // PlatformAssetBundle 将 key 经过 Uri.encodeFull + UTF-8 编码后发送。
@@ -29,7 +28,7 @@ void setMockAssets(Map<String, String> assets) {
 
 /// 清除 assets 平台通道的 mock 处理器。
 void clearMockAssets() {
-  ServicesBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
+  TestWidgetsFlutterBinding.instance.defaultBinaryMessenger.setMockMessageHandler(
     'flutter/assets',
     null,
   );

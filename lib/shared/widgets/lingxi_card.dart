@@ -179,7 +179,7 @@ class _LingxiCardState extends State<LingxiCard> {
     // 解析当前阴影（基础档位 + 交互态切换）
     final shadows = _resolveShadows(context, clickable, reduceMotion);
 
-    Widget content = Padding(
+    final content = Padding(
       padding: widget.padding ?? const EdgeInsets.all(16),
       child: widget.child,
     );

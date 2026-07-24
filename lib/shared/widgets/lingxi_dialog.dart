@@ -96,7 +96,7 @@ class LingxiDialog extends StatelessWidget {
       beginOffset: const Offset(0, 0.02),
       child: AlertDialog(
         shape: RoundedRectangleBorder(
-          borderRadius: ShapeVariants.roundedExtraLarge.borderRadius!,
+          borderRadius: ShapeVariants.roundedExtraLarge.borderRadius,
         ),
         icon: icon != null
             ? Icon(

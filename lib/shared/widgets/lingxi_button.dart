@@ -81,12 +81,12 @@ class LingxiButton extends StatefulWidget {
 
 class _LingxiButtonState extends State<LingxiButton> {
   bool _pressed = false;
-  late final MaterialStatesController _statesController;
+  late final WidgetStatesController _statesController;
 
   @override
   void initState() {
     super.initState();
-    _statesController = MaterialStatesController()
+    _statesController = WidgetStatesController()
       ..addListener(_onStatesChanged);
   }
 
@@ -98,7 +98,7 @@ class _LingxiButtonState extends State<LingxiButton> {
   }
 
   void _onStatesChanged() {
-    final pressed = _statesController.value.contains(MaterialState.pressed);
+    final pressed = _statesController.value.contains(WidgetState.pressed);
     if (pressed != _pressed && mounted) {
       setState(() => _pressed = pressed);
     }

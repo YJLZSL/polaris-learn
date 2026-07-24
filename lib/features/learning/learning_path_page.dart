@@ -49,11 +49,11 @@ class _LearningPathPageState extends ConsumerState<LearningPathPage> {
             Text('🦏', style: TextStyle(fontSize: 20)),
           ],
         ),
-        actions: [
+        actions: const [
           Padding(
-            padding: const EdgeInsets.only(right: 16),
+            padding: EdgeInsets.only(right: 16),
             child: MascotHero(
-              child: const MascotWidget(size: 40),
+              child: MascotWidget(size: 40),
             ),
           ),
         ],
@@ -299,7 +299,7 @@ class _StaggeredPathListState extends State<_StaggeredPathList>
   Widget build(BuildContext context) {
     return ListView.builder(
       padding: const EdgeInsets.all(16),
-      cacheExtent: 500,
+      scrollCacheExtent: 500,
       itemCount: widget.levels.length,
       itemBuilder: (context, index) {
         final level = widget.levels[index];

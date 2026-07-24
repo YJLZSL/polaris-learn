@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:lingxi_academy/core/motion/animation_utils.dart';
 import 'package:lingxi_academy/core/motion/spring_motion.dart';
-import 'package:lingxi_academy/core/theme/shape_variants.dart';
 
 /// 灵犀学院 AppBar 组件
 ///
@@ -133,8 +132,8 @@ class _LingxiAppBarState extends State<LingxiAppBar> {
 
     // staggered 入场动画
     if (widget.animateEntrance && !reduceMotion) {
-      final duration = SpringMotion.fastDuration;
-      final curve = SpringMotion.entranceCurve;
+      const duration = SpringMotion.fastDuration;
+      const curve = SpringMotion.entranceCurve;
 
       if (leading != null) {
         leading = AnimatedOpacity(

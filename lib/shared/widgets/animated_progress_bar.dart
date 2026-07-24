@@ -151,7 +151,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     final bgColor = widget.backgroundColor ??
-        theme.colorScheme.surfaceContainerHighest.withOpacity(0.5);
+        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5);
     final fgColor = widget.foregroundColor ?? theme.colorScheme.primary;
     final radius = BorderRadius.circular(widget.borderRadius);
 
@@ -275,11 +275,11 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          fgColor.withOpacity(0.0),
-                          fgColor.withOpacity(0.4),
+                          fgColor.withValues(alpha: 0.0),
+                          fgColor.withValues(alpha: 0.4),
                           fgColor,
-                          fgColor.withOpacity(0.4),
-                          fgColor.withOpacity(0.0),
+                          fgColor.withValues(alpha: 0.4),
+                          fgColor.withValues(alpha: 0.0),
                         ],
                         stops: const [0.0, 0.25, 0.5, 0.75, 1.0],
                       ),
@@ -329,7 +329,7 @@ class _AnimatedProgressBarState extends State<AnimatedProgressBar>
                 color: dotColor,
                 boxShadow: [
                   BoxShadow(
-                    color: dotColor.withOpacity(0.55),
+                    color: dotColor.withValues(alpha: 0.55),
                     blurRadius: widget.height * 0.75,
                     spreadRadius: 0.5,
                   ),
@@ -514,7 +514,7 @@ class _AnimatedCircularProgressState extends State<AnimatedCircularProgress>
         MediaQuery.maybeOf(context)?.disableAnimations ?? false;
 
     final bgColor = widget.backgroundColor ??
-        theme.colorScheme.surfaceContainerHighest.withOpacity(0.4);
+        theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.4);
     final fgColor = widget.foregroundColor ?? theme.colorScheme.primary;
 
     Widget painter;
@@ -675,10 +675,10 @@ class _CircularProgressPainter extends CustomPainter {
       final breath = 0.5 + 0.5 * math.sin(pulse * 2 * math.pi);
       final dotRadius = strokeWidth * (0.4 + 0.45 * breath);
       final dotPaint = Paint()
-        ..color = foregroundColor.withOpacity(0.3 + 0.7 * breath);
+        ..color = foregroundColor.withValues(alpha: 0.3 + 0.7 * breath);
       // 外发光
       final glowPaint = Paint()
-        ..color = foregroundColor.withOpacity(0.15 + 0.2 * breath)
+        ..color = foregroundColor.withValues(alpha: 0.15 + 0.2 * breath)
         ..maskFilter = MaskFilter.blur(BlurStyle.normal, strokeWidth);
       canvas.drawCircle(dotCenter, dotRadius * 1.8, glowPaint);
       canvas.drawCircle(dotCenter, dotRadius, dotPaint);

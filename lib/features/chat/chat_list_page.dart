@@ -73,7 +73,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
   Widget _buildEmpty(BuildContext context) {
     final theme = Theme.of(context);
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
-    Widget child = Center(
+    final child = Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -126,7 +126,7 @@ class _ChatListPageState extends ConsumerState<ChatListPage> {
     }
     return ListView.separated(
       padding: const EdgeInsets.all(16),
-      cacheExtent: 500,
+      scrollCacheExtent: 500,
       itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
       itemBuilder: (context, index) => _buildTile(context, list[index], index),
