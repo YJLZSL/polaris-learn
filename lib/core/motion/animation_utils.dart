@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/animation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';

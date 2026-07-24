@@ -73,7 +73,7 @@ class RetryInterceptor extends Interceptor {
 
     Future.delayed(delay, () async {
       try {
-        final response = await _dio.fetch(newOptions);
+        final response = await _dio.fetch<dynamic>(newOptions);
         handler.resolve(response);
       } on DioException catch (e) {
         // 重试失败（可能已触发内部递归重试），将最终错误放行。

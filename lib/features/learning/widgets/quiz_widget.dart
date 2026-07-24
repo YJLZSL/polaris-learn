@@ -847,7 +847,7 @@ class _SelectionIndicator extends StatelessWidget {
     }
 
     final scale = pressed ? 0.9 : 1.0;
-    final size = 22.0;
+    const size = 22.0;
 
     if (multiSelect) {
       return AnimatedContainer(
