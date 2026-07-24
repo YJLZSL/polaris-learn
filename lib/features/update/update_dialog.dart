@@ -577,7 +577,7 @@ class _DownloadedBody extends StatelessWidget {
         const SizedBox(height: 8),
         Row(
           children: [
-            Icon(Icons.downloading_done, color: Colors.green.shade600, size: 22),
+            Icon(Icons.download_done, color: Colors.green.shade600, size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

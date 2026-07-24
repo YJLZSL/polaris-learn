@@ -57,7 +57,7 @@ class UpdateService {
         'GitHub API 返回数据格式异常：期望 JSON 对象，实际为 ${data.runtimeType}',
       );
     }
-    return _parseRelease(data);
+    return _parseRelease(Map<String, dynamic>.from(data));
   }
 
   /// 解析 GitHub Release JSON 为 [ReleaseInfo]（暴露给测试）。

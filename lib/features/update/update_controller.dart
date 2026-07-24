@@ -284,6 +284,8 @@ class UpdateController extends StateNotifier<UpdateState> {
         return '请求已取消';
       case DioExceptionType.badCertificate:
         return '证书验证失败';
+      case DioExceptionType.transformTimeout:
+        return e.message ?? '请求转换超时';
       case DioExceptionType.unknown:
         return e.message ?? '未知网络错误';
     }
