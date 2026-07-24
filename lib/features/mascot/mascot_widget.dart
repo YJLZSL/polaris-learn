@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/motion/animation_utils.dart';
 import '../../core/motion/spring_motion.dart';
+import '../../core/theme/lingxi_colors.dart';
 import '../../core/theme/lingxi_gradients.dart';
 import 'mascot_controller.dart';
 import 'mascot_state.dart';
@@ -154,6 +155,8 @@ class _MascotWidgetState extends ConsumerState<MascotWidget>
     final baseMood = widget.mood ?? ref.watch(mascotControllerProvider).mood;
     final effective = _tempMood ?? baseMood;
     final reduceMotion = AnimationUtils.reduceMotionOf(context);
+    // 身体主色从主题获取，dark 模式下自动切换为更亮的紫色
+    final lingxiColors = context.lingxiColors;
 
     // 情绪变化时重启动画（切换时长并重新循环）
     if (effective != _currentMood) {
@@ -172,6 +175,7 @@ class _MascotWidgetState extends ConsumerState<MascotWidget>
             size: Size.infinite,
             painter: _MascotPainter(
               mood: _currentMood,
+              bodyTop: lingxiColors.mascotPrimary,
               animationValue: _controller.value,
               extraSparkle: _easterEgg,
             ),
@@ -381,11 +385,21 @@ class _BubblePainter extends CustomPainter {
 // - 矢量路径绘制，三端像素级一致，缩放不糊。
 // - 实色 [Paint] 缓存为静态字段，渐变/描边按需创建，控制每帧分配数量。
 class _MascotPainter extends CustomPainter {
-  const _MascotPainter({
+  _MascotPainter({
     required this.mood,
+    required this.bodyTop,
     this.animationValue = 0,
     this.extraSparkle = false,
-  });
+  }) : _bodyGradient = RadialGradient(
+         center: const Alignment(-0.3, -0.3),
+         radius: 0.95,
+         colors: [
+           bodyTop,
+           bodyTop.withValues(alpha: 0.8),
+           const Color(0xFF5E35B1),
+         ],
+         stops: const [0.0, 0.6, 1.0],
+       );
 
   /// 当前情绪
   final MascotMood mood;
@@ -396,11 +410,14 @@ class _MascotPainter extends CustomPainter {
   /// 是否叠加额外星光粒子（彩蛋触发时为 true）
   final bool extraSparkle;
 
+  /// 身体主色（来自 [LingxiColors.mascotPrimary]，随主题切换）。
+  /// light=#7C4DFF / dark=#9D7CFF。
+  final Color bodyTop;
+
+  /// 身体径向渐变（基于 [bodyTop] 派生，外缘固定深紫增强立体感）。
+  final RadialGradient _bodyGradient;
+
   // ---- 颜色常量（ARGB 十六进制，避免使用已废弃的 withOpacity）----
-  // 身体径向渐变：中心 mascotPrimary（#7C4DFF），外缘深紫（#5E35B1）增强立体感
-  static const Color _bodyTop = Color(0xFF7C4DFF);
-  static const Color _bodyBottom = Color(0xFFB39DDB);
-  static const Color _bodyOuter = Color(0xFF5E35B1);
   // 角部高光反射（白色 20% 透明度）
   static const Color _hornHighlight = Color(0x33FFFFFF);
   // 瞳孔高光点（白色 70% 透明度，小圆点）
@@ -494,7 +511,8 @@ class _MascotPainter extends CustomPainter {
   bool shouldRepaint(covariant _MascotPainter old) {
     return mood != old.mood ||
         animationValue != old.animationValue ||
-        extraSparkle != old.extraSparkle;
+        extraSparkle != old.extraSparkle ||
+        bodyTop != old.bodyTop;
   }
 
   // ============ 地面投影 ============
@@ -574,13 +592,7 @@ class _MascotPainter extends CustomPainter {
     canvas.restore();
   }
 
-  // 身体径向渐变（const，复用）：偏左上中心 → 外缘深紫，模拟立体受光
-  static const RadialGradient _bodyGradient = RadialGradient(
-    center: Alignment(-0.3, -0.3),
-    radius: 0.95,
-    colors: [_bodyTop, _bodyBottom, _bodyOuter],
-    stops: [0.0, 0.6, 1.0],
-  );
+  // 身体径向渐变已移至实例字段 [_bodyGradient]（随主题切换）。
 
   // ============ 身体 ============
   void _drawBody(Canvas canvas, double s, double cx) {

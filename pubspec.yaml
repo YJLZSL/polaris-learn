@@ -35,6 +35,11 @@ dependencies:
   # 网络
   dio: ^5.4.3+1
 
+  # 自动更新（版本检查 / 下载 / 安装）
+  package_info_plus: ^8.0.0
+  open_filex: ^3.5.0
+  archive: ^3.6.1
+
   # 动画与图形
   rive: ^0.13.13
 

@@ -389,31 +389,11 @@ class _LevelSection extends StatelessWidget {
         CourseLevel.l4 => 'L4 专家',
       };
 
-  /// 级别对应渐变色。
-  List<Color> _levelGradient(ThemeData theme) {
-    final scheme = theme.colorScheme;
-    return switch (level) {
-      CourseLevel.l0 => [
-          const Color(0xFF4FC3F7),
-          const Color(0xFF29B6F6),
-        ],
-      CourseLevel.l1 => [
-          scheme.primary,
-          scheme.primary.withValues(alpha: 0.75),
-        ],
-      CourseLevel.l2 => [
-          const Color(0xFF66BB6A),
-          const Color(0xFF43A047),
-        ],
-      CourseLevel.l3 => [
-          const Color(0xFFFFA726),
-          const Color(0xFFFB8C00),
-        ],
-      CourseLevel.l4 => [
-          const Color(0xFFEF5350),
-          const Color(0xFFE53935),
-        ],
-    };
+  /// 级别对应渐变色（复用 [CourseLevelColorX.levelColor] 派生同色系渐变，
+  /// 与首页 `_CourseProgressCard` 风格统一，避免硬编码十六进制色值）。
+  List<Color> _levelGradient(LingxiColors colors) {
+    final base = level.levelColor(colors);
+    return [base, base.withValues(alpha: 0.7)];
   }
 
   IconData get _levelIcon => switch (level) {
@@ -427,7 +407,7 @@ class _LevelSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gradient = _levelGradient(theme);
+    final gradient = _levelGradient(context.lingxiColors);
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

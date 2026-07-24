@@ -7,21 +7,20 @@ import '../../core/motion/animation_utils.dart';
 import '../../core/motion/spring_motion.dart';
 import '../../core/providers/app_providers.dart';
 import '../../core/router/route_names.dart';
+import '../../core/theme/lingxi_colors.dart';
 import '../../data/models/provider_config.dart';
 import '../../data/providers/db_providers.dart';
 import '../../data/providers/storage_providers.dart';
 import '../ai/ai_providers.dart';
+import '../update/update_controller.dart';
+import '../update/update_dialog.dart';
+import '../update/update_state.dart';
 import '../../shared/widgets/lingxi_app_bar.dart';
 import '../../shared/widgets/lingxi_button.dart';
 import '../../shared/widgets/lingxi_card.dart';
 import 'api_settings_page.dart' show providerConfigsProvider;
 import 'data_export_service.dart';
-
-/// 应用版本号（与 pubspec.yaml 保持一致）。
-const kAppVersion = '0.4.0';
-
-/// GitHub 仓库地址。
-const kRepoUrl = 'https://github.com/YJLZSL/polaris-learn';
+import '../../core/constants/app_constants.dart';
 
 /// 设置页。
 ///
@@ -417,6 +416,14 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
                 trailing: Text(kAppVersion),
               ),
             ),
+            // 检查更新：点击唤起更新对话框（force: true 跳过节流）
+            // 若有可用更新，行尾显示红点徽章；正在下载时显示进度。
+            SpringMotion.scalePressFeedback(
+              onTap: () => UpdateDialog.show(context, force: true),
+              child: _UpdateCheckTile(
+                updateState: ref.watch(updateControllerProvider),
+              ),
+            ),
             SpringMotion.scalePressFeedback(
               onTap: () => _copyRepoUrl(context),
               child: const ListTile(
@@ -552,6 +559,94 @@ class _AnimatedSettingsCard extends StatelessWidget {
       entranceDelay: Duration(milliseconds: 60 * index),
       onTap: onTap,
       child: child,
+    );
+  }
+}
+
+/// "检查更新"行。
+///
+/// 根据 [updateState.status] 切换 trailing：
+/// - idle / upToDate / skipped：版本号 + 箭头
+/// - available：红点徽章 + "新版本 v{x.y.z}"
+/// - checking：小尺寸 CircularProgressIndicator
+/// - downloading：进度百分比
+/// - downloaded：高亮"待安装"
+/// - error：红色感叹号
+class _UpdateCheckTile extends StatelessWidget {
+  const _UpdateCheckTile({required this.updateState});
+
+  final UpdateState updateState;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = context.lingxiColors;
+    final status = updateState.status;
+    final info = updateState.releaseInfo;
+
+    final trailing = switch (status) {
+      UpdateStatus.checking => const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      UpdateStatus.available => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (info != null)
+              Text(
+                'v${info.version}',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            const SizedBox(width: 8),
+            Container(
+              width: 8,
+              height: 8,
+              decoration: BoxDecoration(
+                color: colors.streakFire,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ],
+        ),
+      UpdateStatus.downloading => Text(
+          '${(updateState.downloadProgress * 100).clamp(0, 100).toInt()}%',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.primary,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      UpdateStatus.downloaded => Text(
+          '待安装',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: Colors.green.shade700,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      UpdateStatus.installing => const SizedBox(
+          width: 18,
+          height: 18,
+          child: CircularProgressIndicator(strokeWidth: 2),
+        ),
+      UpdateStatus.error => Icon(
+          Icons.error_outline,
+          size: 18,
+          color: theme.colorScheme.error,
+        ),
+      _ => Icon(
+          Icons.chevron_right_outlined,
+          color: theme.colorScheme.onSurfaceVariant,
+        ),
+    };
+
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: const Icon(Icons.system_update_outlined),
+      title: const Text('检查更新'),
+      trailing: trailing,
     );
   }
 }
